@@ -1,0 +1,4 @@
+*.abi
+*.bin
+incognito_proxy.go
+vault.go
