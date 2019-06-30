@@ -257,14 +257,14 @@ def swapCommittee(
     type, newCommRoot = self.parseSwapInst(inst)
     if type == 3616817: # Metadata type and shardID of swap beacon
         self.beaconCommRoot = newCommRoot
-        # log.NotifyString("updated beacon committee")
-        # log.SwapBeaconCommittee(newCommRoot)
+        log.NotifyString("updated beacon committee")
+        log.SwapBeaconCommittee(newCommRoot)
     elif type == 3617073:
         self.bridgeCommRoot = newCommRoot
-        # log.NotifyString("updated bridge committee")
-        # log.SwapBridgeCommittee(newCommRoot)
+        log.NotifyString("updated bridge committee")
+        log.SwapBridgeCommittee(newCommRoot)
 
-    # log.NotifyBytes32(newCommRoot)
-    # log.NotifyString("no exeception...")
+    # # log.NotifyBytes32(newCommRoot)
+    log.NotifyString("no exeception...")
     return True
 

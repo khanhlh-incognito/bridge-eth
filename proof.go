@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/incognitochain/incognito-chain/rpcserver/jsonresult"
+	"github.com/incognitochain/bridge-eth/jsonresult"
 )
 
 const max_path = 4
@@ -73,7 +73,7 @@ func getBurnProof(txID string) string {
 	url := "http://127.0.0.1:9338"
 
 	if len(txID) == 0 {
-		txID = "64b816d764529928bcc1d65f5cc30763fca40fc075c271deb238514b4e5f15a4"
+		txID = "81e634eddaa9fd6323d61d2a9f6e9b59d88f5c2b7e166752483aba4c36ad3cf6"
 	}
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 

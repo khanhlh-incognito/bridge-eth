@@ -19,10 +19,10 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/incognitochain/bridge-eth/blockchain"
+	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
-	"github.com/incognitochain/incognito-chain/blockchain"
-	"github.com/incognitochain/incognito-chain/common/base58"
 )
 
 var genesisKey *ecdsa.PrivateKey
@@ -197,7 +197,7 @@ func (p *Platform) printReceipt(tx *types.Transaction) {
 func getBridgeSwapProof() string {
 	url := "http://127.0.0.1:9338"
 
-	block := 32
+	block := 124
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbridgeswapproof\",\n    \"params\": [\n    \t%d\n    ]\n}", block))
 
 	req, _ := http.NewRequest("POST", url, payload)
@@ -253,8 +253,8 @@ func getBeaconSwapProof() string {
 }
 
 func TestSimulatedSwapBeacon(t *testing.T) {
-	body := getBeaconSwapProof()
-	// body := getBridgeSwapProof()
+	// body := getBeaconSwapProof()
+	body := getBridgeSwapProof()
 	if len(body) < 1 {
 		return
 	}
