@@ -90,7 +90,7 @@ def withdraw(
     # log.NotifyUint256(burned)
 
     # Check type and tokenID
-    assert type == 3617328 # Burn metadata and shardID of bridge
+    assert type == 3617329 # Burn metadata and shardID of bridge
     assert tokenID == 0x0500000000000000000000000000000000000000000000000000000000000000
 
     # Each instruction can only by redeemed once
