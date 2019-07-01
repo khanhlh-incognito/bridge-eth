@@ -16,7 +16,7 @@ import (
 	"github.com/incognitochain/bridge-eth/vault"
 )
 
-const VaultAddress = "a61b76afe33830E564bf0f07cEb4e39D5Ca43280"
+const VaultAddress = "8caa0be79b109257d243ce4b430c7fc14f3e5ce8"
 
 func Burn(txID string) error {
 	// Get proof
@@ -96,7 +96,7 @@ func Deposit() error {
 
 	// Deposit
 	auth := bind.NewKeyedTransactor(privKey)
-	auth.Value = big.NewInt(1 * params.Ether)
+	auth.Value = big.NewInt(0.1 * params.Ether)
 	incAddr := "1Uv46Pu4pqBvxCcPw7MXhHfiAD5Rmi2xgEE7XB6eQurFAt4vSYvfyGn3uMMB1xnXDq9nRTPeiAZv5gRFCBDroRNsXJF1sxPSjNQtivuHk"
 	tx, err := c.Deposit(auth, incAddr)
 	if err != nil {
