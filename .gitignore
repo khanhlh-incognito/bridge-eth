@@ -2,3 +2,4 @@
 *.bin
 incognito_proxy.go
 vault.go
+export.sh
