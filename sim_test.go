@@ -144,7 +144,9 @@ type account struct {
 }
 
 func newAccount() *account {
-	key, _ := crypto.GenerateKey()
+	// key, _ := crypto.GenerateKey()
+	// crypto.SaveECDSA("genesisKey.hex", key)
+	key, _ := crypto.LoadECDSA("genesisKey.hex")
 	return &account{
 		PrivateKey: key,
 		Address:    crypto.PubkeyToAddress(key.PublicKey),

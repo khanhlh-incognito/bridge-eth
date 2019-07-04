@@ -55,10 +55,11 @@ def depositERC20(token: address, amount: uint256, incognito_address: string[INC_
 def parseBurnInst(inst: bytes[INST_LENGTH]) -> (uint256, address, address, uint256):
     type: uint256 = convert(slice(inst, start=0, len=3), uint256)
     token: address = extract32(inst, 3, type=address)
-    to: address = extract32(inst, 23, type=address)
-    amount: uint256 = extract32(inst, 55, type=uint256)
+    to: address = extract32(inst, 35, type=address)
+    amount: uint256 = extract32(inst, 67, type=uint256)
     return type, token, to, amount
 
+# TODO: remove test function
 @constant
 @public
 def testExtract(a: bytes[INST_LENGTH]) -> (address, wei_value):
@@ -101,7 +102,7 @@ def withdraw(
     burned: uint256 = 0
     type, token, to, burned = self.parseBurnInst(inst)
     # log.NotifyUint256(type)
-    # log.NotifyAddress(tokenID)
+    # log.NotifyAddress(token)
     # log.NotifyAddress(to)
     # log.NotifyUint256(burned)
 
@@ -152,6 +153,6 @@ def withdraw(
     if token == ETH_TOKEN:
         send(to, burned)
     else:
-        assert Erc20(token).transfer(to, burned)
+        Erc20(token).transfer(to, burned)
     log.Withdraw(token, to, burned)
 
