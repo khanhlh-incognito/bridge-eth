@@ -25,8 +25,8 @@ import (
 	"github.com/incognitochain/bridge-eth/vault"
 )
 
-var genesisKey *ecdsa.PrivateKey
 var auth *bind.TransactOpts
+var genesisAcc *account
 
 type Platform struct {
 	inc       *incognito_proxy.IncognitoProxy
@@ -42,9 +42,9 @@ func (p *Platform) getBalance(addr common.Address) *big.Int {
 }
 
 func init() {
-	fmt.Println("Initializing...")
-	genesisKey, _ = crypto.GenerateKey()
-	auth = bind.NewKeyedTransactor(genesisKey)
+	fmt.Println("Initializing genesis account...")
+	genesisAcc = newAccount()
+	auth = bind.NewKeyedTransactor(genesisAcc.PrivateKey)
 }
 
 func setup(beaconCommRoot, bridgeCommRoot [32]byte) (*Platform, error) {
@@ -54,27 +54,25 @@ func setup(beaconCommRoot, bridgeCommRoot [32]byte) (*Platform, error) {
 	sim := backends.NewSimulatedBackend(alloc, 6000000)
 	p := &Platform{sim: sim}
 
-	incognitoAddr, tx, inc, err := incognito_proxy.DeployIncognitoProxy(auth, sim, beaconCommRoot, bridgeCommRoot)
+	incognitoAddr, _, inc, err := incognito_proxy.DeployIncognitoProxy(auth, sim, beaconCommRoot, bridgeCommRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy IncognitoProxy contract: %v", err)
 	}
 	sim.Commit()
 
-	p.printReceipt(tx)
 	p.inc = inc
 	p.incAddr = incognitoAddr
 	fmt.Printf("deployed bridge, addr: %x\n", incognitoAddr)
 
-	vaultAddr, tx, vault, err := vault.DeployVault(auth, sim, incognitoAddr)
+	vaultAddr, _, vault, err := vault.DeployVault(auth, sim, incognitoAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy Vault contract: %v", err)
 	}
 	sim.Commit()
 
-	p.printReceipt(tx)
 	p.vault = vault
 	p.vaultAddr = vaultAddr
-	fmt.Printf("deployed bridge, addr: %x\n", vaultAddr)
+	fmt.Printf("deployed vault, addr: %x\n", vaultAddr)
 	return p, nil
 }
 
@@ -153,9 +151,9 @@ func newAccount() *account {
 	}
 }
 
-func (p *Platform) printReceipt(tx *types.Transaction) {
+func printReceipt(sim *backends.SimulatedBackend, tx *types.Transaction) {
 	ctx, _ := context.WithTimeout(context.Background(), time.Minute)
-	receipt, err := p.sim.TransactionReceipt(ctx, tx.Hash())
+	receipt, err := sim.TransactionReceipt(ctx, tx.Hash())
 	if err != nil {
 		fmt.Println("receipt err:", err)
 	}
@@ -308,7 +306,7 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 		fmt.Println("err:", err)
 	}
 	p.sim.Commit()
-	p.printReceipt(tx)
+	printReceipt(p.sim, tx)
 }
 
 func TestSimulatedBurn(t *testing.T) {
@@ -373,14 +371,14 @@ func TestSimulatedBurn(t *testing.T) {
 		fmt.Println("err:", err)
 	}
 	p.sim.Commit()
-	p.printReceipt(tx)
+	printReceipt(p.sim, tx)
 
 	fmt.Printf("withdrawer new balance: %d\n", p.getBalance(withdrawer))
 }
 
 func deposit(p *Platform, amount int64) (*big.Int, *big.Int, error) {
 	initBalance := p.getBalance(p.vaultAddr)
-	auth := bind.NewKeyedTransactor(genesisKey)
+	auth := bind.NewKeyedTransactor(genesisAcc.PrivateKey)
 	auth.Value = big.NewInt(amount)
 	_, err := p.vault.Deposit(auth, "")
 	if err != nil {
@@ -417,5 +415,5 @@ func TestSimulatedCallFunc(t *testing.T) {
 		fmt.Println("err:", err)
 	}
 	p.sim.Commit()
-	p.printReceipt(tx)
+	printReceipt(p.sim, tx)
 }
