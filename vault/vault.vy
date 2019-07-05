@@ -46,7 +46,8 @@ def deposit(incognito_address: string[INC_ADDRESS_LENGTH]):
 @public
 def depositERC20(token: address, amount: uint256, incognito_address: string[INC_ADDRESS_LENGTH]):
     assert amount <= 10 ** 18
-    Erc20(token).transferFrom(msg.sender, self, amount)
+    success: bool = Erc20(token).transferFrom(msg.sender, self, amount)
+    assert success
     log.Deposit(token, incognito_address, amount)
 
 @constant
@@ -112,7 +113,8 @@ def withdraw(
     if token == ETH_TOKEN:
         assert self.balance >= burned
     else:
-        assert Erc20(token).balanceOf(self) >= burned
+        enough: bool = Erc20(token).balanceOf(self) >= burned
+        assert enough
 
     # Each instruction can only by redeemed once
     instHash: bytes32 = keccak256(inst)
@@ -152,6 +154,8 @@ def withdraw(
     if token == ETH_TOKEN:
         send(to, burned)
     else:
-        Erc20(token).transfer(to, burned)
+        success: bool = Erc20(token).transfer(to, burned)
+        assert success
+
     log.Withdraw(token, to, burned)
 

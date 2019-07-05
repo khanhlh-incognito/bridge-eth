@@ -14,10 +14,59 @@ import (
 	"github.com/incognitochain/bridge-eth/vault"
 )
 
-const TokenAddress = "47e26a86391e382517E2577970E0b9a9C4DA1A8F"
-const IncPaymentAddr = "1Uv46Pu4pqBvxCcPw7MXhHfiAD5Rmi2xgEE7XB6eQurFAt4vSYvfyGn3uMMB1xnXDq9nRTPeiAZv5gRFCBDroRNsXJF1sxPSjNQtivuHk"
+func TestERC20Burn(t *testing.T) {
+	// Get proof
+	txID := ""
+	proof, err := getAndDecodeBurnProof(txID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Get contract instance
+	privKey, v, _, _, _ := setupERC20Test(t)
+
+	// Burn
+	auth := bind.NewKeyedTransactor(privKey)
+	auth.GasLimit = 6000000
+	tx, err := v.Withdraw(
+		auth,
+		proof.instruction,
+
+		proof.beaconInstPath,
+		proof.beaconInstPathIsLeft,
+		proof.beaconInstPathLen,
+		proof.beaconInstRoot,
+		proof.beaconBlkData,
+		proof.beaconBlkHash,
+		proof.beaconSignerPubkeys,
+		proof.beaconSignerCount,
+		proof.beaconSignerSig,
+		proof.beaconSignerPaths,
+		proof.beaconSignerPathIsLeft,
+		proof.beaconSignerPathLen,
+
+		proof.bridgeInstPath,
+		proof.bridgeInstPathIsLeft,
+		proof.bridgeInstPathLen,
+		proof.bridgeInstRoot,
+		proof.bridgeBlkData,
+		proof.bridgeBlkHash,
+		proof.bridgeSignerPubkeys,
+		proof.bridgeSignerCount,
+		proof.bridgeSignerSig,
+		proof.bridgeSignerPaths,
+		proof.bridgeSignerPathIsLeft,
+		proof.bridgeSignerPathLen,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txHash := tx.Hash()
+	fmt.Printf("burned erc20, txHash: %x\n", txHash[:])
+}
 
 func TestERC20Lock(t *testing.T) {
+	// Get contract instance
 	privKey, v, vaultAddr, token, tokenAddr := setupERC20Test(t)
 
 	// Approve

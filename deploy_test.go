@@ -17,8 +17,6 @@ import (
 	"github.com/incognitochain/bridge-eth/vault"
 )
 
-const VaultAddress = "22dcf6DaB0168D1e48A0aCaa7744e2744cEC3CAa"
-
 func TestBurn(t *testing.T) {
 	txID := ""
 

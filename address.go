@@ -1,0 +1,5 @@
+package bridge
+
+const VaultAddress = "f15e34344ff8582baeff780f1751546971243f0a"
+const TokenAddress = "47e26a86391e382517E2577970E0b9a9C4DA1A8F"
+const IncPaymentAddr = "1Uv46Pu4pqBvxCcPw7MXhHfiAD5Rmi2xgEE7XB6eQurFAt4vSYvfyGn3uMMB1xnXDq9nRTPeiAZv5gRFCBDroRNsXJF1sxPSjNQtivuHk"
