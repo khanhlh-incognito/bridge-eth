@@ -107,6 +107,7 @@ def verifyInst(
 
     return True
 
+@constant
 @public
 def instructionApproved(
     instHash: bytes32,
