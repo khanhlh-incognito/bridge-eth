@@ -1,12 +1,15 @@
-MAX_PATH: constant(uint256) = 4 # support up to 2 ** MAX_PATH committee members
-COMM_SIZE: constant(uint256) = 2 ** MAX_PATH
+INST_MAX_PATH: constant(uint256) = 8 # support up to 2 ** INST_MAX_PATH instructions per block
 
-TOTAL_PUBKEY: constant(uint256) = COMM_SIZE * MAX_PATH
+PUBKEY_MAX_PATH: constant(uint256) = 3 # up to 2 ** PUBKEY_MAX_PATH signers
+COMM_SIZE: constant(uint256) = 2 ** PUBKEY_MAX_PATH
+
+PUBKEY_NODE: constant(uint256) = COMM_SIZE * PUBKEY_MAX_PATH # number of merkle proof nodes to prove all pubkeys
 PUBKEY_SIZE: constant(int128) = 33 # each pubkey is 33 bytes
 PUBKEY_LENGTH: constant(int128) = PUBKEY_SIZE * COMM_SIZE # length of the array storing all pubkeys
 
 INST_LENGTH: constant(uint256) = 150
 
+# TODO: update to 2/3+1
 MIN_SIGN: constant(uint256) = 2
 
 SwapBeaconCommittee: event({newCommitteeRoot: bytes32})
@@ -42,9 +45,36 @@ def notifyPls(v: bytes32):
 
 @constant
 @public
-def inMerkleTree(leaf: bytes32, root: bytes32, path: bytes32[MAX_PATH], left: bool[MAX_PATH], length: int128) -> bool:
+def instructionInMerkleTree(
+    leaf: bytes32,
+    root: bytes32,
+    path: bytes32[INST_MAX_PATH],
+    left: bool[INST_MAX_PATH],
+    length: int128
+) -> bool:
     hash: bytes32 = leaf
-    for i in range(MAX_PATH):
+    for i in range(INST_MAX_PATH):
+        if i >= length:
+            break
+        if left[i]:
+            hash = keccak256(concat(path[i], hash))
+        elif convert(path[i], uint256) == 0:
+            hash = keccak256(concat(hash, hash))
+        else:
+            hash = keccak256(concat(hash, path[i]))
+    return hash == root
+
+@constant
+@public
+def pubkeyInMerkleTree(
+    leaf: bytes32,
+    root: bytes32,
+    path: bytes32[PUBKEY_MAX_PATH],
+    left: bool[PUBKEY_MAX_PATH],
+    length: int128
+) -> bool:
+    hash: bytes32 = leaf
+    for i in range(PUBKEY_MAX_PATH):
         if i >= length:
             break
         if left[i]:
@@ -60,16 +90,16 @@ def inMerkleTree(leaf: bytes32, root: bytes32, path: bytes32[MAX_PATH], left: bo
 def verifyInst(
     commRoot: bytes32,
     instHash: bytes32,
-    instPath: bytes32[MAX_PATH],
-    instPathIsLeft: bool[MAX_PATH],
+    instPath: bytes32[INST_MAX_PATH],
+    instPathIsLeft: bool[INST_MAX_PATH],
     instPathLen: int128,
     instRoot: bytes32,
     blkHash: bytes32,
     signerPubkeys: bytes[PUBKEY_LENGTH],
     signerCount: int128,
     signerSig: bytes32,
-    signerPaths: bytes32[TOTAL_PUBKEY],
-    signerPathIsLeft: bool[TOTAL_PUBKEY],
+    signerPaths: bytes32[PUBKEY_NODE],
+    signerPathIsLeft: bool[PUBKEY_NODE],
     signerPathLen: int128
 ) -> bool:
     # Check if enough validators signed this block
@@ -78,7 +108,7 @@ def verifyInst(
         return False
 
     # Check if inst is in merkle tree with root instRoot
-    if not self.inMerkleTree(instHash, instRoot, instPath, instPathIsLeft, instPathLen):
+    if not self.instructionInMerkleTree(instHash, instRoot, instPath, instPathIsLeft, instPathLen):
         # log.NotifyString("instruction is not in merkle tree")
         return False
 
@@ -92,16 +122,16 @@ def verifyInst(
         # Get hash of the pubkey
         signerPubkeyHash: bytes32 = keccak256(slice(signerPubkeys, start=i * PUBKEY_SIZE, len=PUBKEY_SIZE))
 
-        path: bytes32[MAX_PATH]
-        left: bool[MAX_PATH]
-        for j in range(MAX_PATH):
-            if j > signerPathLen:
+        path: bytes32[PUBKEY_MAX_PATH]
+        left: bool[PUBKEY_MAX_PATH]
+        for j in range(PUBKEY_MAX_PATH):
+            if j >= signerPathLen:
                 break
             path[j] = signerPaths[i * signerPathLen + j]
             left[j] = signerPathIsLeft[i * signerPathLen + j]
 
         # log.NotifyBytes32(signerPubkeyHash)
-        if not self.inMerkleTree(signerPubkeyHash, commRoot, path, left, signerPathLen):
+        if not self.pubkeyInMerkleTree(signerPubkeyHash, commRoot, path, left, signerPathLen):
             # log.NotifyString("pubkey not in merkle tree")
             return False
 
@@ -111,8 +141,8 @@ def verifyInst(
 @public
 def instructionApproved(
     instHash: bytes32,
-    beaconInstPath: bytes32[MAX_PATH],
-    beaconInstPathIsLeft: bool[MAX_PATH],
+    beaconInstPath: bytes32[INST_MAX_PATH],
+    beaconInstPathIsLeft: bool[INST_MAX_PATH],
     beaconInstPathLen: int128,
     beaconInstRoot: bytes32,
     beaconBlkData: bytes32,
@@ -120,11 +150,11 @@ def instructionApproved(
     beaconSignerPubkeys: bytes[PUBKEY_LENGTH],
     beaconSignerCount: int128,
     beaconSignerSig: bytes32,
-    beaconSignerPaths: bytes32[TOTAL_PUBKEY],
-    beaconSignerPathIsLeft: bool[TOTAL_PUBKEY],
+    beaconSignerPaths: bytes32[PUBKEY_NODE],
+    beaconSignerPathIsLeft: bool[PUBKEY_NODE],
     beaconSignerPathLen: int128,
-    bridgeInstPath: bytes32[MAX_PATH],
-    bridgeInstPathIsLeft: bool[MAX_PATH],
+    bridgeInstPath: bytes32[INST_MAX_PATH],
+    bridgeInstPathIsLeft: bool[INST_MAX_PATH],
     bridgeInstPathLen: int128,
     bridgeInstRoot: bytes32,
     bridgeBlkData: bytes32,
@@ -132,8 +162,8 @@ def instructionApproved(
     bridgeSignerPubkeys: bytes[PUBKEY_LENGTH],
     bridgeSignerCount: int128,
     bridgeSignerSig: bytes32,
-    bridgeSignerPaths: bytes32[TOTAL_PUBKEY],
-    bridgeSignerPathIsLeft: bool[TOTAL_PUBKEY],
+    bridgeSignerPaths: bytes32[PUBKEY_NODE],
+    bridgeSignerPathIsLeft: bool[PUBKEY_NODE],
     bridgeSignerPathLen: int128
 ) -> bool:
     blk: bytes32 = keccak256(concat(beaconBlkData, beaconInstRoot))
@@ -194,8 +224,8 @@ def instructionApproved(
 @public
 def swapCommittee(
     inst: bytes[INST_LENGTH], # content of swap instruction
-    beaconInstPath: bytes32[MAX_PATH],
-    beaconInstPathIsLeft: bool[MAX_PATH],
+    beaconInstPath: bytes32[INST_MAX_PATH],
+    beaconInstPathIsLeft: bool[INST_MAX_PATH],
     beaconInstPathLen: int128,
     beaconInstRoot: bytes32,
     beaconBlkData: bytes32, # hash of the rest of the beacon block
@@ -203,11 +233,11 @@ def swapCommittee(
     beaconSignerPubkeys: bytes[PUBKEY_LENGTH],
     beaconSignerCount: int128,
     beaconSignerSig: bytes32, # aggregated signature of some committee members
-    beaconSignerPaths: bytes32[TOTAL_PUBKEY],
-    beaconSignerPathIsLeft: bool[TOTAL_PUBKEY],
+    beaconSignerPaths: bytes32[PUBKEY_NODE],
+    beaconSignerPathIsLeft: bool[PUBKEY_NODE],
     beaconSignerPathLen: int128,
-    bridgeInstPath: bytes32[MAX_PATH],
-    bridgeInstPathIsLeft: bool[MAX_PATH],
+    bridgeInstPath: bytes32[INST_MAX_PATH],
+    bridgeInstPathIsLeft: bool[INST_MAX_PATH],
     bridgeInstPathLen: int128,
     bridgeInstRoot: bytes32,
     bridgeBlkData: bytes32, # hash of the rest of the bridge block
@@ -215,8 +245,8 @@ def swapCommittee(
     bridgeSignerPubkeys: bytes[PUBKEY_LENGTH],
     bridgeSignerCount: int128,
     bridgeSignerSig: bytes32,
-    bridgeSignerPaths: bytes32[TOTAL_PUBKEY],
-    bridgeSignerPathIsLeft: bool[TOTAL_PUBKEY],
+    bridgeSignerPaths: bytes32[PUBKEY_NODE],
+    bridgeSignerPathIsLeft: bool[PUBKEY_NODE],
     bridgeSignerPathLen: int128
 ) -> bool:
     # Check if beaconInstRoot is in block with hash beaconBlkHash

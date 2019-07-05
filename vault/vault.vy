@@ -1,6 +1,6 @@
 # External Contracts
 contract Incognito_proxy:
-    def instructionApproved(instHash: bytes32, beaconInstPath: bytes32[4], beaconInstPathIsLeft: bool[4], beaconInstPathLen: int128, beaconInstRoot: bytes32, beaconBlkData: bytes32, beaconBlkHash: bytes32, beaconSignerPubkeys: bytes[528], beaconSignerCount: int128, beaconSignerSig: bytes32, beaconSignerPaths: bytes32[64], beaconSignerPathIsLeft: bool[64], beaconSignerPathLen: int128, bridgeInstPath: bytes32[4], bridgeInstPathIsLeft: bool[4], bridgeInstPathLen: int128, bridgeInstRoot: bytes32, bridgeBlkData: bytes32, bridgeBlkHash: bytes32, bridgeSignerPubkeys: bytes[528], bridgeSignerCount: int128, bridgeSignerSig: bytes32, bridgeSignerPaths: bytes32[64], bridgeSignerPathIsLeft: bool[64], bridgeSignerPathLen: int128) -> bool: constant
+    def instructionApproved(instHash: bytes32, beaconInstPath: bytes32[8], beaconInstPathIsLeft: bool[8], beaconInstPathLen: int128, beaconInstRoot: bytes32, beaconBlkData: bytes32, beaconBlkHash: bytes32, beaconSignerPubkeys: bytes[264], beaconSignerCount: int128, beaconSignerSig: bytes32, beaconSignerPaths: bytes32[24], beaconSignerPathIsLeft: bool[24], beaconSignerPathLen: int128, bridgeInstPath: bytes32[8], bridgeInstPathIsLeft: bool[8], bridgeInstPathLen: int128, bridgeInstRoot: bytes32, bridgeBlkData: bytes32, bridgeBlkHash: bytes32, bridgeSignerPubkeys: bytes[264], bridgeSignerCount: int128, bridgeSignerSig: bytes32, bridgeSignerPaths: bytes32[24], bridgeSignerPathIsLeft: bool[24], bridgeSignerPathLen: int128) -> bool: constant
 
 contract Erc20:
     def transfer(_to: address, _value: uint256) -> bool: modifying
@@ -9,12 +9,13 @@ contract Erc20:
 
 
 # All these constants must mimic incognity_proxy
-MAX_PATH: constant(uint256) = 4
-COMM_SIZE: constant(uint256) = 2 ** MAX_PATH
-TOTAL_PUBKEY: constant(uint256) = COMM_SIZE * MAX_PATH
+INST_LENGTH: constant(uint256) = 150
+INST_MAX_PATH: constant(uint256) = 8
+PUBKEY_MAX_PATH: constant(uint256) = 3
+COMM_SIZE: constant(uint256) = 2 ** PUBKEY_MAX_PATH
+PUBKEY_NODE: constant(uint256) = COMM_SIZE * PUBKEY_MAX_PATH
 PUBKEY_SIZE: constant(int128) = 33
 PUBKEY_LENGTH: constant(int128) = PUBKEY_SIZE * COMM_SIZE
-INST_LENGTH: constant(uint256) = 150
 INC_ADDRESS_LENGTH: constant(uint256) = 128
 
 ETH_TOKEN: constant(address) = 0x0000000000000000000000000000000000000000
@@ -71,8 +72,8 @@ def testExtract(a: bytes[INST_LENGTH]) -> (address, wei_value):
 @public
 def withdraw(
     inst: bytes[INST_LENGTH],
-    beaconInstPath: bytes32[MAX_PATH],
-    beaconInstPathIsLeft: bool[MAX_PATH],
+    beaconInstPath: bytes32[INST_MAX_PATH],
+    beaconInstPathIsLeft: bool[INST_MAX_PATH],
     beaconInstPathLen: int128,
     beaconInstRoot: bytes32,
     beaconBlkData: bytes32,
@@ -80,11 +81,11 @@ def withdraw(
     beaconSignerPubkeys: bytes[PUBKEY_LENGTH],
     beaconSignerCount: int128,
     beaconSignerSig: bytes32,
-    beaconSignerPaths: bytes32[TOTAL_PUBKEY],
-    beaconSignerPathIsLeft: bool[TOTAL_PUBKEY],
+    beaconSignerPaths: bytes32[PUBKEY_NODE],
+    beaconSignerPathIsLeft: bool[PUBKEY_NODE],
     beaconSignerPathLen: int128,
-    bridgeInstPath: bytes32[MAX_PATH],
-    bridgeInstPathIsLeft: bool[MAX_PATH],
+    bridgeInstPath: bytes32[INST_MAX_PATH],
+    bridgeInstPathIsLeft: bool[INST_MAX_PATH],
     bridgeInstPathLen: int128,
     bridgeInstRoot: bytes32,
     bridgeBlkData: bytes32,
@@ -92,8 +93,8 @@ def withdraw(
     bridgeSignerPubkeys: bytes[PUBKEY_LENGTH],
     bridgeSignerCount: int128,
     bridgeSignerSig: bytes32,
-    bridgeSignerPaths: bytes32[TOTAL_PUBKEY],
-    bridgeSignerPathIsLeft: bool[TOTAL_PUBKEY],
+    bridgeSignerPaths: bytes32[PUBKEY_NODE],
+    bridgeSignerPathIsLeft: bool[PUBKEY_NODE],
     bridgeSignerPathLen: int128
 ):
     type: uint256 = 0

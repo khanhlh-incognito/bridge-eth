@@ -13,10 +13,11 @@ import (
 	"github.com/incognitochain/bridge-eth/jsonresult"
 )
 
-const max_path = 4
-const comm_size = 1 << max_path
-const pubkey_length = comm_size * max_path
-const inst_size = 1 << max_path
+const inst_max_path = 8
+const pubkey_max_path = 3
+const comm_size = 1 << pubkey_max_path
+const pubkey_node = comm_size * pubkey_max_path
+const inst_size = 1 << pubkey_max_path
 const inst_length = 150
 
 type getProofResult struct {
@@ -28,8 +29,8 @@ type getProofResult struct {
 type decodedProof struct {
 	instruction []byte
 
-	beaconInstPath         [max_path][32]byte
-	beaconInstPathIsLeft   [max_path]bool
+	beaconInstPath         [inst_max_path][32]byte
+	beaconInstPathIsLeft   [inst_max_path]bool
 	beaconInstPathLen      *big.Int
 	beaconInstRoot         [32]byte
 	beaconBlkData          [32]byte
@@ -37,12 +38,12 @@ type decodedProof struct {
 	beaconSignerPubkeys    []byte
 	beaconSignerCount      *big.Int
 	beaconSignerSig        [32]byte
-	beaconSignerPaths      [pubkey_length][32]byte
-	beaconSignerPathIsLeft [pubkey_length]bool
+	beaconSignerPaths      [pubkey_node][32]byte
+	beaconSignerPathIsLeft [pubkey_node]bool
 	beaconSignerPathLen    *big.Int
 
-	bridgeInstPath         [max_path][32]byte
-	bridgeInstPathIsLeft   [max_path]bool
+	bridgeInstPath         [inst_max_path][32]byte
+	bridgeInstPathIsLeft   [inst_max_path]bool
 	bridgeInstPathLen      *big.Int
 	bridgeInstRoot         [32]byte
 	bridgeBlkData          [32]byte
@@ -50,8 +51,8 @@ type decodedProof struct {
 	bridgeSignerPubkeys    []byte
 	bridgeSignerCount      *big.Int
 	bridgeSignerSig        [32]byte
-	bridgeSignerPaths      [pubkey_length][32]byte
-	bridgeSignerPathIsLeft [pubkey_length]bool
+	bridgeSignerPaths      [pubkey_node][32]byte
+	bridgeSignerPathIsLeft [pubkey_node]bool
 	bridgeSignerPathLen    *big.Int
 }
 
@@ -73,7 +74,7 @@ func getBurnProof(txID string) string {
 	url := "http://127.0.0.1:9338"
 
 	if len(txID) == 0 {
-		txID = "28261e8a1e6b9999deed1d8f61adf68b06271744faeaa6d06825bcc34d18d055"
+		txID = "9f6b9c4de75da9e033ff632f0f2ffb9a48fb713998eee77aaa7fe7975cb635fd"
 	}
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 
@@ -105,8 +106,8 @@ func decodeProof(r *getProofResult) *decodedProof {
 	fmt.Printf("inst: %d %x\n", len(inst), inst)
 
 	beaconInstRoot := decode32(r.Result.BeaconInstRoot)
-	beaconInstPath := [max_path][32]byte{}
-	beaconInstPathIsLeft := [max_path]bool{}
+	beaconInstPath := [inst_max_path][32]byte{}
+	beaconInstPathIsLeft := [inst_max_path]bool{}
 	for i, path := range r.Result.BeaconInstPath {
 		beaconInstPath[i] = decode32(path)
 		beaconInstPathIsLeft[i] = r.Result.BeaconInstPathIsLeft[i]
@@ -126,8 +127,8 @@ func decodeProof(r *getProofResult) *decodedProof {
 	beaconSignerCount := big.NewInt(int64(len(r.Result.BeaconSignerPubkeys)))
 
 	beaconSignerSig := toByte32(decode(r.Result.BeaconSignerSig))
-	beaconSignerPaths := [pubkey_length][32]byte{}
-	beaconSignerPathIsLeft := [pubkey_length]bool{}
+	beaconSignerPaths := [pubkey_node][32]byte{}
+	beaconSignerPathIsLeft := [pubkey_node]bool{}
 	for i, fullPath := range r.Result.BeaconSignerPaths {
 		for j, node := range fullPath {
 			k := i*len(fullPath) + j
@@ -139,8 +140,8 @@ func decodeProof(r *getProofResult) *decodedProof {
 
 	// For bridge
 	bridgeInstRoot := decode32(r.Result.BridgeInstRoot)
-	bridgeInstPath := [max_path][32]byte{}
-	bridgeInstPathIsLeft := [max_path]bool{}
+	bridgeInstPath := [inst_max_path][32]byte{}
+	bridgeInstPathIsLeft := [inst_max_path]bool{}
 	for i, path := range r.Result.BridgeInstPath {
 		bridgeInstPath[i] = decode32(path)
 		bridgeInstPathIsLeft[i] = r.Result.BridgeInstPathIsLeft[i]
@@ -159,8 +160,8 @@ func decodeProof(r *getProofResult) *decodedProof {
 	bridgeSignerCount := big.NewInt(int64(len(r.Result.BridgeSignerPubkeys)))
 
 	bridgeSignerSig := toByte32(decode(r.Result.BridgeSignerSig))
-	bridgeSignerPaths := [pubkey_length][32]byte{}
-	bridgeSignerPathIsLeft := [pubkey_length]bool{}
+	bridgeSignerPaths := [pubkey_node][32]byte{}
+	bridgeSignerPathIsLeft := [pubkey_node]bool{}
 	for i, fullPath := range r.Result.BridgeSignerPaths {
 		for j, node := range fullPath {
 			k := i*len(fullPath) + j

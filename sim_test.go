@@ -63,6 +63,7 @@ func setup(beaconCommRoot, bridgeCommRoot [32]byte) (*Platform, error) {
 	p.inc = inc
 	p.incAddr = incognitoAddr
 	fmt.Printf("deployed bridge, addr: %x\n", incognitoAddr)
+	// printReceipt(sim, tx)
 
 	vaultAddr, _, vault, err := vault.DeployVault(auth, sim, incognitoAddr)
 	if err != nil {
@@ -73,6 +74,7 @@ func setup(beaconCommRoot, bridgeCommRoot [32]byte) (*Platform, error) {
 	p.vault = vault
 	p.vaultAddr = vaultAddr
 	fmt.Printf("deployed vault, addr: %x\n", vaultAddr)
+	// printReceipt(sim, tx)
 	return p, nil
 }
 
