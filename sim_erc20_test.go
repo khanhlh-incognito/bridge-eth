@@ -19,12 +19,12 @@ func TestSimulatedErc20(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sim, _, _, v, vAddr, token, _, err := setupWithErc20()
+	sim, _, _, v, vAddr, token, tokenAddr, err := setupWithErc20()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	oldBalance, newBalance, err := depositErc20(sim, token, vAddr, int64(1e9))
+	oldBalance, newBalance, err := depositErc20(sim, v, vAddr, token, tokenAddr, int64(1e9))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,6 +78,38 @@ func getBalanceErc20(token *erc20.Erc20, addr common.Address) *big.Int {
 }
 
 func depositErc20(
+	sim *backends.SimulatedBackend,
+	v *vault.Vault,
+	vAddr common.Address,
+	token *erc20.Erc20,
+	tokenAddr common.Address,
+	amount int64,
+) (*big.Int, *big.Int, error) {
+	initBalance := getBalanceErc20(token, vAddr)
+
+	// Approve
+	auth := bind.NewKeyedTransactor(genesisAcc.PrivateKey)
+	value := big.NewInt(int64(1e9))
+	tx, err := token.Approve(auth, vAddr, value)
+	if err != nil {
+		return nil, nil, err
+	}
+	sim.Commit()
+	printReceipt(sim, tx)
+
+	// Deposit
+	incAddr := "1Uv46Pu4pqBvxCcPw7MXhHfiAD5Rmi2xgEE7XB6eQurFAt4vSYvfyGn3uMMB1xnXDq9nRTPeiAZv5gRFCBDroRNsXJF1sxPSjNQtivuHk"
+	tx, err = v.DepositERC20(auth, tokenAddr, value, incAddr)
+	if err != nil {
+		return nil, nil, err
+	}
+	sim.Commit()
+	newBalance := getBalanceErc20(token, vAddr)
+	printReceipt(sim, tx)
+	return initBalance, newBalance, nil
+}
+
+func transferErc20(
 	sim *backends.SimulatedBackend,
 	token *erc20.Erc20,
 	to common.Address,

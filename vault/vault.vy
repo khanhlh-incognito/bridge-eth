@@ -5,7 +5,6 @@ contract Incognito_proxy:
 contract Erc20:
     def transfer(_to: address, _value: uint256) -> bool: modifying
     def transferFrom(_from: address, _to: address, _value: uint256) -> bool: modifying
-    def approve(_spender: address, _value: uint256) -> bool: modifying
     def balanceOf(arg0: address) -> uint256: constant
 
 
@@ -47,7 +46,7 @@ def deposit(incognito_address: string[INC_ADDRESS_LENGTH]):
 @public
 def depositERC20(token: address, amount: uint256, incognito_address: string[INC_ADDRESS_LENGTH]):
     assert amount <= 10 ** 18
-    assert Erc20(token).transferFrom(msg.sender, self, amount)
+    Erc20(token).transferFrom(msg.sender, self, amount)
     log.Deposit(token, incognito_address, amount)
 
 @constant
