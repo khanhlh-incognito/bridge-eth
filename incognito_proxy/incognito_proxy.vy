@@ -1,3 +1,5 @@
+MAX_RANGE: constant(uint256) = 2 ** 255
+
 INST_MAX_PATH: constant(uint256) = 8 # support up to 2 ** INST_MAX_PATH instructions per block
 
 PUBKEY_MAX_PATH: constant(uint256) = 3 # up to 2 ** PUBKEY_MAX_PATH signers
@@ -12,28 +14,56 @@ INST_LENGTH: constant(uint256) = 150
 # TODO: update to 2/3+1
 MIN_SIGN: constant(uint256) = 2
 
+struct Committee:
+    Pubkeys: bytes32
+    PrevBlk: uint256
+
 SwapBeaconCommittee: event({newCommitteeRoot: bytes32})
 SwapBridgeCommittee: event({newCommitteeRoot: bytes32})
 
+# Debug events
 NotifyString: event({content: string[120]})
 NotifyBytes32: event({content: bytes32})
 NotifyBool: event({content: bool})
 NotifyUint256: event({content: uint256})
 
-beaconCommRoot: public(bytes32)
-bridgeCommRoot: public(bytes32)
+beaconCommRoot: public(map(uint256, Committee))
+bridgeCommRoot: public(map(uint256, Committee))
+latestBeaconBlk: public(uint256)
+latestBridgeBlk: public(uint256)
 
 @public
 def __init__(_beaconCommRoot: bytes32, _bridgeCommRoot: bytes32):
-    self.beaconCommRoot = _beaconCommRoot
-    self.bridgeCommRoot = _bridgeCommRoot
+    self.beaconCommRoot[0] = Committee({Pubkeys: _beaconCommRoot, PrevBlk: 0})
+    self.bridgeCommRoot[0] = Committee({Pubkeys: _bridgeCommRoot, PrevBlk: 0})
 
 @constant
 @public
-def parseSwapInst(inst: bytes[INST_LENGTH]) -> (uint256, bytes32):
+def parseSwapInst(inst: bytes[INST_LENGTH]) -> (uint256, uint256, bytes32):
     type: uint256 = convert(slice(inst, start=0, len=3), uint256)
-    newCommRoot: bytes32 = convert(slice(inst, start=3, len=32), bytes32)
-    return type, newCommRoot
+    height: uint256 = extract32(inst, 3, type=uint256)
+    newCommRoot: bytes32 = convert(slice(inst, start=35, len=32), bytes32)
+    return type, height, newCommRoot
+
+@constant
+@public
+def findCommRoot(beaconHeight: uint256, bridgeHeight: uint256) -> (bytes32, bytes32):
+    beacon: bytes32
+    height: uint256 = self.latestBeaconBlk
+    for i in range(MAX_RANGE):
+        if height <= beaconHeight:
+            beacon = self.beaconCommRoot[height].Pubkeys
+            break
+        height = self.beaconCommRoot[height].PrevBlk
+
+    bridge: bytes32
+    height = self.latestBridgeBlk
+    for i in range(MAX_RANGE):
+        if height <= bridgeHeight:
+            bridge = self.bridgeCommRoot[height].Pubkeys
+            break
+        height = self.bridgeCommRoot[height].PrevBlk
+    return beacon, bridge
 
 @public
 def notifyPls(v: bytes32):
@@ -141,6 +171,7 @@ def verifyInst(
 @public
 def instructionApproved(
     instHash: bytes32,
+    beaconHeight: uint256,
     beaconInstPath: bytes32[INST_MAX_PATH],
     beaconInstPathIsLeft: bool[INST_MAX_PATH],
     beaconInstPathLen: int128,
@@ -153,6 +184,7 @@ def instructionApproved(
     beaconSignerPaths: bytes32[PUBKEY_NODE],
     beaconSignerPathIsLeft: bool[PUBKEY_NODE],
     beaconSignerPathLen: int128,
+    bridgeHeight: uint256,
     bridgeInstPath: bytes32[INST_MAX_PATH],
     bridgeInstPathIsLeft: bool[INST_MAX_PATH],
     bridgeInstPathLen: int128,
@@ -175,9 +207,14 @@ def instructionApproved(
         # log.NotifyBytes32(blk)
         return False
 
+    # Find committees signed this instruction
+    beacon: bytes32
+    bridge: bytes32
+    beacon, bridge = self.findCommRoot(beaconHeight, bridgeHeight)
+
     # Check that inst is in beacon block
     if not self.verifyInst(
-        self.beaconCommRoot,
+        beacon,
         instHash,
         beaconInstPath,
         beaconInstPathIsLeft,
@@ -202,7 +239,7 @@ def instructionApproved(
 
     # Check that inst is in bridge block
     if not self.verifyInst(
-        self.bridgeCommRoot,
+        bridge,
         instHash,
         bridgeInstPath,
         bridgeInstPathIsLeft,
@@ -252,9 +289,23 @@ def swapCommittee(
     # Check if beaconInstRoot is in block with hash beaconBlkHash
     instHash: bytes32 = keccak256(inst)
 
+    # Parse instruction and check metadata
+    type: uint256
+    startHeight: uint256
+    newCommRoot: bytes32
+    type, startHeight, newCommRoot = self.parseSwapInst(inst)
+    log.NotifyUint256(startHeight)
+    if type == 3616817: # Metadata type and shardID of swap beacon
+        assert startHeight > self.latestBeaconBlk
+    elif type == 3617073:
+        assert startHeight > self.latestBridgeBlk
+    else:
+        assert False
+
     # Only swap if instruction is approved
     if not self.instructionApproved(
         instHash,
+        self.latestBeaconBlk,
         beaconInstPath,
         beaconInstPathIsLeft,
         beaconInstPathLen,
@@ -267,6 +318,7 @@ def swapCommittee(
         beaconSignerPaths,
         beaconSignerPathIsLeft,
         beaconSignerPathLen,
+        self.latestBridgeBlk,
         bridgeInstPath,
         bridgeInstPathIsLeft,
         bridgeInstPathLen,
@@ -282,16 +334,15 @@ def swapCommittee(
     ):
         return False
 
-    # Update beacon committee merkle root
-    type: uint256
-    newCommRoot: bytes32
-    type, newCommRoot = self.parseSwapInst(inst)
+    # Swap committee
     if type == 3616817: # Metadata type and shardID of swap beacon
-        self.beaconCommRoot = newCommRoot
+        self.beaconCommRoot[startHeight] = Committee({Pubkeys: newCommRoot, PrevBlk: self.latestBeaconBlk})
+        self.latestBeaconBlk = startHeight
         log.NotifyString("updated beacon committee")
         log.SwapBeaconCommittee(newCommRoot)
     elif type == 3617073:
-        self.bridgeCommRoot = newCommRoot
+        self.bridgeCommRoot[startHeight] = Committee({Pubkeys: newCommRoot, PrevBlk: self.latestBridgeBlk})
+        self.latestBridgeBlk = startHeight
         log.NotifyString("updated bridge committee")
         log.SwapBridgeCommittee(newCommRoot)
 
