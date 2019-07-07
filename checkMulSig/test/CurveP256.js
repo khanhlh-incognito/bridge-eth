@@ -1,12 +1,12 @@
 const Curve = artifacts.require('CurveP256.sol');
-
-contract("CurveP256", (accounts) => {
-    const root = accounts[0] 
+let c;
+contract("CurveP256", () => {
+    // const root = accounts[0];
     before(async() => {
        
         // function checkMulSig(bytes memory listCompPk, uint256[] memory xPks, uint256[] memory yPks, uint[] memory idxRs,
   //uint[] memory idxSigs, uint256 xR, uint256 yR, bytes memory bytesR, uint256 sig, bytes memory mess)
-        c = await constant.deployed()
+        c = await Curve.deployed()
     })
     describe('TestMulSig', () => {
         it('Test total gas', async() => {
