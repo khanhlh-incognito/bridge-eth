@@ -105,22 +105,11 @@ func TestERC20Approve(t *testing.T) {
 }
 
 func TestGetAllowance(t *testing.T) {
-	privKey, client, err := connect()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer client.Close()
+	// Get contract instances
+	privKey, _, vaultAddr, token, _ := setupERC20Test(t)
 
-	// ERC20 token
-	tokenAddr := common.HexToAddress(TokenAddress)
-	token, err := erc20.NewErc20(tokenAddr, client)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Approve
+	// Allowance
 	userAddr := crypto.PubkeyToAddress(privKey.PublicKey)
-	vaultAddr := common.HexToAddress(VaultAddress)
 	allow, err := token.Allowance(nil, userAddr, vaultAddr)
 	if err != nil {
 		t.Fatal(err)
