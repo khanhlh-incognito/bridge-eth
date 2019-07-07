@@ -140,6 +140,8 @@ def verifyInst(
     # Check if inst is in merkle tree with root instRoot
     if not self.instructionInMerkleTree(instHash, instRoot, instPath, instPathIsLeft, instPathLen):
         # log.NotifyString("instruction is not in merkle tree")
+        # log.NotifyBytes32(instHash)
+        # log.NotifyBytes32(instRoot)
         return False
 
     # TODO: Check if signerSig is valid
@@ -170,7 +172,7 @@ def verifyInst(
 @constant
 @public
 def instructionApproved(
-    instHash: bytes32,
+    beaconInstHash: bytes32,
     beaconHeight: uint256,
     beaconInstPath: bytes32[INST_MAX_PATH],
     beaconInstPathIsLeft: bool[INST_MAX_PATH],
@@ -184,6 +186,7 @@ def instructionApproved(
     beaconSignerPaths: bytes32[PUBKEY_NODE],
     beaconSignerPathIsLeft: bool[PUBKEY_NODE],
     beaconSignerPathLen: int128,
+    bridgeInstHash: bytes32,
     bridgeHeight: uint256,
     bridgeInstPath: bytes32[INST_MAX_PATH],
     bridgeInstPathIsLeft: bool[INST_MAX_PATH],
@@ -203,7 +206,7 @@ def instructionApproved(
         # log.NotifyString("instruction merkle root is not in beacon block")
         # log.NotifyBytes32(beaconInstRoot)
         # log.NotifyBytes32(beaconBlkData)
-        # log.NotifyBytes32(instHash)
+        # log.NotifyBytes32(beaconInstHash)
         # log.NotifyBytes32(blk)
         return False
 
@@ -211,11 +214,13 @@ def instructionApproved(
     beacon: bytes32
     bridge: bytes32
     beacon, bridge = self.findCommRoot(beaconHeight, bridgeHeight)
+    # log.NotifyBytes32(beacon)
+    # log.NotifyBytes32(bridge)
 
     # Check that inst is in beacon block
     if not self.verifyInst(
         beacon,
-        instHash,
+        beaconInstHash,
         beaconInstPath,
         beaconInstPathIsLeft,
         beaconInstPathLen,
@@ -240,7 +245,7 @@ def instructionApproved(
     # Check that inst is in bridge block
     if not self.verifyInst(
         bridge,
-        instHash,
+        bridgeInstHash,
         bridgeInstPath,
         bridgeInstPathIsLeft,
         bridgeInstPathLen,
@@ -318,6 +323,7 @@ def swapCommittee(
         beaconSignerPaths,
         beaconSignerPathIsLeft,
         beaconSignerPathLen,
+        instHash,
         self.latestBridgeBlk,
         bridgeInstPath,
         bridgeInstPathIsLeft,

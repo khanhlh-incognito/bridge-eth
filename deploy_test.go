@@ -47,6 +47,7 @@ func TestBurn(t *testing.T) {
 		auth,
 		proof.instruction,
 
+		proof.beaconHeight,
 		proof.beaconInstPath,
 		proof.beaconInstPathIsLeft,
 		proof.beaconInstPathLen,
@@ -60,6 +61,7 @@ func TestBurn(t *testing.T) {
 		proof.beaconSignerPathIsLeft,
 		proof.beaconSignerPathLen,
 
+		proof.bridgeHeight,
 		proof.bridgeInstPath,
 		proof.bridgeInstPathIsLeft,
 		proof.bridgeInstPathLen,
