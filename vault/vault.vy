@@ -1,6 +1,6 @@
 # External Contracts
 contract Incognito_proxy:
-    def instructionApproved(instHash: bytes32, beaconInstPath: bytes32[8], beaconInstPathIsLeft: bool[8], beaconInstPathLen: int128, beaconInstRoot: bytes32, beaconBlkData: bytes32, beaconBlkHash: bytes32, beaconSignerPubkeys: bytes[264], beaconSignerCount: int128, beaconSignerSig: bytes32, beaconSignerPaths: bytes32[24], beaconSignerPathIsLeft: bool[24], beaconSignerPathLen: int128, bridgeInstPath: bytes32[8], bridgeInstPathIsLeft: bool[8], bridgeInstPathLen: int128, bridgeInstRoot: bytes32, bridgeBlkData: bytes32, bridgeBlkHash: bytes32, bridgeSignerPubkeys: bytes[264], bridgeSignerCount: int128, bridgeSignerSig: bytes32, bridgeSignerPaths: bytes32[24], bridgeSignerPathIsLeft: bool[24], bridgeSignerPathLen: int128) -> bool: constant
+    def instructionApproved(beaconInstHash: bytes32, beaconHeight: uint256, beaconInstPath: bytes32[8], beaconInstPathIsLeft: bool[8], beaconInstPathLen: int128, beaconInstRoot: bytes32, beaconBlkData: bytes32, beaconBlkHash: bytes32, beaconSignerPubkeys: bytes[264], beaconSignerCount: int128, beaconSignerSig: bytes32, beaconSignerPaths: bytes32[24], beaconSignerPathIsLeft: bool[24], beaconSignerPathLen: int128, bridgeInstHash: bytes32, bridgeHeight: uint256, bridgeInstPath: bytes32[8], bridgeInstPathIsLeft: bool[8], bridgeInstPathLen: int128, bridgeInstRoot: bytes32, bridgeBlkData: bytes32, bridgeBlkHash: bytes32, bridgeSignerPubkeys: bytes[264], bridgeSignerCount: int128, bridgeSignerSig: bytes32, bridgeSignerPaths: bytes32[24], bridgeSignerPathIsLeft: bool[24], bridgeSignerPathLen: int128) -> bool: constant
 
 contract Erc20:
     def transfer(_to: address, _value: uint256) -> bool: modifying
@@ -72,6 +72,7 @@ def testExtract(a: bytes[INST_LENGTH]) -> (address, wei_value):
 @public
 def withdraw(
     inst: bytes[INST_LENGTH],
+    beaconHeight: uint256,
     beaconInstPath: bytes32[INST_MAX_PATH],
     beaconInstPathIsLeft: bool[INST_MAX_PATH],
     beaconInstPathLen: int128,
@@ -84,6 +85,7 @@ def withdraw(
     beaconSignerPaths: bytes32[PUBKEY_NODE],
     beaconSignerPathIsLeft: bool[PUBKEY_NODE],
     beaconSignerPathLen: int128,
+    bridgeHeight: uint256,
     bridgeInstPath: bytes32[INST_MAX_PATH],
     bridgeInstPathIsLeft: bool[INST_MAX_PATH],
     bridgeInstPathLen: int128,
@@ -119,11 +121,14 @@ def withdraw(
 
     # Each instruction can only by redeemed once
     instHash: bytes32 = keccak256(inst)
+    beaconInstHash: bytes32 = keccak256(concat(inst, convert(beaconHeight, bytes32)))
+    bridgeInstHash: bytes32 = keccak256(concat(inst, convert(bridgeHeight, bytes32)))
     assert self.withdrawed[instHash] == False
 
     # Check if instruction is approved on Incognito
     assert self.incognito.instructionApproved(
-        instHash,
+        beaconInstHash,
+        beaconHeight,
         beaconInstPath,
         beaconInstPathIsLeft,
         beaconInstPathLen,
@@ -136,6 +141,8 @@ def withdraw(
         beaconSignerPaths,
         beaconSignerPathIsLeft,
         beaconSignerPathLen,
+        bridgeInstHash,
+        bridgeHeight,
         bridgeInstPath,
         bridgeInstPathIsLeft,
         bridgeInstPathLen,

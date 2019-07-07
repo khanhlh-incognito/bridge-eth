@@ -27,7 +27,9 @@ type getProofResult struct {
 }
 
 type decodedProof struct {
-	instruction []byte
+	instruction  []byte
+	beaconHeight *big.Int
+	bridgeHeight *big.Int
 
 	beaconInstPath         [inst_max_path][32]byte
 	beaconInstPathIsLeft   [inst_max_path]bool
@@ -74,7 +76,7 @@ func getBurnProof(txID string) string {
 	url := "http://127.0.0.1:9338"
 
 	if len(txID) == 0 {
-		txID = "9f6b9c4de75da9e033ff632f0f2ffb9a48fb713998eee77aaa7fe7975cb635fd"
+		txID = "2a0cf9a94a60a2aba82f17e331d4158695cd4943b36eab707bd774dffd6086a6"
 	}
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 
@@ -104,6 +106,10 @@ func getBurnProof(txID string) string {
 func decodeProof(r *getProofResult) *decodedProof {
 	inst := decode(r.Result.Instruction)
 	fmt.Printf("inst: %d %x\n", len(inst), inst)
+
+	// Block heights
+	beaconHeight := big.NewInt(0).SetBytes(decode(r.Result.BeaconHeight))
+	bridgeHeight := big.NewInt(0).SetBytes(decode(r.Result.BridgeHeight))
 
 	beaconInstRoot := decode32(r.Result.BeaconInstRoot)
 	beaconInstPath := [inst_max_path][32]byte{}
@@ -173,6 +179,7 @@ func decodeProof(r *getProofResult) *decodedProof {
 	return &decodedProof{
 		instruction: inst,
 
+		beaconHeight:           beaconHeight,
 		beaconInstPath:         beaconInstPath,
 		beaconInstPathIsLeft:   beaconInstPathIsLeft,
 		beaconInstPathLen:      beaconInstPathLen,
@@ -186,6 +193,7 @@ func decodeProof(r *getProofResult) *decodedProof {
 		beaconSignerPathIsLeft: beaconSignerPathIsLeft,
 		beaconSignerPathLen:    beaconSignerPathLen,
 
+		bridgeHeight:           bridgeHeight,
 		bridgeInstPath:         bridgeInstPath,
 		bridgeInstPathIsLeft:   bridgeInstPathIsLeft,
 		bridgeInstPathLen:      bridgeInstPathLen,
