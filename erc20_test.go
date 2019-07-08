@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/incognitochain/bridge-eth/erc20"
+	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
 )
 
@@ -23,12 +24,12 @@ func TestERC20Burn(t *testing.T) {
 	}
 
 	// Get contract instance
-	privKey, v, _, _, _ := setupERC20Test(t)
+	privKey, c := connectAndInstantiate(t)
 
 	// Burn
 	auth := bind.NewKeyedTransactor(privKey)
 	auth.GasLimit = 6000000
-	tx, err := v.Withdraw(
+	tx, err := c.v.Withdraw(
 		auth,
 		proof.instruction,
 
@@ -69,38 +70,38 @@ func TestERC20Burn(t *testing.T) {
 
 func TestERC20Lock(t *testing.T) {
 	// Get contract instance
-	privKey, v, vaultAddr, token, tokenAddr := setupERC20Test(t)
+	privKey, c := connectAndInstantiate(t)
 
 	// Approve
 	amount := int64(1e9)
-	err := approveERC20(privKey, vaultAddr, token, amount)
+	err := approveERC20(privKey, c.vAddr, c.token, amount)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Deposit
-	if err := depositERC20(privKey, v, tokenAddr, amount); err != nil {
+	if err := depositERC20(privKey, c.v, c.tokenAddr, amount); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestERC20Deposit(t *testing.T) {
-	privKey, v, _, _, tokenAddr := setupERC20Test(t)
+	privKey, c := connectAndInstantiate(t)
 
 	// Deposit
 	amount := int64(1e9)
-	if err := depositERC20(privKey, v, tokenAddr, amount); err != nil {
+	if err := depositERC20(privKey, c.v, c.tokenAddr, amount); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestERC20Approve(t *testing.T) {
 	// Get contract instances
-	privKey, _, vaultAddr, token, _ := setupERC20Test(t)
+	privKey, c := connectAndInstantiate(t)
 
 	// Approve
 	amount := int64(1e9)
-	err := approveERC20(privKey, vaultAddr, token, amount)
+	err := approveERC20(privKey, c.vAddr, c.token, amount)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,19 +109,19 @@ func TestERC20Approve(t *testing.T) {
 
 func TestGetAllowance(t *testing.T) {
 	// Get contract instances
-	privKey, _, vaultAddr, token, _ := setupERC20Test(t)
+	privKey, c := connectAndInstantiate(t)
 
 	// Allowance
 	userAddr := crypto.PubkeyToAddress(privKey.PublicKey)
-	allow, err := token.Allowance(nil, userAddr, vaultAddr)
+	allow, err := c.token.Allowance(nil, userAddr, c.vAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fmt.Printf("allowance: %d\n", allow)
 
-	bal, _ := token.BalanceOf(nil, userAddr)
+	bal, _ := c.token.BalanceOf(nil, userAddr)
 	fmt.Printf("balanceOf owner: %d\n", bal)
-	bal, _ = token.BalanceOf(nil, vaultAddr)
+	bal, _ = c.token.BalanceOf(nil, c.vAddr)
 	fmt.Printf("balanceOf spender: %d\n", bal)
 }
 
@@ -145,18 +146,18 @@ func TestERC20Deploy(t *testing.T) {
 	fmt.Printf("addr: %x\n", addr[:])
 }
 
-func setupERC20Test(t *testing.T) (*ecdsa.PrivateKey, *vault.Vault, common.Address, *erc20.Erc20, common.Address) {
+func connectAndInstantiate(t *testing.T) (*ecdsa.PrivateKey, *contracts) {
 	privKey, client, err := connect()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Get contract instance
-	v, vaultAddr, token, tokenAddr, err := instantiate(client)
+	c, err := instantiate(client)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return privKey, v, vaultAddr, token, tokenAddr
+	return privKey, c
 }
 
 func depositERC20(
@@ -166,6 +167,7 @@ func depositERC20(
 	amount int64,
 ) error {
 	auth := bind.NewKeyedTransactor(privKey)
+	auth.GasLimit = 1000000
 	tx, err := v.DepositERC20(auth, tokenAddr, big.NewInt(amount), IncPaymentAddr)
 	if err != nil {
 		return err
@@ -192,19 +194,37 @@ func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token *erc2
 	return nil
 }
 
-func instantiate(client *ethclient.Client) (*vault.Vault, common.Address, *erc20.Erc20, common.Address, error) {
+type contracts struct {
+	v         *vault.Vault
+	vAddr     common.Address
+	inc       *incognito_proxy.IncognitoProxy
+	incAddr   common.Address
+	token     *erc20.Erc20
+	tokenAddr common.Address
+}
+
+func instantiate(client *ethclient.Client) (*contracts, error) {
 	// Get contract instance
-	vaultAddr := common.HexToAddress(VaultAddress)
-	c, err := vault.NewVault(vaultAddr, client)
+	var err error
+	c := &contracts{}
+	c.incAddr = common.HexToAddress(IncognitoProxyAddress)
+	c.inc, err = incognito_proxy.NewIncognitoProxy(c.incAddr, client)
 	if err != nil {
-		return nil, common.Address{}, nil, common.Address{}, err
+		return nil, err
+	}
+
+	// Vault
+	c.vAddr = common.HexToAddress(VaultAddress)
+	c.v, err = vault.NewVault(c.vAddr, client)
+	if err != nil {
+		return nil, err
 	}
 
 	// ERC20 token
-	tokenAddr := common.HexToAddress(TokenAddress)
-	token, err := erc20.NewErc20(tokenAddr, client)
+	c.tokenAddr = common.HexToAddress(TokenAddress)
+	c.token, err = erc20.NewErc20(c.tokenAddr, client)
 	if err != nil {
-		return nil, common.Address{}, nil, common.Address{}, err
+		return nil, err
 	}
-	return c, vaultAddr, token, tokenAddr, nil
+	return c, nil
 }

@@ -107,6 +107,44 @@ func TestDeposit(t *testing.T) {
 	fmt.Printf("deposited, txHash: %x\n", txHash[:])
 }
 
+func TestGetCommittee(t *testing.T) {
+	_, c := connectAndInstantiate(t)
+	beaconBlk, _ := c.inc.LatestBeaconBlk(nil)
+	for {
+		pubkeys, err := c.inc.BeaconCommRootPubkeys(nil, beaconBlk)
+		if err != nil {
+			t.Fatal(err)
+		}
+		prevBeaconBlk, err := c.inc.BeaconCommRootPrevBlk(nil, beaconBlk)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Printf("beaconBlk: %d %x\n", beaconBlk, pubkeys)
+
+		if beaconBlk.Uint64() == 0 {
+			break
+		}
+		beaconBlk = prevBeaconBlk
+	}
+	bridgeBlk, _ := c.inc.LatestBridgeBlk(nil)
+	for {
+		pubkeys, err := c.inc.BridgeCommRootPubkeys(nil, beaconBlk)
+		if err != nil {
+			t.Fatal(err)
+		}
+		prevBridgeBlk, err := c.inc.BridgeCommRootPrevBlk(nil, bridgeBlk)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Printf("bridgeBlk: %d %x\n", bridgeBlk, pubkeys)
+
+		if bridgeBlk.Uint64() == 0 {
+			break
+		}
+		bridgeBlk = prevBridgeBlk
+	}
+}
+
 func TestDeployProxyAndVault(t *testing.T) {
 	privKey, client, err := connect()
 	if err != nil {
@@ -163,7 +201,7 @@ func getCommittee() ([32]byte, [32]byte, error) {
 	copy(beaconCommRoot[:], r)
 	fmt.Printf("beaconCommRoot: %x\n", beaconCommRoot[:])
 
-	r, err = hex.DecodeString("bf7420ad8e1cf089575a77a6c04788ece2268d43adcdbd37c1e28b9628f8ab1a")
+	r, err = hex.DecodeString("7e0e95ce7b526df6c144fc0f9e9d27f8b13fc1892f40ed6e0da3ba9d9f64dbee")
 	if err != nil {
 		return emptyArr, emptyArr, err
 	}
