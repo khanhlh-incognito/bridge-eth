@@ -20,8 +20,8 @@ INC_ADDRESS_LENGTH: constant(uint256) = 128
 
 ETH_TOKEN: constant(address) = 0x0000000000000000000000000000000000000000
 
-Deposit: event({_token: indexed(address), _incognito_address: string[INC_ADDRESS_LENGTH], _amount: wei_value})
-Withdraw: event({_token: indexed(address), _to: indexed(address), _amount: wei_value})
+Deposit: event({_token: address, _incognito_address: string[INC_ADDRESS_LENGTH], _amount: wei_value})
+Withdraw: event({_token: address, _to: address, _amount: wei_value})
 
 
 NotifyString: event({content: string[128]})
