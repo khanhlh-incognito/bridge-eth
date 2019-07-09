@@ -14,11 +14,7 @@ import (
 )
 
 const inst_max_path = 8
-const pubkey_max_path = 3
-const comm_size = 1 << pubkey_max_path
-const pubkey_node = comm_size * pubkey_max_path
-const inst_size = 1 << pubkey_max_path
-const inst_length = 150
+const pubkey_size = 33
 
 type getProofResult struct {
 	Result jsonresult.GetInstructionProof
@@ -31,31 +27,21 @@ type decodedProof struct {
 	beaconHeight *big.Int
 	bridgeHeight *big.Int
 
-	beaconInstPath         [inst_max_path][32]byte
-	beaconInstPathIsLeft   [inst_max_path]bool
-	beaconInstPathLen      *big.Int
-	beaconInstRoot         [32]byte
-	beaconBlkData          [32]byte
-	beaconBlkHash          [32]byte
-	beaconSignerPubkeys    []byte
-	beaconSignerCount      *big.Int
-	beaconSignerSig        [32]byte
-	beaconSignerPaths      [pubkey_node][32]byte
-	beaconSignerPathIsLeft [pubkey_node]bool
-	beaconSignerPathLen    *big.Int
+	beaconInstPath       [inst_max_path][32]byte
+	beaconInstPathIsLeft [inst_max_path]bool
+	beaconInstPathLen    *big.Int
+	beaconInstRoot       [32]byte
+	beaconBlkData        [32]byte
+	beaconBlkHash        [32]byte
+	beaconSignerSig      [32]byte
 
-	bridgeInstPath         [inst_max_path][32]byte
-	bridgeInstPathIsLeft   [inst_max_path]bool
-	bridgeInstPathLen      *big.Int
-	bridgeInstRoot         [32]byte
-	bridgeBlkData          [32]byte
-	bridgeBlkHash          [32]byte
-	bridgeSignerPubkeys    []byte
-	bridgeSignerCount      *big.Int
-	bridgeSignerSig        [32]byte
-	bridgeSignerPaths      [pubkey_node][32]byte
-	bridgeSignerPathIsLeft [pubkey_node]bool
-	bridgeSignerPathLen    *big.Int
+	bridgeInstPath       [inst_max_path][32]byte
+	bridgeInstPathIsLeft [inst_max_path]bool
+	bridgeInstPathLen    *big.Int
+	bridgeInstRoot       [32]byte
+	bridgeBlkData        [32]byte
+	bridgeBlkHash        [32]byte
+	bridgeSignerSig      [32]byte
 }
 
 func getAndDecodeBurnProof(txID string) (*decodedProof, error) {
@@ -126,23 +112,7 @@ func decodeProof(r *getProofResult) *decodedProof {
 	fmt.Printf("expected beaconBlkHash: %x\n", keccak256(beaconBlkData[:], beaconInstRoot[:]))
 	fmt.Printf("beaconBlkHash: %x\n\n", beaconBlkHash)
 
-	beaconSignerPubkeys := []byte{}
-	for _, signer := range r.Result.BeaconSignerPubkeys {
-		beaconSignerPubkeys = append(beaconSignerPubkeys, decode(signer)...)
-	}
-	beaconSignerCount := big.NewInt(int64(len(r.Result.BeaconSignerPubkeys)))
-
 	beaconSignerSig := toByte32(decode(r.Result.BeaconSignerSig))
-	beaconSignerPaths := [pubkey_node][32]byte{}
-	beaconSignerPathIsLeft := [pubkey_node]bool{}
-	for i, fullPath := range r.Result.BeaconSignerPaths {
-		for j, node := range fullPath {
-			k := i*len(fullPath) + j
-			beaconSignerPaths[k] = decode32(node)
-			beaconSignerPathIsLeft[k] = r.Result.BeaconSignerPathIsLeft[i][j]
-		}
-	}
-	beaconSignerPathLen := big.NewInt(int64(len(r.Result.BeaconSignerPaths[0])))
 
 	// For bridge
 	bridgeInstRoot := decode32(r.Result.BridgeInstRoot)
@@ -159,53 +129,28 @@ func decodeProof(r *getProofResult) *decodedProof {
 	bridgeBlkHash := toByte32(decode(r.Result.BridgeBlkHash))
 	// fmt.Printf("bridgeBlkHash: %x\n", bridgeBlkHash)
 
-	bridgeSignerPubkeys := []byte{}
-	for _, signer := range r.Result.BridgeSignerPubkeys {
-		bridgeSignerPubkeys = append(bridgeSignerPubkeys, decode(signer)...)
-	}
-	bridgeSignerCount := big.NewInt(int64(len(r.Result.BridgeSignerPubkeys)))
-
 	bridgeSignerSig := toByte32(decode(r.Result.BridgeSignerSig))
-	bridgeSignerPaths := [pubkey_node][32]byte{}
-	bridgeSignerPathIsLeft := [pubkey_node]bool{}
-	for i, fullPath := range r.Result.BridgeSignerPaths {
-		for j, node := range fullPath {
-			k := i*len(fullPath) + j
-			bridgeSignerPaths[k] = decode32(node)
-			bridgeSignerPathIsLeft[k] = r.Result.BridgeSignerPathIsLeft[i][j]
-		}
-	}
-	bridgeSignerPathLen := big.NewInt(int64(len(r.Result.BridgeSignerPaths[0])))
+
 	return &decodedProof{
 		instruction: inst,
 
-		beaconHeight:           beaconHeight,
-		beaconInstPath:         beaconInstPath,
-		beaconInstPathIsLeft:   beaconInstPathIsLeft,
-		beaconInstPathLen:      beaconInstPathLen,
-		beaconInstRoot:         beaconInstRoot,
-		beaconBlkData:          beaconBlkData,
-		beaconBlkHash:          beaconBlkHash,
-		beaconSignerPubkeys:    beaconSignerPubkeys,
-		beaconSignerCount:      beaconSignerCount,
-		beaconSignerSig:        beaconSignerSig,
-		beaconSignerPaths:      beaconSignerPaths,
-		beaconSignerPathIsLeft: beaconSignerPathIsLeft,
-		beaconSignerPathLen:    beaconSignerPathLen,
+		beaconHeight:         beaconHeight,
+		beaconInstPath:       beaconInstPath,
+		beaconInstPathIsLeft: beaconInstPathIsLeft,
+		beaconInstPathLen:    beaconInstPathLen,
+		beaconInstRoot:       beaconInstRoot,
+		beaconBlkData:        beaconBlkData,
+		beaconBlkHash:        beaconBlkHash,
+		beaconSignerSig:      beaconSignerSig,
 
-		bridgeHeight:           bridgeHeight,
-		bridgeInstPath:         bridgeInstPath,
-		bridgeInstPathIsLeft:   bridgeInstPathIsLeft,
-		bridgeInstPathLen:      bridgeInstPathLen,
-		bridgeInstRoot:         bridgeInstRoot,
-		bridgeBlkData:          bridgeBlkData,
-		bridgeBlkHash:          bridgeBlkHash,
-		bridgeSignerPubkeys:    bridgeSignerPubkeys,
-		bridgeSignerCount:      bridgeSignerCount,
-		bridgeSignerSig:        bridgeSignerSig,
-		bridgeSignerPaths:      bridgeSignerPaths,
-		bridgeSignerPathIsLeft: bridgeSignerPathIsLeft,
-		bridgeSignerPathLen:    bridgeSignerPathLen,
+		bridgeHeight:         bridgeHeight,
+		bridgeInstPath:       bridgeInstPath,
+		bridgeInstPathIsLeft: bridgeInstPathIsLeft,
+		bridgeInstPathLen:    bridgeInstPathLen,
+		bridgeInstRoot:       bridgeInstRoot,
+		bridgeBlkData:        bridgeBlkData,
+		bridgeBlkHash:        bridgeBlkHash,
+		bridgeSignerSig:      bridgeSignerSig,
 	}
 }
 

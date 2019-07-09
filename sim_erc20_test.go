@@ -45,12 +45,7 @@ func TestSimulatedErc20(t *testing.T) {
 		proof.beaconInstRoot,
 		proof.beaconBlkData,
 		proof.beaconBlkHash,
-		proof.beaconSignerPubkeys,
-		proof.beaconSignerCount,
 		proof.beaconSignerSig,
-		proof.beaconSignerPaths,
-		proof.beaconSignerPathIsLeft,
-		proof.beaconSignerPathLen,
 
 		proof.bridgeHeight,
 		proof.bridgeInstPath,
@@ -59,12 +54,7 @@ func TestSimulatedErc20(t *testing.T) {
 		proof.bridgeInstRoot,
 		proof.bridgeBlkData,
 		proof.bridgeBlkHash,
-		proof.bridgeSignerPubkeys,
-		proof.bridgeSignerCount,
 		proof.bridgeSignerSig,
-		proof.bridgeSignerPaths,
-		proof.bridgeSignerPathIsLeft,
-		proof.bridgeSignerPathLen,
 	)
 	if err != nil {
 		t.Fatal(err)

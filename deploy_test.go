@@ -54,12 +54,7 @@ func TestBurn(t *testing.T) {
 		proof.beaconInstRoot,
 		proof.beaconBlkData,
 		proof.beaconBlkHash,
-		proof.beaconSignerPubkeys,
-		proof.beaconSignerCount,
 		proof.beaconSignerSig,
-		proof.beaconSignerPaths,
-		proof.beaconSignerPathIsLeft,
-		proof.beaconSignerPathLen,
 
 		proof.bridgeHeight,
 		proof.bridgeInstPath,
@@ -68,12 +63,7 @@ func TestBurn(t *testing.T) {
 		proof.bridgeInstRoot,
 		proof.bridgeBlkData,
 		proof.bridgeBlkHash,
-		proof.bridgeSignerPubkeys,
-		proof.bridgeSignerCount,
 		proof.bridgeSignerSig,
-		proof.bridgeSignerPaths,
-		proof.bridgeSignerPathIsLeft,
-		proof.bridgeSignerPathLen,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -111,11 +101,11 @@ func TestGetCommittee(t *testing.T) {
 	_, c := connectAndInstantiate(t)
 	beaconBlk, _ := c.inc.LatestBeaconBlk(nil)
 	for {
-		pubkeys, err := c.inc.BeaconCommRootPubkeys(nil, beaconBlk)
+		pubkeys, err := c.inc.BeaconCommPubkeys(nil, beaconBlk)
 		if err != nil {
 			t.Fatal(err)
 		}
-		prevBeaconBlk, err := c.inc.BeaconCommRootPrevBlk(nil, beaconBlk)
+		prevBeaconBlk, err := c.inc.BeaconCommPrevBlk(nil, beaconBlk)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -128,11 +118,11 @@ func TestGetCommittee(t *testing.T) {
 	}
 	bridgeBlk, _ := c.inc.LatestBridgeBlk(nil)
 	for {
-		pubkeys, err := c.inc.BridgeCommRootPubkeys(nil, beaconBlk)
+		pubkeys, err := c.inc.BridgeCommPubkeys(nil, beaconBlk)
 		if err != nil {
 			t.Fatal(err)
 		}
-		prevBridgeBlk, err := c.inc.BridgeCommRootPrevBlk(nil, bridgeBlk)
+		prevBridgeBlk, err := c.inc.BridgeCommPrevBlk(nil, bridgeBlk)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -153,14 +143,14 @@ func TestDeployProxyAndVault(t *testing.T) {
 	defer client.Close()
 
 	// Genesis committee
-	beaconCommRoot, bridgeCommRoot, err := getCommittee()
+	beaconComm, bridgeComm, err := getCommittee()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
-	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, beaconCommRoot, bridgeCommRoot)
+	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, beaconComm, bridgeComm)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,22 +181,19 @@ func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
 	return privKey, client, nil
 }
 
-func getCommittee() ([32]byte, [32]byte, error) {
-	emptyArr := [32]byte{}
-	r, err := hex.DecodeString("72207d624ba3da378cd08466e8658a575a3706b70e20ceaa71611d9ff89e77bc")
-	if err != nil {
-		return emptyArr, emptyArr, err
+func getCommittee() ([]byte, []byte, error) {
+	beaconComm := []string{}
+	beacons := []byte{}
+	for _, p := range beaconComm {
+		pk, _ := hex.DecodeString(p)
+		beacons = append(beacons, pk...)
 	}
-	beaconCommRoot := [32]byte{}
-	copy(beaconCommRoot[:], r)
-	fmt.Printf("beaconCommRoot: %x\n", beaconCommRoot[:])
 
-	r, err = hex.DecodeString("7e0e95ce7b526df6c144fc0f9e9d27f8b13fc1892f40ed6e0da3ba9d9f64dbee")
-	if err != nil {
-		return emptyArr, emptyArr, err
+	bridgeComm := []string{}
+	bridges := []byte{}
+	for _, p := range bridgeComm {
+		pk, _ := hex.DecodeString(p)
+		bridges = append(bridges, pk...)
 	}
-	bridgeCommRoot := [32]byte{}
-	copy(bridgeCommRoot[:], r)
-	fmt.Printf("bridgeCommRoot: %x\n", bridgeCommRoot[:])
-	return beaconCommRoot, bridgeCommRoot, nil
+	return beacons, bridges, nil
 }
