@@ -19,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/incognitochain/bridge-eth/blockchain"
 	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
@@ -47,14 +46,14 @@ func init() {
 	auth = bind.NewKeyedTransactor(genesisAcc.PrivateKey)
 }
 
-func setup(beaconCommRoot, bridgeCommRoot [32]byte) (*Platform, error) {
+func setup(beaconComm, bridgeComm []byte) (*Platform, error) {
 	alloc := make(core.GenesisAlloc)
 	balance, _ := big.NewInt(1).SetString("100000000000000000000", 10) // 100 eth
 	alloc[auth.From] = core.GenesisAccount{Balance: balance}
 	sim := backends.NewSimulatedBackend(alloc, 6000000)
 	p := &Platform{sim: sim}
 
-	incognitoAddr, _, inc, err := incognito_proxy.DeployIncognitoProxy(auth, sim, beaconCommRoot, bridgeCommRoot)
+	incognitoAddr, _, inc, err := incognito_proxy.DeployIncognitoProxy(auth, sim, beaconComm, bridgeComm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy IncognitoProxy contract: %v", err)
 	}
@@ -119,25 +118,20 @@ func setupWithCommittee() (*Platform, error) {
 	}
 
 	// Genesis committee
-	beaconOldFlat := [][]byte{}
+	beaconOld := []byte{}
 	for i, val := range r.Result.BeaconCommittee {
 		pk, _, _ := base58.Base58Check{}.Decode(val)
 		fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
-		fmt.Printf("hash(pk[%d]): %x\n", i, keccak256(pk))
-		beaconOldFlat = append(beaconOldFlat, pk)
+		beaconOld = append(beaconOld, pk...)
 	}
-	beaconOldRoot := toByte32(blockchain.GetKeccak256MerkleRoot(beaconOldFlat))
-	fmt.Printf("beaconOldRoot: %x\n", beaconOldRoot[:])
 
-	bridgeOldFlat := [][]byte{}
+	bridgeOld := []byte{}
 	for _, val := range r.Result.ShardCommittee["1"] {
 		pk, _, _ := base58.Base58Check{}.Decode(val)
-		bridgeOldFlat = append(bridgeOldFlat, pk)
+		bridgeOld = append(bridgeOld, pk...)
 	}
-	bridgeOldRoot := toByte32(blockchain.GetKeccak256MerkleRoot(bridgeOldFlat))
-	fmt.Printf("bridgeOldRoot: %x\n", bridgeOldRoot[:])
 
-	return setup(beaconOldRoot, bridgeOldRoot)
+	return setup(beaconOld, bridgeOld)
 }
 
 type account struct {
@@ -255,10 +249,10 @@ func getBeaconSwapProof() string {
 }
 
 func TestSimulatedSwapBeacon(t *testing.T) {
-	// body := getBeaconSwapProof()
-	body := getBridgeSwapProof()
+	body := getBeaconSwapProof()
+	// body := getBridgeSwapProof()
 	if len(body) < 1 {
-		return
+		t.Fatal(fmt.Errorf("empty beacon swap proof"))
 	}
 
 	r := getProofResult{}
@@ -276,9 +270,13 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 	_ = p
 
 	auth.GasLimit = 6000000
+	fmt.Printf("inst len: %d\n", len(proof.instruction))
+	numPk := big.NewInt(int64((len(proof.instruction) - 35) / pubkey_size))
+	fmt.Printf("numPk: %d\n", numPk)
 	tx, err := p.inc.SwapCommittee(
 		auth,
 		proof.instruction,
+		numPk,
 
 		proof.beaconInstPath,
 		proof.beaconInstPathIsLeft,
@@ -286,12 +284,7 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 		proof.beaconInstRoot,
 		proof.beaconBlkData,
 		proof.beaconBlkHash,
-		proof.beaconSignerPubkeys,
-		proof.beaconSignerCount,
 		proof.beaconSignerSig,
-		proof.beaconSignerPaths,
-		proof.beaconSignerPathIsLeft,
-		proof.beaconSignerPathLen,
 
 		proof.bridgeInstPath,
 		proof.bridgeInstPathIsLeft,
@@ -299,12 +292,7 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 		proof.bridgeInstRoot,
 		proof.bridgeBlkData,
 		proof.bridgeBlkHash,
-		proof.bridgeSignerPubkeys,
-		proof.bridgeSignerCount,
 		proof.bridgeSignerSig,
-		proof.bridgeSignerPaths,
-		proof.bridgeSignerPathIsLeft,
-		proof.bridgeSignerPathLen,
 	)
 	if err != nil {
 		fmt.Println("err:", err)
@@ -352,12 +340,7 @@ func TestSimulatedBurn(t *testing.T) {
 		proof.beaconInstRoot,
 		proof.beaconBlkData,
 		proof.beaconBlkHash,
-		proof.beaconSignerPubkeys,
-		proof.beaconSignerCount,
 		proof.beaconSignerSig,
-		proof.beaconSignerPaths,
-		proof.beaconSignerPathIsLeft,
-		proof.beaconSignerPathLen,
 
 		proof.bridgeHeight,
 		proof.bridgeInstPath,
@@ -366,12 +349,7 @@ func TestSimulatedBurn(t *testing.T) {
 		proof.bridgeInstRoot,
 		proof.bridgeBlkData,
 		proof.bridgeBlkHash,
-		proof.bridgeSignerPubkeys,
-		proof.bridgeSignerCount,
 		proof.bridgeSignerSig,
-		proof.bridgeSignerPaths,
-		proof.bridgeSignerPathIsLeft,
-		proof.bridgeSignerPathLen,
 	)
 	if err != nil {
 		fmt.Println("err:", err)

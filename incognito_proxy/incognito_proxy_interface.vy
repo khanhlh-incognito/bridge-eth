@@ -1,18 +1,17 @@
 
 # External Contracts
 contract Incognito_proxy:
-    def parseSwapInst(inst: bytes[150]) -> (uint256, uint256, bytes32): constant
-    def findCommRoot(beaconHeight: uint256, bridgeHeight: uint256) -> (bytes32, bytes32): constant
+    def parseSwapInst(inst: bytes[300], numPk: int128) -> (uint256, uint256, bytes[300]): constant
+    def findComm(beaconHeight: uint256, bridgeHeight: uint256) -> (bytes[300], bytes[300]): constant
     def notifyPls(v: bytes32): modifying
     def instructionInMerkleTree(leaf: bytes32, root: bytes32, path: bytes32[8], left: bool[8], length: int128) -> bool: constant
-    def pubkeyInMerkleTree(leaf: bytes32, root: bytes32, path: bytes32[3], left: bool[3], length: int128) -> bool: constant
-    def verifyInst(commRoot: bytes32, instHash: bytes32, instPath: bytes32[8], instPathIsLeft: bool[8], instPathLen: int128, instRoot: bytes32, blkHash: bytes32, signerPubkeys: bytes[264], signerCount: int128, signerSig: bytes32, signerPaths: bytes32[24], signerPathIsLeft: bool[24], signerPathLen: int128) -> bool: constant
-    def instructionApproved(beaconInstHash: bytes32, beaconHeight: uint256, beaconInstPath: bytes32[8], beaconInstPathIsLeft: bool[8], beaconInstPathLen: int128, beaconInstRoot: bytes32, beaconBlkData: bytes32, beaconBlkHash: bytes32, beaconSignerPubkeys: bytes[264], beaconSignerCount: int128, beaconSignerSig: bytes32, beaconSignerPaths: bytes32[24], beaconSignerPathIsLeft: bool[24], beaconSignerPathLen: int128, bridgeInstHash: bytes32, bridgeHeight: uint256, bridgeInstPath: bytes32[8], bridgeInstPathIsLeft: bool[8], bridgeInstPathLen: int128, bridgeInstRoot: bytes32, bridgeBlkData: bytes32, bridgeBlkHash: bytes32, bridgeSignerPubkeys: bytes[264], bridgeSignerCount: int128, bridgeSignerSig: bytes32, bridgeSignerPaths: bytes32[24], bridgeSignerPathIsLeft: bool[24], bridgeSignerPathLen: int128) -> bool: constant
-    def swapCommittee(inst: bytes[150], beaconInstPath: bytes32[8], beaconInstPathIsLeft: bool[8], beaconInstPathLen: int128, beaconInstRoot: bytes32, beaconBlkData: bytes32, beaconBlkHash: bytes32, beaconSignerPubkeys: bytes[264], beaconSignerCount: int128, beaconSignerSig: bytes32, beaconSignerPaths: bytes32[24], beaconSignerPathIsLeft: bool[24], beaconSignerPathLen: int128, bridgeInstPath: bytes32[8], bridgeInstPathIsLeft: bool[8], bridgeInstPathLen: int128, bridgeInstRoot: bytes32, bridgeBlkData: bytes32, bridgeBlkHash: bytes32, bridgeSignerPubkeys: bytes[264], bridgeSignerCount: int128, bridgeSignerSig: bytes32, bridgeSignerPaths: bytes32[24], bridgeSignerPathIsLeft: bool[24], bridgeSignerPathLen: int128) -> bool: modifying
-    def beaconCommRoot__Pubkeys(arg0: uint256) -> bytes32: constant
-    def beaconCommRoot__PrevBlk(arg0: uint256) -> uint256: constant
-    def bridgeCommRoot__Pubkeys(arg0: uint256) -> bytes32: constant
-    def bridgeCommRoot__PrevBlk(arg0: uint256) -> uint256: constant
+    def verifyInst(pubkey: bytes[300], instHash: bytes32, instPath: bytes32[8], instPathIsLeft: bool[8], instPathLen: int128, instRoot: bytes32, blkHash: bytes32, signerSig: bytes32) -> bool: constant
+    def instructionApproved(beaconInstHash: bytes32, beaconHeight: uint256, beaconInstPath: bytes32[8], beaconInstPathIsLeft: bool[8], beaconInstPathLen: int128, beaconInstRoot: bytes32, beaconBlkData: bytes32, beaconBlkHash: bytes32, beaconSignerSig: bytes32, bridgeInstHash: bytes32, bridgeHeight: uint256, bridgeInstPath: bytes32[8], bridgeInstPathIsLeft: bool[8], bridgeInstPathLen: int128, bridgeInstRoot: bytes32, bridgeBlkData: bytes32, bridgeBlkHash: bytes32, bridgeSignerSig: bytes32) -> bool: constant
+    def swapCommittee(inst: bytes[300], numPk: int128, beaconInstPath: bytes32[8], beaconInstPathIsLeft: bool[8], beaconInstPathLen: int128, beaconInstRoot: bytes32, beaconBlkData: bytes32, beaconBlkHash: bytes32, beaconSignerSig: bytes32, bridgeInstPath: bytes32[8], bridgeInstPathIsLeft: bool[8], bridgeInstPathLen: int128, bridgeInstRoot: bytes32, bridgeBlkData: bytes32, bridgeBlkHash: bytes32, bridgeSignerSig: bytes32) -> bool: modifying
+    def beaconComm__Pubkeys(arg0: uint256) -> bytes[300]: constant
+    def beaconComm__PrevBlk(arg0: uint256) -> uint256: constant
+    def bridgeComm__Pubkeys(arg0: uint256) -> bytes[300]: constant
+    def bridgeComm__PrevBlk(arg0: uint256) -> uint256: constant
     def latestBeaconBlk() -> uint256: constant
     def latestBridgeBlk() -> uint256: constant
 
