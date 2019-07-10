@@ -14,6 +14,10 @@ struct Committee:
     Pubkeys: bytes[PUBKEY_LENGTH]
     PrevBlk: uint256
 
+# External contract
+contract MulSigP256:
+    def checkMulSig(xPks: uint256[8], yPks: uint256[8], idxSigs: uint256[8], numSig: int128, xR: uint256, yR: uint256, bytesR: bytes[33], sig: uint256, mess: bytes32) -> bool: constant
+
 SwapBeaconCommittee: event({newCommitteeRoot: bytes32})
 SwapBridgeCommittee: event({newCommitteeRoot: bytes32})
 
@@ -28,11 +32,13 @@ beaconComm: public(map(uint256, Committee))
 bridgeComm: public(map(uint256, Committee))
 latestBeaconBlk: public(uint256)
 latestBridgeBlk: public(uint256)
+mulsig: public(MulSigP256)
 
 @public
-def __init__(_beaconComm: bytes[PUBKEY_LENGTH], _bridgeComm: bytes[PUBKEY_LENGTH]):
+def __init__(_beaconComm: bytes[PUBKEY_LENGTH], _bridgeComm: bytes[PUBKEY_LENGTH], _mulsig: address):
     self.beaconComm[0] = Committee({Pubkeys: _beaconComm, PrevBlk: 0})
     self.bridgeComm[0] = Committee({Pubkeys: _bridgeComm, PrevBlk: 0})
+    self.mulsig = MulSigP256(_mulsig)
 
 @constant
 @public
@@ -94,25 +100,64 @@ def instructionInMerkleTree(
 
 @constant
 @public
-def verifyInst(
-    pubkey: bytes[PUBKEY_LENGTH],
-    instHash: bytes32,
-    instPath: bytes32[INST_MAX_PATH],
-    instPathIsLeft: bool[INST_MAX_PATH],
-    instPathLen: int128,
-    instRoot: bytes32,
-    blkHash: bytes32,
-    signerSig: bytes32,
+def verifyCompressPoint(
+    pk: bytes[PUBKEY_SIZE],
+    x: uint256,
+    y: uint256,
 ) -> bool:
-    # Check if inst is in merkle tree with root instRoot
-    if not self.instructionInMerkleTree(instHash, instRoot, instPath, instPathIsLeft, instPathLen):
-        # log.NotifyString("instruction is not in merkle tree")
-        # log.NotifyBytes32(instHash)
-        # log.NotifyBytes32(instRoot)
+    pkx: uint256 = convert(slice(pk, start=1, len=32), uint256)
+    if pkx != x:
+        return False
+    pkFormat: uint256 = convert(slice(pk, start=0, len=1), uint256)
+    format: uint256 = 2
+    if y % 2 == 1:
+        format = 3
+    if pkFormat != format:
+        return False
+    return True
+
+@constant
+@public
+def verifySig(
+    pubkey: bytes[PUBKEY_LENGTH],
+    signerSig: uint256,
+    numR: int128,
+    xs: uint256[COMM_SIZE],
+    ys: uint256[COMM_SIZE],
+    rIdxs: int128[COMM_SIZE],
+    numSig: int128,
+    sigIdxs: uint256[COMM_SIZE],
+    rx: uint256,
+    ry: uint256,
+    r: bytes[PUBKEY_SIZE],
+    blk: bytes32,
+) -> bool:
+    # Check if enough validators signed this block
+    if numSig < MIN_SIGN:
         return False
 
-    # TODO: Check if signerSig is valid
-    # Check if enough validators signed this block
+    # Check if decompressed xs, ys are correct
+    for i in range(COMM_SIZE):
+        if i >= numR:
+            break
+        idx: int128 = rIdxs[i]
+        pk: bytes[PUBKEY_SIZE] = slice(pubkey, start=idx * PUBKEY_SIZE, len=PUBKEY_SIZE)
+        if not self.verifyCompressPoint(pk, xs[i], ys[i]):
+            return False
+
+    # Check if signerSig is valid
+    if not self.mulsig.checkMulSig(
+        xs,
+        ys,
+        sigIdxs,
+        numSig,
+        rx,
+        ry,
+        r,
+        signerSig,
+        blk,
+    ):
+        return False
 
     return True
 
@@ -127,7 +172,16 @@ def instructionApproved(
     beaconInstRoot: bytes32,
     beaconBlkData: bytes32,
     beaconBlkHash: bytes32,
-    beaconSignerSig: bytes32,
+    beaconSignerSig: uint256,
+    beaconNumR: int128,
+    beaconXs: uint256[COMM_SIZE],
+    beaconYs: uint256[COMM_SIZE],
+    beaconRIdxs: int128[COMM_SIZE],
+    beaconNumSig: int128,
+    beaconSigIdxs: uint256[COMM_SIZE],
+    beaconRx: uint256,
+    beaconRy: uint256,
+    beaconR: bytes[PUBKEY_SIZE],
     bridgeInstHash: bytes32,
     bridgeHeight: uint256,
     bridgeInstPath: bytes32[INST_MAX_PATH],
@@ -136,7 +190,16 @@ def instructionApproved(
     bridgeInstRoot: bytes32,
     bridgeBlkData: bytes32,
     bridgeBlkHash: bytes32,
-    bridgeSignerSig: bytes32,
+    bridgeSignerSig: uint256,
+    bridgeNumR: int128,
+    bridgeXs: uint256[COMM_SIZE],
+    bridgeYs: uint256[COMM_SIZE],
+    bridgeRIdxs: int128[COMM_SIZE],
+    bridgeNumSig: int128,
+    bridgeSigIdxs: uint256[COMM_SIZE],
+    bridgeRx: uint256,
+    bridgeRy: uint256,
+    bridgeR: bytes[PUBKEY_SIZE],
 ) -> bool:
     blk: bytes32 = keccak256(concat(beaconBlkData, beaconInstRoot))
     if not blk == beaconBlkHash:
@@ -154,16 +217,30 @@ def instructionApproved(
     # log.NotifyBytes32(beacon)
     # log.NotifyBytes32(bridge)
 
-    # Check that inst is in beacon block
-    if not self.verifyInst(
+    # Check that beacon signature is correct
+    if not self.verifySig(
         beacon,
+        beaconSignerSig,
+        beaconNumR,
+        beaconXs,
+        beaconYs,
+        beaconRIdxs,
+        beaconNumSig,
+        beaconSigIdxs,
+        beaconRx,
+        beaconRy,
+        beaconR,
+        blk,
+    ):
+        return False
+
+    # Check that inst is in beacon block
+    if not self.instructionInMerkleTree(
         beaconInstHash,
+        beaconInstRoot,
         beaconInstPath,
         beaconInstPathIsLeft,
         beaconInstPathLen,
-        beaconInstRoot,
-        beaconBlkHash,
-        beaconSignerSig,
     ):
         # log.NotifyString("failed verifying beacon instruction")
         return False
@@ -174,16 +251,30 @@ def instructionApproved(
         # log.NotifyString("instruction merkle root is not in bridge block")
         return False
 
-    # Check that inst is in bridge block
-    if not self.verifyInst(
+    # Check that bridge signature is correct
+    if not self.verifySig(
         bridge,
+        bridgeSignerSig,
+        bridgeNumR,
+        bridgeXs,
+        bridgeYs,
+        bridgeRIdxs,
+        bridgeNumSig,
+        bridgeSigIdxs,
+        bridgeRx,
+        bridgeRy,
+        bridgeR,
+        blk,
+    ):
+        return False
+
+    # Check that inst is in bridge block
+    if not self.instructionInMerkleTree(
         bridgeInstHash,
+        bridgeInstRoot,
         bridgeInstPath,
         bridgeInstPathIsLeft,
         bridgeInstPathLen,
-        bridgeInstRoot,
-        bridgeBlkHash,
-        bridgeSignerSig,
     ):
         # log.NotifyString("failed verify bridge instruction")
         return False
@@ -200,14 +291,32 @@ def swapCommittee(
     beaconInstRoot: bytes32,
     beaconBlkData: bytes32, # hash of the rest of the beacon block
     beaconBlkHash: bytes32,
-    beaconSignerSig: bytes32, # aggregated signature of some committee members
+    beaconSignerSig: uint256, # aggregated signature
+    beaconNumR: int128,
+    beaconXs: uint256[COMM_SIZE], # decompressed x of pks who aggregated R
+    beaconYs: uint256[COMM_SIZE],
+    beaconRIdxs: int128[COMM_SIZE], # indices of members who aggregated R
+    beaconNumSig: int128,
+    beaconSigIdxs: uint256[COMM_SIZE], # indices of members who signed
+    beaconRx: uint256,
+    beaconRy: uint256,
+    beaconR: bytes[PUBKEY_SIZE],
     bridgeInstPath: bytes32[INST_MAX_PATH],
     bridgeInstPathIsLeft: bool[INST_MAX_PATH],
     bridgeInstPathLen: int128,
     bridgeInstRoot: bytes32,
-    bridgeBlkData: bytes32, # hash of the rest of the bridge block
+    bridgeBlkData: bytes32,
     bridgeBlkHash: bytes32,
-    bridgeSignerSig: bytes32,
+    bridgeSignerSig: uint256,
+    bridgeNumR: int128,
+    bridgeXs: uint256[COMM_SIZE],
+    bridgeYs: uint256[COMM_SIZE],
+    bridgeRIdxs: int128[COMM_SIZE],
+    bridgeNumSig: int128,
+    bridgeSigIdxs: uint256[COMM_SIZE],
+    bridgeRx: uint256,
+    bridgeRy: uint256,
+    bridgeR: bytes[PUBKEY_SIZE],
 ) -> bool:
     # Check if beaconInstRoot is in block with hash beaconBlkHash
     instHash: bytes32 = keccak256(inst)
@@ -237,6 +346,15 @@ def swapCommittee(
         beaconBlkData,
         beaconBlkHash,
         beaconSignerSig,
+        beaconNumR,
+        beaconXs,
+        beaconYs,
+        beaconRIdxs,
+        beaconNumSig,
+        beaconSigIdxs,
+        beaconRx,
+        beaconRy,
+        beaconR,
         instHash,
         self.latestBridgeBlk,
         bridgeInstPath,
@@ -246,6 +364,15 @@ def swapCommittee(
         bridgeBlkData,
         bridgeBlkHash,
         bridgeSignerSig,
+        bridgeNumR,
+        bridgeXs,
+        bridgeYs,
+        bridgeRIdxs,
+        bridgeNumSig,
+        bridgeSigIdxs,
+        bridgeRx,
+        bridgeRy,
+        bridgeR
     ):
         return False
 
