@@ -13,33 +13,35 @@ contract MulSigP256 {
     uint constant lowSmax = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
     /**
-     * @dev Inverse of u in the field of modulo m.
+     * @dev Inverse of u in the field of modulo modular.
      */
-    function inverseMod(uint x, uint y) internal pure
-        returns (uint)
+    function inverseMod(uint num, uint modular)
+    public pure returns (uint k)
     {
-        uint u = x;
-        uint m = y;
-        if (u == 0 || u == m || m == 0)
+        if (num == 0 || num == modular)
             return 0;
-        if (u > m)
-            u = u % m;
-
-        int t1;
-        int t2 = 1;
-        uint r1 = m;
-        uint r2 = u;
-        uint q;
-
-        while (r2 != 0) {
-            q = r1 / r2;
-            (t1, t2, r1, r2) = (t2, t1 - int(q) * t2, r2, r1 - q * r2);
+        int x = 0;
+        assembly{
+            let t
+            let q := div(num,modular)
+            let m := mod(num,modular)
+            let a0 := modular
+            let y := 1
+            for {} gt(a0,1) {} {
+                q := div(a0,m)
+                t := m
+                m := mod(a0,m)
+                a0 := t
+                t := y
+                y := sub(x, mul(q, y))
+                x := t
+            }
         }
-
-        if (t1 < 0)
-            return (m - uint(-t1));
-
-        return uint(t1);
+        if (x<0) {
+            k = modular - uint(-x);
+        } else {
+            k = uint(x);
+        }
     }
 
     /**
@@ -326,7 +328,7 @@ contract MulSigP256 {
         x1 = x0;
         y1 = y0;
 
-        if(scalar%2 == 0) {
+        if(scalar&1 == 0) {
             x1 = y1 = 0;
         }
 
@@ -335,7 +337,7 @@ contract MulSigP256 {
         while(scalar > 0) {
             (base2X, base2Y, base2Z) = twiceProj(base2X, base2Y, base2Z);
 
-            if(scalar%2 == 1) {
+            if(scalar&1 == 1) {
                 (x1, y1, z1) = addProj(base2X, base2Y, base2Z, x1, y1, z1);
             }
 
@@ -365,9 +367,10 @@ contract MulSigP256 {
      * @dev Generate common parameters for check multi-signature
      */
     function genCommonParams(
-        uint[] memory xPks,
-        uint[] memory yPks,
-        uint[] memory idxSigs,
+        uint[8] memory xPks,
+        uint[8] memory yPks,
+        uint[8] memory idxSigs,
+        uint8 sigLen,
         bytes memory bytesR,
         bytes32 mess)
     public pure returns (uint[3] memory res)
@@ -393,14 +396,15 @@ contract MulSigP256 {
         res[0] = 0;
         res[1] = 0;
         res[2] = 0;
-        uint j = 0;
+        uint8 j = 0;
         for (uint i = 0; i < xPks.length; i++) {
             (xArr[3], yArr[3]) = add(xArr[0], yArr[0], xPks[i], yPks[i]);
             temp = compressPoint(xArr[3], yArr[3]);
             xArr[4] = uint(keccak256(temp))%n;
             (xArr[2], yArr[2]) = multiplyScalar(xPks[i], yPks[i], xArr[4]);
-            if (i==idxSigs[j]) {
+            if ((i==idxSigs[j]) && (j<sigLen)) {
                (res[1], res[2], zArr[0]) = addProj(res[1], res[2], zArr[0], xArr[2], yArr[2], 1);
+                j++;
             }
             (xArr[1], yArr[1], zArr[1]) = addProj(xArr[1], yArr[1], zArr[1], xArr[2], yArr[2], 1);
         }
@@ -412,10 +416,10 @@ contract MulSigP256 {
     }
 
     function checkMulSig(
-        bytes memory listCompPk,
-        uint[] memory xPks,
-        uint[] memory yPks,
-        uint[] memory idxSigs,
+        uint[8] memory xPks,
+        uint[8] memory yPks,
+        uint[8] memory idxSigs,
+        int128 sigsLen,
         uint xR,
         uint yR,
         bytes memory bytesR,
@@ -423,12 +427,10 @@ contract MulSigP256 {
         bytes32 mess)
     public pure returns(bool)
     {
-    // if (!checkListPk(listCompPk, xPks, yPks)) return false;
-    // if (idxSigs.length>idxRs.length) return false;
-    // if (idxRs.length>xPks.length) return false;
-    // if (!chkPointAndCompPoint(xR, yR, bytesR)) return false;
+        if (sigsLen>8) return false;
+        uint8 sigLen = uint8(sigsLen);
         uint[3] memory Info;//0:C; 1: xX, 2: yX
-        Info = genCommonParams(xPks, yPks, idxSigs, bytesR, mess);
+        Info = genCommonParams(xPks, yPks, idxSigs, sigLen, bytesR, mess);
         uint xLPoint = 0;
         uint yLPoint = 0;
         uint xRPoint = 0;
@@ -437,40 +439,6 @@ contract MulSigP256 {
         (xRPoint, yRPoint) = multiplyScalar(Info[1], Info[2], Info[0]);
         (xRPoint, yRPoint) = add(xRPoint, yRPoint,xR,yR);
         return ((xLPoint==xRPoint) && (yLPoint==yRPoint));
-  }
-
-    /**
-     * @dev Validate combination of message, signature, and public key.
-     */
-    function validateSignature(bytes32 message, uint[2] memory rs, uint[2] memory Q) public pure
-        returns (bool)
-    {
-
-        // To disambiguate between public key solutions, include comment below.
-        if(rs[0] == 0 || rs[0] >= n || rs[1] == 0) {// || rs[1] > lowSmax)
-            return false;
-        }
-        if (!isOnCurve(Q[0], Q[1])) {
-            return false;
-        }
-
-        uint x1;
-        uint x2;
-        uint y1;
-        uint y2;
-
-        uint sInv = inverseMod(rs[1], n);
-        (x1, y1) = multiplyScalar(gx, gy, mulmod(uint(message), sInv, n));
-        (x2, y2) = multiplyScalar(Q[0], Q[1], mulmod(rs[0], sInv, n));
-        uint[3] memory P = addAndReturnProjectivePoint(x1, y1, x2, y2);
-
-        if (P[2] == 0) {
-            return false;
-        }
-
-        uint Px = inverseMod(P[2], p);
-        Px = mulmod(P[0], mulmod(Px, Px, p), p);
-
-        return Px % n == rs[0];
     }
+
 }
