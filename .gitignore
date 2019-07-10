@@ -3,3 +3,7 @@
 incognito_proxy.go
 vault.go
 export.sh
+ERC20.go
+MulSigP256.go
+*/build/contracts/*
+*/node_modules/
