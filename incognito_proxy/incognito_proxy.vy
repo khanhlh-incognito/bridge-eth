@@ -249,21 +249,22 @@ def instructionApproved(
         return False
 
     # Check that bridge signature is correct
-    # if not self.verifySig(
-    #     bridge,
-    #     bridgeSignerSig,
-    #     bridgeNumR,
-    #     bridgeXs,
-    #     bridgeYs,
-    #     bridgeRIdxs,
-    #     bridgeNumSig,
-    #     bridgeSigIdxs,
-    #     bridgeRx,
-    #     bridgeRy,
-    #     bridgeR,
-    #     blk,
-    # ):
-    #     return False
+    if not self.verifySig(
+        bridge,
+        bridgeSignerSig,
+        bridgeNumR,
+        bridgeXs,
+        bridgeYs,
+        bridgeRIdxs,
+        bridgeNumSig,
+        bridgeSigIdxs,
+        bridgeRx,
+        bridgeRy,
+        bridgeR,
+        blk,
+    ):
+        log.NotifyString("failed bridge")
+        return False
 
     # Check that inst is in bridge block
     if not self.instructionInMerkleTree(

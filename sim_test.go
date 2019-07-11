@@ -47,7 +47,7 @@ func setup(beaconComm, bridgeComm []byte) (*Platform, error) {
 	alloc := make(core.GenesisAlloc)
 	balance, _ := big.NewInt(1).SetString("100000000000000000000", 10) // 100 eth
 	alloc[auth.From] = core.GenesisAccount{Balance: balance}
-	sim := backends.NewSimulatedBackend(alloc, 6000000)
+	sim := backends.NewSimulatedBackend(alloc, 8000000)
 	p := &Platform{sim: sim, contracts: &contracts{}}
 
 	// MulSigP256
@@ -274,7 +274,7 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 	}
 	_ = p
 
-	auth.GasLimit = 6000000
+	auth.GasLimit = 7000000
 	fmt.Printf("inst len: %d\n", len(proof.instruction))
 	numPk := big.NewInt(int64((len(proof.instruction) - 35) / pubkey_size))
 	fmt.Printf("numPk: %d\n", numPk)
