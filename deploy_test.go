@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/incognitochain/bridge-eth/checkMulSig"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
 )
@@ -148,9 +149,17 @@ func TestDeployProxyAndVault(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Deploy MulSigP256
+	msAddr, _, _, err := checkMulSig.DeployMulSigP256(auth, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("deployed MulSigP256")
+	fmt.Printf("addr: %x\n", msAddr[:])
+
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
-	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, beaconComm, bridgeComm)
+	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, beaconComm, bridgeComm, msAddr)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -139,7 +139,7 @@ func setupWithErc20() (
 		return
 	}
 
-	return p.sim, p.inc, p.incAddr, p.vault, p.vaultAddr, token, tokenAddr, nil
+	return p.sim, p.inc, p.incAddr, p.v, p.vAddr, token, tokenAddr, nil
 }
 
 func deployErc20(sim *backends.SimulatedBackend) (*erc20.Erc20, common.Address, error) {

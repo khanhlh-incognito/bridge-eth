@@ -184,15 +184,6 @@ func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token *erc2
 	return nil
 }
 
-type contracts struct {
-	v         *vault.Vault
-	vAddr     common.Address
-	inc       *incognito_proxy.IncognitoProxy
-	incAddr   common.Address
-	token     *erc20.Erc20
-	tokenAddr common.Address
-}
-
 func instantiate(client *ethclient.Client) (*contracts, error) {
 	// Get contract instance
 	var err error

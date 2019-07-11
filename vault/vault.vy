@@ -77,7 +77,7 @@ def withdraw(
     beaconInstRoot: bytes32,
     beaconBlkData: bytes32,
     beaconBlkHash: bytes32,
-    beaconSignerSig: bytes32,
+    beaconSignerSig: uint256,
     bridgeHeight: uint256,
     bridgeInstPath: bytes32[INST_MAX_PATH],
     bridgeInstPathIsLeft: bool[INST_MAX_PATH],
@@ -85,7 +85,7 @@ def withdraw(
     bridgeInstRoot: bytes32,
     bridgeBlkData: bytes32,
     bridgeBlkHash: bytes32,
-    bridgeSignerSig: bytes32,
+    bridgeSignerSig: uint256,
 ):
     type: uint256 = 0
     token: address
@@ -113,27 +113,27 @@ def withdraw(
     bridgeInstHash: bytes32 = keccak256(concat(inst, convert(bridgeHeight, bytes32)))
     assert self.withdrawed[instHash] == False
 
-    # Check if instruction is approved on Incognito
-    assert self.incognito.instructionApproved(
-        beaconInstHash,
-        beaconHeight,
-        beaconInstPath,
-        beaconInstPathIsLeft,
-        beaconInstPathLen,
-        beaconInstRoot,
-        beaconBlkData,
-        beaconBlkHash,
-        beaconSignerSig,
-        bridgeInstHash,
-        bridgeHeight,
-        bridgeInstPath,
-        bridgeInstPathIsLeft,
-        bridgeInstPathLen,
-        bridgeInstRoot,
-        bridgeBlkData,
-        bridgeBlkHash,
-        bridgeSignerSig,
-    )
+    # # Check if instruction is approved on Incognito
+    # assert self.incognito.instructionApproved(
+    #     beaconInstHash,
+    #     beaconHeight,
+    #     beaconInstPath,
+    #     beaconInstPathIsLeft,
+    #     beaconInstPathLen,
+    #     beaconInstRoot,
+    #     beaconBlkData,
+    #     beaconBlkHash,
+    #     beaconSignerSig,
+    #     bridgeInstHash,
+    #     bridgeHeight,
+    #     bridgeInstPath,
+    #     bridgeInstPathIsLeft,
+    #     bridgeInstPathLen,
+    #     bridgeInstRoot,
+    #     bridgeBlkData,
+    #     bridgeBlkHash,
+    #     bridgeSignerSig,
+    # )
 
     # Send and notify
     self.withdrawed[instHash] = True

@@ -146,7 +146,8 @@ def verifySig(
             return False
 
     # Check if signerSig is valid
-    if not self.mulsig.checkMulSig(
+    a: bool = False
+    a = self.mulsig.checkMulSig(
         xs,
         ys,
         sigIdxs,
@@ -156,7 +157,8 @@ def verifySig(
         r,
         signerSig,
         blk,
-    ):
+    )
+    if not a:
         return False
 
     return True
@@ -203,19 +205,14 @@ def instructionApproved(
 ) -> bool:
     blk: bytes32 = keccak256(concat(beaconBlkData, beaconInstRoot))
     if not blk == beaconBlkHash:
-        # log.NotifyString("instruction merkle root is not in beacon block")
-        # log.NotifyBytes32(beaconInstRoot)
-        # log.NotifyBytes32(beaconBlkData)
-        # log.NotifyBytes32(beaconInstHash)
-        # log.NotifyBytes32(blk)
         return False
 
     # Find committees signed this instruction
     beacon: bytes[PUBKEY_LENGTH]
     bridge: bytes[PUBKEY_LENGTH]
     beacon, bridge = self.findComm(beaconHeight, bridgeHeight)
-    # log.NotifyBytes32(beacon)
-    # log.NotifyBytes32(bridge)
+    log.NotifyBytes32(extract32(beacon, 0, type=bytes32))
+    log.NotifyBytes32(extract32(bridge, 0, type=bytes32))
 
     # Check that beacon signature is correct
     if not self.verifySig(
@@ -252,21 +249,21 @@ def instructionApproved(
         return False
 
     # Check that bridge signature is correct
-    if not self.verifySig(
-        bridge,
-        bridgeSignerSig,
-        bridgeNumR,
-        bridgeXs,
-        bridgeYs,
-        bridgeRIdxs,
-        bridgeNumSig,
-        bridgeSigIdxs,
-        bridgeRx,
-        bridgeRy,
-        bridgeR,
-        blk,
-    ):
-        return False
+    # if not self.verifySig(
+    #     bridge,
+    #     bridgeSignerSig,
+    #     bridgeNumR,
+    #     bridgeXs,
+    #     bridgeYs,
+    #     bridgeRIdxs,
+    #     bridgeNumSig,
+    #     bridgeSigIdxs,
+    #     bridgeRx,
+    #     bridgeRy,
+    #     bridgeR,
+    #     blk,
+    # ):
+    #     return False
 
     # Check that inst is in bridge block
     if not self.instructionInMerkleTree(
@@ -388,7 +385,6 @@ def swapCommittee(
         log.NotifyString("updated bridge committee")
         # log.SwapBridgeCommittee(newCommRoot)
 
-    # # # log.NotifyBytes32(newCommRoot)
     log.NotifyString("no exeception...")
     return True
 

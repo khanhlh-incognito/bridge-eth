@@ -3,7 +3,6 @@ package bridge
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -19,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/incognitochain/bridge-eth/checkMulSig"
 	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
@@ -28,11 +28,8 @@ var auth *bind.TransactOpts
 var genesisAcc *account
 
 type Platform struct {
-	inc       *incognito_proxy.IncognitoProxy
-	incAddr   common.Address
-	vault     *vault.Vault
-	vaultAddr common.Address
-	sim       *backends.SimulatedBackend
+	*contracts
+	sim *backends.SimulatedBackend
 }
 
 func (p *Platform) getBalance(addr common.Address) *big.Int {
@@ -51,29 +48,34 @@ func setup(beaconComm, bridgeComm []byte) (*Platform, error) {
 	balance, _ := big.NewInt(1).SetString("100000000000000000000", 10) // 100 eth
 	alloc[auth.From] = core.GenesisAccount{Balance: balance}
 	sim := backends.NewSimulatedBackend(alloc, 6000000)
-	p := &Platform{sim: sim}
+	p := &Platform{sim: sim, contracts: &contracts{}}
 
-	incognitoAddr, _, inc, err := incognito_proxy.DeployIncognitoProxy(auth, sim, beaconComm, bridgeComm)
+	// MulSigP256
+	var err error
+	p.msAddr, _, p.ms, err = checkMulSig.DeployMulSigP256(auth, sim)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deploy mulsig contract: %v", err)
+	}
+	sim.Commit()
+
+	// IncognitoProxy
+	p.incAddr, _, p.inc, err = incognito_proxy.DeployIncognitoProxy(auth, sim, beaconComm, bridgeComm, p.msAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy IncognitoProxy contract: %v", err)
 	}
 	sim.Commit()
-
-	p.inc = inc
-	p.incAddr = incognitoAddr
-	fmt.Printf("deployed bridge, addr: %x\n", incognitoAddr)
+	fmt.Printf("deployed bridge, addr: %x\n", p.incAddr)
 	// printReceipt(sim, tx)
 
-	vaultAddr, _, vault, err := vault.DeployVault(auth, sim, incognitoAddr)
+	// Vault
+	p.vAddr, _, p.v, err = vault.DeployVault(auth, sim, p.incAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy Vault contract: %v", err)
 	}
 	sim.Commit()
-
-	p.vault = vault
-	p.vaultAddr = vaultAddr
-	fmt.Printf("deployed vault, addr: %x\n", vaultAddr)
+	fmt.Printf("deployed vault, addr: %x\n", p.vAddr)
 	// printReceipt(sim, tx)
+
 	return p, nil
 }
 
@@ -258,9 +260,12 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 	r := getProofResult{}
 	err := json.Unmarshal([]byte(body), &r)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	proof := decodeProof(&r)
+	proof, err := decodeProof(&r)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_ = proof
 
 	p, err := setupWithCommittee()
@@ -285,6 +290,15 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 		proof.beaconBlkData,
 		proof.beaconBlkHash,
 		proof.beaconSignerSig,
+		proof.beaconNumR,
+		proof.beaconXs,
+		proof.beaconYs,
+		proof.beaconRIdxs,
+		proof.beaconNumSig,
+		proof.beaconSigIdxs,
+		proof.beaconRx,
+		proof.beaconRy,
+		proof.beaconR,
 
 		proof.bridgeInstPath,
 		proof.bridgeInstPathIsLeft,
@@ -293,6 +307,15 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 		proof.bridgeBlkData,
 		proof.bridgeBlkHash,
 		proof.bridgeSignerSig,
+		proof.bridgeNumR,
+		proof.bridgeXs,
+		proof.bridgeYs,
+		proof.bridgeRIdxs,
+		proof.bridgeNumSig,
+		proof.bridgeSigIdxs,
+		proof.bridgeRx,
+		proof.bridgeRy,
+		proof.bridgeR,
 	)
 	if err != nil {
 		fmt.Println("err:", err)
@@ -301,103 +324,103 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 	printReceipt(p.sim, tx)
 }
 
-func TestSimulatedBurn(t *testing.T) {
-	proof, err := getAndDecodeBurnProof("")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	p, err := setupWithCommittee()
-	if err != nil {
-		t.Fatalf("Fail to deloy contract: %v\n", err)
-	}
-
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Printf("deposit to vault: %d -> %d\n", oldBalance, newBalance)
-
-	// tokenID := proof.instruction[3:35]
-	// to := proof.instruction[35:67]
-	// amount := big.NewInt(0).SetBytes(proof.instruction[67:99])
-	// fmt.Printf("tokenID: %x\n", tokenID)
-	// fmt.Printf("to: %x\n", to)
-	// fmt.Printf("amount: %s\n", amount.String())
-
-	withdrawer := common.HexToAddress("0x0FFBd68F130809BcA7b32D9536c8339E9A844620")
-	fmt.Printf("withdrawer init balance: %d\n", p.getBalance(withdrawer))
-
-	auth.GasLimit = 6000000
-	tx, err := p.vault.Withdraw(
-		auth,
-		proof.instruction,
-
-		proof.beaconHeight,
-		proof.beaconInstPath,
-		proof.beaconInstPathIsLeft,
-		proof.beaconInstPathLen,
-		proof.beaconInstRoot,
-		proof.beaconBlkData,
-		proof.beaconBlkHash,
-		proof.beaconSignerSig,
-
-		proof.bridgeHeight,
-		proof.bridgeInstPath,
-		proof.bridgeInstPathIsLeft,
-		proof.bridgeInstPathLen,
-		proof.bridgeInstRoot,
-		proof.bridgeBlkData,
-		proof.bridgeBlkHash,
-		proof.bridgeSignerSig,
-	)
-	if err != nil {
-		fmt.Println("err:", err)
-	}
-	p.sim.Commit()
-	printReceipt(p.sim, tx)
-
-	fmt.Printf("withdrawer new balance: %d\n", p.getBalance(withdrawer))
-}
-
-func deposit(p *Platform, amount int64) (*big.Int, *big.Int, error) {
-	initBalance := p.getBalance(p.vaultAddr)
-	auth := bind.NewKeyedTransactor(genesisAcc.PrivateKey)
-	auth.Value = big.NewInt(amount)
-	_, err := p.vault.Deposit(auth, "")
-	if err != nil {
-		return nil, nil, err
-	}
-	p.sim.Commit()
-	newBalance := p.getBalance(p.vaultAddr)
-	return initBalance, newBalance, nil
-}
-
-func TestSimulatedExtract(t *testing.T) {
-	p, err := setupWithCommittee()
-	if err != nil {
-		t.Fatalf("Fail to deloy contract: %v\n", err)
-	}
-
-	a, _ := hex.DecodeString("000000000000000000000000e722D8b71DCC0152D47D2438556a45D3357d631f")
-	addr, wei, err := p.vault.TestExtract(nil, a)
-	fmt.Printf("addr: %x\n", addr)
-	fmt.Printf("wei: %d\n", wei)
-}
-
-func TestSimulatedCallFunc(t *testing.T) {
-	p, err := setupWithCommittee()
-	if err != nil {
-		t.Fatalf("Fail to deloy contract: %v\n", err)
-	}
-
-	v := [32]byte{}
-	b := big.NewInt(135790246810123).Bytes()
-	copy(v[32-len(b):], b)
-	tx, err := p.inc.NotifyPls(auth, v)
-	if err != nil {
-		fmt.Println("err:", err)
-	}
-	p.sim.Commit()
-	printReceipt(p.sim, tx)
-}
+// func TestSimulatedBurn(t *testing.T) {
+// 	proof, err := getAndDecodeBurnProof("")
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+//
+// 	p, err := setupWithCommittee()
+// 	if err != nil {
+// 		t.Fatalf("Fail to deloy contract: %v\n", err)
+// 	}
+//
+// 	oldBalance, newBalance, err := deposit(p, int64(5e18))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+// 	fmt.Printf("deposit to vault: %d -> %d\n", oldBalance, newBalance)
+//
+// 	// tokenID := proof.instruction[3:35]
+// 	// to := proof.instruction[35:67]
+// 	// amount := big.NewInt(0).SetBytes(proof.instruction[67:99])
+// 	// fmt.Printf("tokenID: %x\n", tokenID)
+// 	// fmt.Printf("to: %x\n", to)
+// 	// fmt.Printf("amount: %s\n", amount.String())
+//
+// 	withdrawer := common.HexToAddress("0x0FFBd68F130809BcA7b32D9536c8339E9A844620")
+// 	fmt.Printf("withdrawer init balance: %d\n", p.getBalance(withdrawer))
+//
+// 	auth.GasLimit = 6000000
+// 	tx, err := p.vault.Withdraw(
+// 		auth,
+// 		proof.instruction,
+//
+// 		proof.beaconHeight,
+// 		proof.beaconInstPath,
+// 		proof.beaconInstPathIsLeft,
+// 		proof.beaconInstPathLen,
+// 		proof.beaconInstRoot,
+// 		proof.beaconBlkData,
+// 		proof.beaconBlkHash,
+// 		proof.beaconSignerSig,
+//
+// 		proof.bridgeHeight,
+// 		proof.bridgeInstPath,
+// 		proof.bridgeInstPathIsLeft,
+// 		proof.bridgeInstPathLen,
+// 		proof.bridgeInstRoot,
+// 		proof.bridgeBlkData,
+// 		proof.bridgeBlkHash,
+// 		proof.bridgeSignerSig,
+// 	)
+// 	if err != nil {
+// 		fmt.Println("err:", err)
+// 	}
+// 	p.sim.Commit()
+// 	printReceipt(p.sim, tx)
+//
+// 	fmt.Printf("withdrawer new balance: %d\n", p.getBalance(withdrawer))
+// }
+//
+// func deposit(p *Platform, amount int64) (*big.Int, *big.Int, error) {
+// 	initBalance := p.getBalance(p.vaultAddr)
+// 	auth := bind.NewKeyedTransactor(genesisAcc.PrivateKey)
+// 	auth.Value = big.NewInt(amount)
+// 	_, err := p.vault.Deposit(auth, "")
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+// 	p.sim.Commit()
+// 	newBalance := p.getBalance(p.vaultAddr)
+// 	return initBalance, newBalance, nil
+// }
+//
+// func TestSimulatedExtract(t *testing.T) {
+// 	p, err := setupWithCommittee()
+// 	if err != nil {
+// 		t.Fatalf("Fail to deloy contract: %v\n", err)
+// 	}
+//
+// 	a, _ := hex.DecodeString("000000000000000000000000e722D8b71DCC0152D47D2438556a45D3357d631f")
+// 	addr, wei, err := p.vault.TestExtract(nil, a)
+// 	fmt.Printf("addr: %x\n", addr)
+// 	fmt.Printf("wei: %d\n", wei)
+// }
+//
+// func TestSimulatedCallFunc(t *testing.T) {
+// 	p, err := setupWithCommittee()
+// 	if err != nil {
+// 		t.Fatalf("Fail to deloy contract: %v\n", err)
+// 	}
+//
+// 	v := [32]byte{}
+// 	b := big.NewInt(135790246810123).Bytes()
+// 	copy(v[32-len(b):], b)
+// 	tx, err := p.inc.NotifyPls(auth, v)
+// 	if err != nil {
+// 		fmt.Println("err:", err)
+// 	}
+// 	p.sim.Commit()
+// 	printReceipt(p.sim, tx)
+// }
