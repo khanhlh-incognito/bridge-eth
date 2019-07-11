@@ -383,6 +383,9 @@ contract MulSigP256 {
         yArr[0] = yPks[0];
         zArr[0] = 1;
         for (uint i = 1; i < xPks.length; i++) {
+            if ((xPks[i] | yPks[i]) == 0) {
+                break;
+            }
             (xArr[0], yArr[0], zArr[0]) = addProj(xArr[0], yArr[0], zArr[0], xPks[i], yPks[i], 1);
         }
         (xArr[0], yArr[0]) = toAffinePoint(xArr[0], yArr[0], zArr[0]);
@@ -396,15 +399,17 @@ contract MulSigP256 {
         res[0] = 0;
         res[1] = 0;
         res[2] = 0;
-        uint8 j = 0;
         for (uint i = 0; i < xPks.length; i++) {
+            if ((xPks[i] | yPks[i]) == 0) {
+                break;
+            }
             (xArr[3], yArr[3]) = add(xArr[0], yArr[0], xPks[i], yPks[i]);
             temp = compressPoint(xArr[3], yArr[3]);
             xArr[4] = uint(keccak256(temp))%n;
             (xArr[2], yArr[2]) = multiplyScalar(xPks[i], yPks[i], xArr[4]);
-            if ((i==idxSigs[j]) && (j<sigLen)) {
+            if ((i==idxSigs[res[0]]) && (res[0]<sigLen)) {
                (res[1], res[2], zArr[0]) = addProj(res[1], res[2], zArr[0], xArr[2], yArr[2], 1);
-                j++;
+                res[0]++;
             }
             (xArr[1], yArr[1], zArr[1]) = addProj(xArr[1], yArr[1], zArr[1], xArr[2], yArr[2], 1);
         }
