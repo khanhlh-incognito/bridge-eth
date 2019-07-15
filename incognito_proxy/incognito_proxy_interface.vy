@@ -3,7 +3,6 @@
 contract Incognito_proxy:
     def parseSwapInst(inst: bytes[300], numPk: int128) -> (uint256, uint256, bytes[300]): constant
     def findComm(beaconHeight: uint256, bridgeHeight: uint256) -> (bytes[300], bytes[300]): constant
-    def notifyPls(v: bytes32): modifying
     def instructionInMerkleTree(leaf: bytes32, root: bytes32, path: bytes32[8], left: bool[8], length: int128) -> bool: constant
     def verifyCompressPoint(pk: bytes[33], x: uint256, y: uint256) -> bool: constant
     def verifySig(pubkey: bytes[300], signerSig: uint256, numR: int128, xs: uint256[8], ys: uint256[8], rIdxs: int128[8], numSig: int128, sigIdxs: uint256[8], rx: uint256, ry: uint256, r: bytes[33], blk: bytes32) -> bool: constant

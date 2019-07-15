@@ -58,15 +58,6 @@ def parseBurnInst(inst: bytes[INST_LENGTH]) -> (uint256, address, address, uint2
     amount: uint256 = extract32(inst, 67, type=uint256)
     return type, token, to, amount
 
-# TODO: remove test function
-@constant
-@public
-def testExtract(a: bytes[INST_LENGTH]) -> (address, wei_value):
-    x: address = extract32(a, 0, type=address)
-    s: uint256 = 12345
-    t: wei_value = as_wei_value(s, "gwei")
-    return x, t
-
 @public
 def withdraw(
     inst: bytes[INST_LENGTH],

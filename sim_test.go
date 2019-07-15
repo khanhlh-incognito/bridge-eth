@@ -195,7 +195,7 @@ func printReceipt(sim *backends.SimulatedBackend, tx *types.Transaction) {
 func getBridgeSwapProof() string {
 	url := "http://127.0.0.1:9338"
 
-	block := 19
+	block := 14
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbridgeswapproof\",\n    \"params\": [\n    \t%d\n    ]\n}", block))
 
 	req, _ := http.NewRequest("POST", url, payload)
@@ -224,7 +224,7 @@ func getBridgeSwapProof() string {
 func getBeaconSwapProof() string {
 	url := "http://127.0.0.1:9338"
 
-	block := 23
+	block := 16
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbeaconswapproof\",\n    \"params\": [\n    \t%d\n    ]\n}", block))
 
 	req, _ := http.NewRequest("POST", url, payload)
@@ -251,8 +251,8 @@ func getBeaconSwapProof() string {
 }
 
 func TestSimulatedSwapBeacon(t *testing.T) {
-	body := getBeaconSwapProof()
-	// body := getBridgeSwapProof()
+	// body := getBeaconSwapProof()
+	body := getBridgeSwapProof()
 	if len(body) < 1 {
 		t.Fatal(fmt.Errorf("empty beacon swap proof"))
 	}

@@ -7,8 +7,7 @@ COMM_SIZE: constant(uint256) = 8
 PUBKEY_SIZE: constant(int128) = 33 # each pubkey is 33 bytes
 PUBKEY_LENGTH: constant(int128) = INST_LENGTH # length of the array storing all pubkeys
 
-# TODO: update to 2/3+1
-MIN_SIGN: constant(uint256) = 2
+MIN_SIGN: constant(uint256) = 3
 
 struct Committee:
     Pubkeys: bytes[PUBKEY_LENGTH]
@@ -67,15 +66,6 @@ def findComm(beaconHeight: uint256, bridgeHeight: uint256) -> (bytes[PUBKEY_LENG
             break
         height = self.bridgeComm[height].PrevBlk
     return beacon, bridge
-
-# TODO: remove test func
-@public
-def notifyPls(v: bytes32):
-    a: uint256 = 135790246810123
-    b: uint256 = convert(v, uint256)
-    log.NotifyBytes32(convert(a, bytes32))
-    log.NotifyBytes32(v)
-    log.NotifyBool(b == a)
 
 @constant
 @public
