@@ -211,8 +211,8 @@ def instructionApproved(
     beacon: bytes[PUBKEY_LENGTH]
     bridge: bytes[PUBKEY_LENGTH]
     beacon, bridge = self.findComm(beaconHeight, bridgeHeight)
-    log.NotifyBytes32(extract32(beacon, 0, type=bytes32))
-    log.NotifyBytes32(extract32(bridge, 0, type=bytes32))
+    # log.NotifyBytes32(extract32(beacon, 0, type=bytes32))
+    # log.NotifyBytes32(extract32(bridge, 0, type=bytes32))
 
     # Check that beacon signature is correct
     if not self.verifySig(

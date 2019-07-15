@@ -324,103 +324,45 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 	printReceipt(p.sim, tx)
 }
 
-// func TestSimulatedBurn(t *testing.T) {
-// 	proof, err := getAndDecodeBurnProof("")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-//
-// 	p, err := setupWithCommittee()
-// 	if err != nil {
-// 		t.Fatalf("Fail to deloy contract: %v\n", err)
-// 	}
-//
-// 	oldBalance, newBalance, err := deposit(p, int64(5e18))
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
-// 	fmt.Printf("deposit to vault: %d -> %d\n", oldBalance, newBalance)
-//
-// 	// tokenID := proof.instruction[3:35]
-// 	// to := proof.instruction[35:67]
-// 	// amount := big.NewInt(0).SetBytes(proof.instruction[67:99])
-// 	// fmt.Printf("tokenID: %x\n", tokenID)
-// 	// fmt.Printf("to: %x\n", to)
-// 	// fmt.Printf("amount: %s\n", amount.String())
-//
-// 	withdrawer := common.HexToAddress("0x0FFBd68F130809BcA7b32D9536c8339E9A844620")
-// 	fmt.Printf("withdrawer init balance: %d\n", p.getBalance(withdrawer))
-//
-// 	auth.GasLimit = 6000000
-// 	tx, err := p.vault.Withdraw(
-// 		auth,
-// 		proof.instruction,
-//
-// 		proof.beaconHeight,
-// 		proof.beaconInstPath,
-// 		proof.beaconInstPathIsLeft,
-// 		proof.beaconInstPathLen,
-// 		proof.beaconInstRoot,
-// 		proof.beaconBlkData,
-// 		proof.beaconBlkHash,
-// 		proof.beaconSignerSig,
-//
-// 		proof.bridgeHeight,
-// 		proof.bridgeInstPath,
-// 		proof.bridgeInstPathIsLeft,
-// 		proof.bridgeInstPathLen,
-// 		proof.bridgeInstRoot,
-// 		proof.bridgeBlkData,
-// 		proof.bridgeBlkHash,
-// 		proof.bridgeSignerSig,
-// 	)
-// 	if err != nil {
-// 		fmt.Println("err:", err)
-// 	}
-// 	p.sim.Commit()
-// 	printReceipt(p.sim, tx)
-//
-// 	fmt.Printf("withdrawer new balance: %d\n", p.getBalance(withdrawer))
-// }
-//
-// func deposit(p *Platform, amount int64) (*big.Int, *big.Int, error) {
-// 	initBalance := p.getBalance(p.vaultAddr)
-// 	auth := bind.NewKeyedTransactor(genesisAcc.PrivateKey)
-// 	auth.Value = big.NewInt(amount)
-// 	_, err := p.vault.Deposit(auth, "")
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
-// 	p.sim.Commit()
-// 	newBalance := p.getBalance(p.vaultAddr)
-// 	return initBalance, newBalance, nil
-// }
-//
-// func TestSimulatedExtract(t *testing.T) {
-// 	p, err := setupWithCommittee()
-// 	if err != nil {
-// 		t.Fatalf("Fail to deloy contract: %v\n", err)
-// 	}
-//
-// 	a, _ := hex.DecodeString("000000000000000000000000e722D8b71DCC0152D47D2438556a45D3357d631f")
-// 	addr, wei, err := p.vault.TestExtract(nil, a)
-// 	fmt.Printf("addr: %x\n", addr)
-// 	fmt.Printf("wei: %d\n", wei)
-// }
-//
-// func TestSimulatedCallFunc(t *testing.T) {
-// 	p, err := setupWithCommittee()
-// 	if err != nil {
-// 		t.Fatalf("Fail to deloy contract: %v\n", err)
-// 	}
-//
-// 	v := [32]byte{}
-// 	b := big.NewInt(135790246810123).Bytes()
-// 	copy(v[32-len(b):], b)
-// 	tx, err := p.inc.NotifyPls(auth, v)
-// 	if err != nil {
-// 		fmt.Println("err:", err)
-// 	}
-// 	p.sim.Commit()
-// 	printReceipt(p.sim, tx)
-// }
+func TestSimulatedBurn(t *testing.T) {
+	proof, err := getAndDecodeBurnProof("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p, err := setupWithCommittee()
+	if err != nil {
+		t.Fatalf("Fail to deloy contract: %v\n", err)
+	}
+
+	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("deposit to vault: %d -> %d\n", oldBalance, newBalance)
+
+	withdrawer := common.HexToAddress("0x0FFBd68F130809BcA7b32D9536c8339E9A844620")
+	fmt.Printf("withdrawer init balance: %d\n", p.getBalance(withdrawer))
+
+	tx, err := withdraw(p.v, auth, proof)
+	if err != nil {
+		fmt.Println("err:", err)
+	}
+	p.sim.Commit()
+	printReceipt(p.sim, tx)
+
+	fmt.Printf("withdrawer new balance: %d\n", p.getBalance(withdrawer))
+}
+
+func deposit(p *Platform, amount int64) (*big.Int, *big.Int, error) {
+	initBalance := p.getBalance(p.vAddr)
+	auth := bind.NewKeyedTransactor(genesisAcc.PrivateKey)
+	auth.Value = big.NewInt(amount)
+	_, err := p.v.Deposit(auth, "")
+	if err != nil {
+		return nil, nil, err
+	}
+	p.sim.Commit()
+	newBalance := p.getBalance(p.vAddr)
+	return initBalance, newBalance, nil
+}

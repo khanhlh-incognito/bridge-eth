@@ -33,29 +33,7 @@ func TestSimulatedErc20(t *testing.T) {
 	withdrawer := common.HexToAddress("0x0FFBd68F130809BcA7b32D9536c8339E9A844620")
 	fmt.Printf("withdrawer init balance: %d\n", getBalanceErc20(token, withdrawer))
 
-	auth.GasLimit = 6000000
-	tx, err := v.Withdraw(
-		auth,
-		proof.instruction,
-
-		proof.beaconHeight,
-		proof.beaconInstPath,
-		proof.beaconInstPathIsLeft,
-		proof.beaconInstPathLen,
-		proof.beaconInstRoot,
-		proof.beaconBlkData,
-		proof.beaconBlkHash,
-		proof.beaconSignerSig,
-
-		proof.bridgeHeight,
-		proof.bridgeInstPath,
-		proof.bridgeInstPathIsLeft,
-		proof.bridgeInstPathLen,
-		proof.bridgeInstRoot,
-		proof.bridgeBlkData,
-		proof.bridgeBlkHash,
-		proof.bridgeSignerSig,
-	)
+	tx, err := withdraw(v, auth, proof)
 	if err != nil {
 		t.Fatal(err)
 	}

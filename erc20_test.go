@@ -28,29 +28,7 @@ func TestERC20Burn(t *testing.T) {
 
 	// Burn
 	auth := bind.NewKeyedTransactor(privKey)
-	auth.GasLimit = 6000000
-	tx, err := c.v.Withdraw(
-		auth,
-		proof.instruction,
-
-		proof.beaconHeight,
-		proof.beaconInstPath,
-		proof.beaconInstPathIsLeft,
-		proof.beaconInstPathLen,
-		proof.beaconInstRoot,
-		proof.beaconBlkData,
-		proof.beaconBlkHash,
-		proof.beaconSignerSig,
-
-		proof.bridgeHeight,
-		proof.bridgeInstPath,
-		proof.bridgeInstPathIsLeft,
-		proof.bridgeInstPathLen,
-		proof.bridgeInstRoot,
-		proof.bridgeBlkData,
-		proof.bridgeBlkHash,
-		proof.bridgeSignerSig,
-	)
+	tx, err := withdraw(c.v, auth, proof)
 	if err != nil {
 		t.Fatal(err)
 	}

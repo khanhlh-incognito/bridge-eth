@@ -1,6 +1,6 @@
 # External Contracts
 contract Incognito_proxy:
-    def instructionApproved(beaconInstHash: bytes32, beaconHeight: uint256, beaconInstPath: bytes32[8], beaconInstPathIsLeft: bool[8], beaconInstPathLen: int128, beaconInstRoot: bytes32, beaconBlkData: bytes32, beaconBlkHash: bytes32, beaconSignerSig: bytes32, bridgeInstHash: bytes32, bridgeHeight: uint256, bridgeInstPath: bytes32[8], bridgeInstPathIsLeft: bool[8], bridgeInstPathLen: int128, bridgeInstRoot: bytes32, bridgeBlkData: bytes32, bridgeBlkHash: bytes32, bridgeSignerSig: bytes32) -> bool: constant
+    def instructionApproved(beaconInstHash: bytes32, beaconHeight: uint256, beaconInstPath: bytes32[8], beaconInstPathIsLeft: bool[8], beaconInstPathLen: int128, beaconInstRoot: bytes32, beaconBlkData: bytes32, beaconBlkHash: bytes32, beaconSignerSig: uint256, beaconNumR: int128, beaconXs: uint256[8], beaconYs: uint256[8], beaconRIdxs: int128[8], beaconNumSig: int128, beaconSigIdxs: uint256[8], beaconRx: uint256, beaconRy: uint256, beaconR: bytes[33], bridgeInstHash: bytes32, bridgeHeight: uint256, bridgeInstPath: bytes32[8], bridgeInstPathIsLeft: bool[8], bridgeInstPathLen: int128, bridgeInstRoot: bytes32, bridgeBlkData: bytes32, bridgeBlkHash: bytes32, bridgeSignerSig: uint256, bridgeNumR: int128, bridgeXs: uint256[8], bridgeYs: uint256[8], bridgeRIdxs: int128[8], bridgeNumSig: int128, bridgeSigIdxs: uint256[8], bridgeRx: uint256, bridgeRy: uint256, bridgeR: bytes[33]) -> bool: constant
 
 contract Erc20:
     def transfer(_to: address, _value: uint256) -> bool: modifying
@@ -78,6 +78,15 @@ def withdraw(
     beaconBlkData: bytes32,
     beaconBlkHash: bytes32,
     beaconSignerSig: uint256,
+    beaconNumR: int128,
+    beaconXs: uint256[COMM_SIZE],
+    beaconYs: uint256[COMM_SIZE],
+    beaconRIdxs: int128[COMM_SIZE],
+    beaconNumSig: int128,
+    beaconSigIdxs: uint256[COMM_SIZE],
+    beaconRx: uint256,
+    beaconRy: uint256,
+    beaconR: bytes[PUBKEY_SIZE],
     bridgeHeight: uint256,
     bridgeInstPath: bytes32[INST_MAX_PATH],
     bridgeInstPathIsLeft: bool[INST_MAX_PATH],
@@ -86,6 +95,15 @@ def withdraw(
     bridgeBlkData: bytes32,
     bridgeBlkHash: bytes32,
     bridgeSignerSig: uint256,
+    bridgeNumR: int128,
+    bridgeXs: uint256[COMM_SIZE],
+    bridgeYs: uint256[COMM_SIZE],
+    bridgeRIdxs: int128[COMM_SIZE],
+    bridgeNumSig: int128,
+    bridgeSigIdxs: uint256[COMM_SIZE],
+    bridgeRx: uint256,
+    bridgeRy: uint256,
+    bridgeR: bytes[PUBKEY_SIZE],
 ):
     type: uint256 = 0
     token: address
@@ -113,27 +131,45 @@ def withdraw(
     bridgeInstHash: bytes32 = keccak256(concat(inst, convert(bridgeHeight, bytes32)))
     assert self.withdrawed[instHash] == False
 
-    # # Check if instruction is approved on Incognito
-    # assert self.incognito.instructionApproved(
-    #     beaconInstHash,
-    #     beaconHeight,
-    #     beaconInstPath,
-    #     beaconInstPathIsLeft,
-    #     beaconInstPathLen,
-    #     beaconInstRoot,
-    #     beaconBlkData,
-    #     beaconBlkHash,
-    #     beaconSignerSig,
-    #     bridgeInstHash,
-    #     bridgeHeight,
-    #     bridgeInstPath,
-    #     bridgeInstPathIsLeft,
-    #     bridgeInstPathLen,
-    #     bridgeInstRoot,
-    #     bridgeBlkData,
-    #     bridgeBlkHash,
-    #     bridgeSignerSig,
-    # )
+    # Check if instruction is approved on Incognito
+    assert self.incognito.instructionApproved(
+        beaconInstHash,
+        beaconHeight,
+        beaconInstPath,
+        beaconInstPathIsLeft,
+        beaconInstPathLen,
+        beaconInstRoot,
+        beaconBlkData,
+        beaconBlkHash,
+        beaconSignerSig,
+        beaconNumR,
+        beaconXs,
+        beaconYs,
+        beaconRIdxs,
+        beaconNumSig,
+        beaconSigIdxs,
+        beaconRx,
+        beaconRy,
+        beaconR,
+        bridgeInstHash,
+        bridgeHeight,
+        bridgeInstPath,
+        bridgeInstPathIsLeft,
+        bridgeInstPathLen,
+        bridgeInstRoot,
+        bridgeBlkData,
+        bridgeBlkHash,
+        bridgeSignerSig,
+        bridgeNumR,
+        bridgeXs,
+        bridgeYs,
+        bridgeRIdxs,
+        bridgeNumSig,
+        bridgeSigIdxs,
+        bridgeRx,
+        bridgeRy,
+        bridgeR
+    )
 
     # Send and notify
     self.withdrawed[instHash] = True
