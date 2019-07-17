@@ -32,15 +32,119 @@ type Platform struct {
 	sim *backends.SimulatedBackend
 }
 
-func (p *Platform) getBalance(addr common.Address) *big.Int {
-	bal, _ := p.sim.BalanceAt(context.Background(), addr, nil)
-	return bal
-}
-
 func init() {
 	fmt.Println("Initializing genesis account...")
 	genesisAcc = newAccount()
 	auth = bind.NewKeyedTransactor(genesisAcc.PrivateKey)
+}
+
+func TestSimulatedSwapBeacon(t *testing.T) {
+	// body := getBeaconSwapProof()
+	body := getBridgeSwapProof()
+	if len(body) < 1 {
+		t.Fatal(fmt.Errorf("empty beacon swap proof"))
+	}
+
+	r := getProofResult{}
+	err := json.Unmarshal([]byte(body), &r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proof, err := decodeProof(&r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = proof
+
+	p, err := setupWithCommittee()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = p
+
+	auth.GasLimit = 7000000
+	fmt.Printf("inst len: %d\n", len(proof.instruction))
+	numPk := big.NewInt(int64((len(proof.instruction) - 35) / pubkey_size))
+	fmt.Printf("numPk: %d\n", numPk)
+	tx, err := p.inc.SwapCommittee(
+		auth,
+		proof.instruction,
+		numPk,
+
+		proof.beaconInstPath,
+		proof.beaconInstPathIsLeft,
+		proof.beaconInstPathLen,
+		proof.beaconInstRoot,
+		proof.beaconBlkData,
+		proof.beaconBlkHash,
+		proof.beaconSignerSig,
+		proof.beaconNumR,
+		proof.beaconXs,
+		proof.beaconYs,
+		proof.beaconRIdxs,
+		proof.beaconNumSig,
+		proof.beaconSigIdxs,
+		proof.beaconRx,
+		proof.beaconRy,
+		proof.beaconR,
+
+		proof.bridgeInstPath,
+		proof.bridgeInstPathIsLeft,
+		proof.bridgeInstPathLen,
+		proof.bridgeInstRoot,
+		proof.bridgeBlkData,
+		proof.bridgeBlkHash,
+		proof.bridgeSignerSig,
+		proof.bridgeNumR,
+		proof.bridgeXs,
+		proof.bridgeYs,
+		proof.bridgeRIdxs,
+		proof.bridgeNumSig,
+		proof.bridgeSigIdxs,
+		proof.bridgeRx,
+		proof.bridgeRy,
+		proof.bridgeR,
+	)
+	if err != nil {
+		fmt.Println("err:", err)
+	}
+	p.sim.Commit()
+	printReceipt(p.sim, tx)
+}
+
+func TestSimulatedBurn(t *testing.T) {
+	proof, err := getAndDecodeBurnProof("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p, err := setupWithCommittee()
+	if err != nil {
+		t.Fatalf("Fail to deloy contract: %v\n", err)
+	}
+
+	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("deposit to vault: %d -> %d\n", oldBalance, newBalance)
+
+	withdrawer := common.HexToAddress("0x0FFBd68F130809BcA7b32D9536c8339E9A844620")
+	fmt.Printf("withdrawer init balance: %d\n", p.getBalance(withdrawer))
+
+	tx, err := withdraw(p.v, auth, proof)
+	if err != nil {
+		fmt.Println("err:", err)
+	}
+	p.sim.Commit()
+	printReceipt(p.sim, tx)
+
+	fmt.Printf("withdrawer new balance: %d\n", p.getBalance(withdrawer))
+}
+
+func (p *Platform) getBalance(addr common.Address) *big.Int {
+	bal, _ := p.sim.BalanceAt(context.Background(), addr, nil)
+	return bal
 }
 
 func setup(beaconComm, bridgeComm []byte) (*Platform, error) {
@@ -52,14 +156,17 @@ func setup(beaconComm, bridgeComm []byte) (*Platform, error) {
 
 	// MulSigP256
 	var err error
-	p.msAddr, _, p.ms, err = checkMulSig.DeployMulSigP256(auth, sim)
+	var tx *types.Transaction
+	_ = tx
+	p.msAddr, tx, p.ms, err = checkMulSig.DeployMulSigP256(auth, sim)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy mulsig contract: %v", err)
 	}
 	sim.Commit()
+	// printReceipt(sim, tx)
 
 	// IncognitoProxy
-	p.incAddr, _, p.inc, err = incognito_proxy.DeployIncognitoProxy(auth, sim, beaconComm, bridgeComm, p.msAddr)
+	p.incAddr, tx, p.inc, err = incognito_proxy.DeployIncognitoProxy(auth, sim, beaconComm, bridgeComm, p.msAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy IncognitoProxy contract: %v", err)
 	}
@@ -68,7 +175,7 @@ func setup(beaconComm, bridgeComm []byte) (*Platform, error) {
 	// printReceipt(sim, tx)
 
 	// Vault
-	p.vAddr, _, p.v, err = vault.DeployVault(auth, sim, p.incAddr)
+	p.vAddr, tx, p.v, err = vault.DeployVault(auth, sim, p.incAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy Vault contract: %v", err)
 	}
@@ -128,8 +235,9 @@ func setupWithCommittee() (*Platform, error) {
 	}
 
 	bridgeOld := []byte{}
-	for _, val := range r.Result.ShardCommittee["1"] {
+	for i, val := range r.Result.ShardCommittee["1"] {
 		pk, _, _ := base58.Base58Check{}.Decode(val)
+		fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
 		bridgeOld = append(bridgeOld, pk...)
 	}
 
@@ -248,110 +356,6 @@ func getBeaconSwapProof() string {
 
 	//fmt.Println(string(body))
 	return string(body)
-}
-
-func TestSimulatedSwapBeacon(t *testing.T) {
-	// body := getBeaconSwapProof()
-	body := getBridgeSwapProof()
-	if len(body) < 1 {
-		t.Fatal(fmt.Errorf("empty beacon swap proof"))
-	}
-
-	r := getProofResult{}
-	err := json.Unmarshal([]byte(body), &r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	proof, err := decodeProof(&r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_ = proof
-
-	p, err := setupWithCommittee()
-	if err != nil {
-		t.Fatal(err)
-	}
-	_ = p
-
-	auth.GasLimit = 7000000
-	fmt.Printf("inst len: %d\n", len(proof.instruction))
-	numPk := big.NewInt(int64((len(proof.instruction) - 35) / pubkey_size))
-	fmt.Printf("numPk: %d\n", numPk)
-	tx, err := p.inc.SwapCommittee(
-		auth,
-		proof.instruction,
-		numPk,
-
-		proof.beaconInstPath,
-		proof.beaconInstPathIsLeft,
-		proof.beaconInstPathLen,
-		proof.beaconInstRoot,
-		proof.beaconBlkData,
-		proof.beaconBlkHash,
-		proof.beaconSignerSig,
-		proof.beaconNumR,
-		proof.beaconXs,
-		proof.beaconYs,
-		proof.beaconRIdxs,
-		proof.beaconNumSig,
-		proof.beaconSigIdxs,
-		proof.beaconRx,
-		proof.beaconRy,
-		proof.beaconR,
-
-		proof.bridgeInstPath,
-		proof.bridgeInstPathIsLeft,
-		proof.bridgeInstPathLen,
-		proof.bridgeInstRoot,
-		proof.bridgeBlkData,
-		proof.bridgeBlkHash,
-		proof.bridgeSignerSig,
-		proof.bridgeNumR,
-		proof.bridgeXs,
-		proof.bridgeYs,
-		proof.bridgeRIdxs,
-		proof.bridgeNumSig,
-		proof.bridgeSigIdxs,
-		proof.bridgeRx,
-		proof.bridgeRy,
-		proof.bridgeR,
-	)
-	if err != nil {
-		fmt.Println("err:", err)
-	}
-	p.sim.Commit()
-	printReceipt(p.sim, tx)
-}
-
-func TestSimulatedBurn(t *testing.T) {
-	proof, err := getAndDecodeBurnProof("")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	p, err := setupWithCommittee()
-	if err != nil {
-		t.Fatalf("Fail to deloy contract: %v\n", err)
-	}
-
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Printf("deposit to vault: %d -> %d\n", oldBalance, newBalance)
-
-	withdrawer := common.HexToAddress("0x0FFBd68F130809BcA7b32D9536c8339E9A844620")
-	fmt.Printf("withdrawer init balance: %d\n", p.getBalance(withdrawer))
-
-	tx, err := withdraw(p.v, auth, proof)
-	if err != nil {
-		fmt.Println("err:", err)
-	}
-	p.sim.Commit()
-	printReceipt(p.sim, tx)
-
-	fmt.Printf("withdrawer new balance: %d\n", p.getBalance(withdrawer))
 }
 
 func deposit(p *Platform, amount int64) (*big.Int, *big.Int, error) {

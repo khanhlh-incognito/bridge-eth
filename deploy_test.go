@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/incognitochain/bridge-eth/checkMulSig"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
 )
@@ -128,11 +127,12 @@ func TestDeployProxyAndVault(t *testing.T) {
 	}
 
 	// Deploy MulSigP256
-	msAddr, _, _, err := checkMulSig.DeployMulSigP256(auth, client)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println("deployed MulSigP256")
+	// msAddr, _, _, err := checkMulSig.DeployMulSigP256(auth, client)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// fmt.Println("deployed MulSigP256")
+	msAddr := common.HexToAddress("0x1383AA86AC1f7BF638baAD2311448a40493f691F")
 	fmt.Printf("addr: %x\n", msAddr[:])
 
 	// Deploy incognito_proxy
@@ -169,14 +169,14 @@ func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
 }
 
 func getCommittee() ([]byte, []byte, error) {
-	beaconComm := []string{}
+	beaconComm := []string{"035e324cb260cf972a0b3cbe4d2bf2b5b01e5746712474101839beeaba8a15cd00", "02f302e420f5947118dce4d7f4bc6f018da2c04f4ac199d3ed9e15dbdbdf2f2a00", "02688b24164f8ee7b0df258dccb4776fe846c2ad41d32c054469887331e4aa2500"}
 	beacons := []byte{}
 	for _, p := range beaconComm {
 		pk, _ := hex.DecodeString(p)
 		beacons = append(beacons, pk...)
 	}
 
-	bridgeComm := []string{}
+	bridgeComm := []string{"03b2c0633aa510738c7847611f6ce6aa2ea4f2106476c2df4343b3e15e608105d9", "02b70062bbb139729ede0ef1273205e1f12c43af9a79d9da97f09cea11a865d301", "021c0d087fe263012e41f3319c6e40c2484d78d000596d05d3207f21bb13ef4601"}
 	bridges := []byte{}
 	for _, p := range bridgeComm {
 		pk, _ := hex.DecodeString(p)
