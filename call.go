@@ -7,7 +7,6 @@ import (
 )
 
 func withdraw(v *vault.Vault, auth *bind.TransactOpts, proof *decodedProof) (*types.Transaction, error) {
-	auth.GasLimit = 8000000
 	tx, err := v.Withdraw(
 		auth,
 		proof.instruction,

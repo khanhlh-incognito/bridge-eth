@@ -136,8 +136,7 @@ def verifySig(
             return False
 
     # Check if signerSig is valid
-    a: bool = False
-    a = self.mulsig.checkMulSig(
+    if not self.mulsig.checkMulSig(
         xs,
         ys,
         sigIdxs,
@@ -147,8 +146,7 @@ def verifySig(
         r,
         signerSig,
         blk,
-    )
-    if not a:
+    ):
         return False
 
     return True
@@ -253,7 +251,6 @@ def instructionApproved(
         bridgeR,
         blk,
     ):
-        log.NotifyString("failed bridge")
         return False
 
     # Check that inst is in bridge block

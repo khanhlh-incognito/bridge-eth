@@ -169,14 +169,14 @@ func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
 }
 
 func getCommittee() ([]byte, []byte, error) {
-	beaconComm := []string{"035e324cb260cf972a0b3cbe4d2bf2b5b01e5746712474101839beeaba8a15cd00", "02f302e420f5947118dce4d7f4bc6f018da2c04f4ac199d3ed9e15dbdbdf2f2a00", "02688b24164f8ee7b0df258dccb4776fe846c2ad41d32c054469887331e4aa2500"}
+	beaconComm := []string{"02a96a04ad76a0034efc8819e93308823ce7a3b76fd694f961ee909124096baf00", "0242653de0e9af9dd3725008519157314eb5a845dec2cd646ce9e03f780175b700", "028c49fc5f3e001c36095335c53b0b7320f6a1c932424e92c9de344b55e80ddf00"}
 	beacons := []byte{}
 	for _, p := range beaconComm {
 		pk, _ := hex.DecodeString(p)
 		beacons = append(beacons, pk...)
 	}
 
-	bridgeComm := []string{"03b2c0633aa510738c7847611f6ce6aa2ea4f2106476c2df4343b3e15e608105d9", "02b70062bbb139729ede0ef1273205e1f12c43af9a79d9da97f09cea11a865d301", "021c0d087fe263012e41f3319c6e40c2484d78d000596d05d3207f21bb13ef4601"}
+	bridgeComm := []string{"0253d262c2b6a55606ff9d32e195231ec57e4d23a6efd1c02143a58fd0c2591d01", "02dee56cbbde5ef6d03a9e69bf3784ae4a8460d0058a6082eee4be2ed5c4fd3301", "02ec388db662801da0fe3c41f39085369ed4df71d42ec96924012243dc9c67d201"}
 	bridges := []byte{}
 	for _, p := range bridgeComm {
 		pk, _ := hex.DecodeString(p)
