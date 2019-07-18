@@ -19,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/incognitochain/bridge-eth/checkMulSig"
-	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
 )
@@ -55,7 +54,7 @@ func TestSimulatedSwapBridge(t *testing.T) {
 	}
 	_ = proof
 
-	p, err := setupWithCommittee()
+	p, err := setupWithLocalCommittee()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +127,7 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 	}
 	_ = proof
 
-	p, err := setupWithCommittee()
+	p, err := setupWithLocalCommittee()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +172,7 @@ func TestSimulatedBurn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p, err := setupWithCommittee()
+	p, err := setupWithLocalCommittee()
 	if err != nil {
 		t.Fatalf("Fail to deloy contract: %v\n", err)
 	}
@@ -241,61 +240,12 @@ func setup(beaconComm, bridgeComm []byte) (*Platform, error) {
 	return p, nil
 }
 
-func setupWithCommittee() (*Platform, error) {
+func setupWithLocalCommittee() (*Platform, error) {
 	url := "http://127.0.0.1:9334"
-
-	payload := strings.NewReader("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbeaconbeststate\",\n    \"params\": []\n}")
-
-	req, _ := http.NewRequest("POST", url, payload)
-
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Accept", "*/*")
-	req.Header.Add("Cache-Control", "no-cache")
-	req.Header.Add("Host", "127.0.0.1:9334")
-	req.Header.Add("accept-encoding", "gzip, deflate")
-	req.Header.Add("Connection", "keep-alive")
-	req.Header.Add("cache-control", "no-cache")
-
-	res, err := http.DefaultClient.Do(req)
+	beaconOld, bridgeOld, err := getCommittee(url)
 	if err != nil {
 		return nil, err
 	}
-
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
-
-	type beaconBestStateResult struct {
-		BeaconCommittee []string
-		ShardCommittee  map[string][]string
-	}
-
-	type getBeaconBestStateResult struct {
-		Result beaconBestStateResult
-		Error  string
-		Id     int
-	}
-
-	r := getBeaconBestStateResult{}
-	err = json.Unmarshal([]byte(body), &r)
-	if err != nil {
-		return nil, err
-	}
-
-	// Genesis committee
-	beaconOld := []byte{}
-	for i, val := range r.Result.BeaconCommittee {
-		pk, _, _ := base58.Base58Check{}.Decode(val)
-		fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
-		beaconOld = append(beaconOld, pk...)
-	}
-
-	bridgeOld := []byte{}
-	for i, val := range r.Result.ShardCommittee["1"] {
-		pk, _, _ := base58.Base58Check{}.Decode(val)
-		fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
-		bridgeOld = append(bridgeOld, pk...)
-	}
-
 	return setup(beaconOld, bridgeOld)
 }
 

@@ -107,7 +107,7 @@ func setupWithErc20() (
 	err error,
 ) {
 	p := &Platform{}
-	p, err = setupWithCommittee()
+	p, err = setupWithLocalCommittee()
 	if err != nil {
 		return
 	}

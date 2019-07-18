@@ -121,7 +121,8 @@ func TestDeployProxyAndVault(t *testing.T) {
 	defer client.Close()
 
 	// Genesis committee
-	beaconComm, bridgeComm, err := getCommittee()
+	url := "http://test-node.incognito.org:9334"
+	beaconComm, bridgeComm, err := getCommittee(url)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +169,7 @@ func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
 	return privKey, client, nil
 }
 
-func getCommittee() ([]byte, []byte, error) {
+func getCommitteeHardcoded() ([]byte, []byte, error) {
 	beaconComm := []string{"02a96a04ad76a0034efc8819e93308823ce7a3b76fd694f961ee909124096baf00", "0242653de0e9af9dd3725008519157314eb5a845dec2cd646ce9e03f780175b700", "028c49fc5f3e001c36095335c53b0b7320f6a1c932424e92c9de344b55e80ddf00"}
 	beacons := []byte{}
 	for _, p := range beaconComm {

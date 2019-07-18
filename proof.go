@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/incognitochain/bridge-eth/checkMulSig"
+	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/jsonresult"
@@ -94,11 +95,67 @@ func getAndDecodeBurnProof(txID string) (*decodedProof, error) {
 	return decodeProof(&r)
 }
 
+func getCommittee(url string) ([]byte, []byte, error) {
+	payload := strings.NewReader("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbeaconbeststate\",\n    \"params\": []\n}")
+
+	req, _ := http.NewRequest("POST", url, payload)
+
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Accept", "*/*")
+	req.Header.Add("Cache-Control", "no-cache")
+	req.Header.Add("Host", "127.0.0.1:9334")
+	req.Header.Add("accept-encoding", "gzip, deflate")
+	req.Header.Add("Connection", "keep-alive")
+	req.Header.Add("cache-control", "no-cache")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+
+	type beaconBestStateResult struct {
+		BeaconCommittee []string
+		ShardCommittee  map[string][]string
+	}
+
+	type getBeaconBestStateResult struct {
+		Result beaconBestStateResult
+		Error  string
+		Id     int
+	}
+
+	r := getBeaconBestStateResult{}
+	err = json.Unmarshal([]byte(body), &r)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Genesis committee
+	beaconOld := []byte{}
+	for i, val := range r.Result.BeaconCommittee {
+		pk, _, _ := base58.Base58Check{}.Decode(val)
+		fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
+		beaconOld = append(beaconOld, pk...)
+	}
+
+	bridgeOld := []byte{}
+	for i, val := range r.Result.ShardCommittee["1"] {
+		pk, _, _ := base58.Base58Check{}.Decode(val)
+		fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
+		bridgeOld = append(bridgeOld, pk...)
+	}
+
+	return beaconOld, bridgeOld, nil
+}
+
 func getBurnProof(txID string) string {
 	url := "http://127.0.0.1:9338"
 
 	if len(txID) == 0 {
-		txID = "30fee194ad7bfea3698261d3b9e15448162201d3b6b68a6d2cf39e4689fd9bac"
+		txID = "0ab44313a76278757d8eb6aaa39a0b0f8465bc93ca958446155c0ef5102649d1"
 	}
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 
