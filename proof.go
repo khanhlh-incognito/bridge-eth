@@ -59,8 +59,9 @@ type decodedProof struct {
 	beaconRIdxs          [comm_size]*big.Int
 	beaconNumSig         *big.Int
 	beaconSigIdxs        [comm_size]*big.Int
-	beaconRx             *big.Int
-	beaconRy             *big.Int
+	beaconRp             []byte
+	beaconRpx            *big.Int
+	beaconRpy            *big.Int
 	beaconR              []byte
 
 	bridgeInstPath       [inst_max_path][32]byte
@@ -76,8 +77,9 @@ type decodedProof struct {
 	bridgeRIdxs          [comm_size]*big.Int
 	bridgeNumSig         *big.Int
 	bridgeSigIdxs        [comm_size]*big.Int
-	bridgeRx             *big.Int
-	bridgeRy             *big.Int
+	bridgeRp             []byte
+	bridgeRpx            *big.Int
+	bridgeRpy            *big.Int
 	bridgeR              []byte
 }
 
@@ -152,10 +154,10 @@ func getCommittee(url string) ([]byte, []byte, error) {
 }
 
 func getBurnProof(txID string) string {
-	url := "http://127.0.0.1:9338"
+	url := "http://127.0.0.1:9554"
 
 	if len(txID) == 0 {
-		txID = "0ab44313a76278757d8eb6aaa39a0b0f8465bc93ca958446155c0ef5102649d1"
+		txID = "25efee712014d05c7acbba6358e843c5b7234532ef26b063b864ae7425d72d33"
 	}
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 
@@ -205,7 +207,12 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	fmt.Printf("expected beaconBlkHash: %x\n", keccak256(beaconBlkData[:], beaconInstRoot[:]))
 	fmt.Printf("beaconBlkHash: %x\n\n", beaconBlkHash)
 
-	beaconSignerSig := big.NewInt(0).SetBytes(decode(r.Result.BeaconSignerSig))
+	beaconMulSig := &privacy.SchnMultiSig{}
+	err := beaconMulSig.SetBytes(decode(r.Result.BeaconSignerSig))
+	if err != nil {
+		return nil, err
+	}
+	beaconSignerSig := beaconMulSig.S
 	beaconNumR := big.NewInt(int64(len(r.Result.BeaconRIdxs)))
 	beaconXs := newBigIntArray()
 	beaconYs := newBigIntArray()
@@ -228,12 +235,9 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 		}
 		beaconSigIdxs[i] = big.NewInt(int64(j))
 	}
-	p, err := decompress(r.Result.BeaconR)
-	if err != nil {
-		return nil, err
-	}
-	beaconRx := p.X
-	beaconRy := p.Y
+	beaconRp := beaconMulSig.R.Compress()
+	beaconRpx := beaconMulSig.R.X
+	beaconRpy := beaconMulSig.R.Y
 	beaconR := decode(r.Result.BeaconR)
 
 	// For bridge
@@ -251,7 +255,12 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	bridgeBlkHash := toByte32(decode(r.Result.BridgeBlkHash))
 	// fmt.Printf("bridgeBlkHash: %x\n", bridgeBlkHash)
 
-	bridgeSignerSig := big.NewInt(0).SetBytes(decode(r.Result.BridgeSignerSig))
+	bridgeMulSig := &privacy.SchnMultiSig{}
+	err = bridgeMulSig.SetBytes(decode(r.Result.BridgeSignerSig))
+	if err != nil {
+		return nil, err
+	}
+	bridgeSignerSig := bridgeMulSig.S
 	bridgeNumR := big.NewInt(int64(len(r.Result.BridgeRIdxs)))
 	bridgeXs := newBigIntArray()
 	bridgeYs := newBigIntArray()
@@ -273,13 +282,11 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 			return nil, fmt.Errorf("failed finding bridge sigIdx %d %v", sIdx, r.Result.BridgeRIdxs)
 		}
 		bridgeSigIdxs[i] = big.NewInt(int64(j))
+		fmt.Printf("bridgeSigIdxs[%d]: %d\n", i, j)
 	}
-	p, err = decompress(r.Result.BridgeR)
-	if err != nil {
-		return nil, err
-	}
-	bridgeRx := p.X
-	bridgeRy := p.Y
+	bridgeRp := bridgeMulSig.R.Compress()
+	bridgeRpx := bridgeMulSig.R.X
+	bridgeRpy := bridgeMulSig.R.Y
 	bridgeR := decode(r.Result.BridgeR)
 
 	return &decodedProof{
@@ -299,8 +306,9 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 		beaconRIdxs:          beaconRIdxs,
 		beaconNumSig:         beaconNumSig,
 		beaconSigIdxs:        beaconSigIdxs,
-		beaconRx:             beaconRx,
-		beaconRy:             beaconRy,
+		beaconRp:             beaconRp,
+		beaconRpx:            beaconRpx,
+		beaconRpy:            beaconRpy,
 		beaconR:              beaconR,
 
 		bridgeHeight:         bridgeHeight,
@@ -317,8 +325,9 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 		bridgeRIdxs:          bridgeRIdxs,
 		bridgeNumSig:         bridgeNumSig,
 		bridgeSigIdxs:        bridgeSigIdxs,
-		bridgeRx:             bridgeRx,
-		bridgeRy:             bridgeRy,
+		bridgeRp:             bridgeRp,
+		bridgeRpx:            bridgeRpx,
+		bridgeRpy:            bridgeRpy,
 		bridgeR:              bridgeR,
 	}, nil
 }

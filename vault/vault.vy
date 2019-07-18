@@ -1,6 +1,6 @@
 # External Contracts
 contract Incognito_proxy:
-    def instructionApproved(isBeacon: bool, instHash: bytes32, height: uint256, instPath: bytes32[8], instPathIsLeft: bool[8], instPathLen: int128, instRoot: bytes32, blkData: bytes32, blkHash: bytes32, signerSig: uint256, numR: int128, xs: uint256[8], ys: uint256[8], rIdxs: int128[8], numSig: int128, sigIdxs: uint256[8], rx: uint256, ry: uint256, r: bytes[33]) -> bool: constant
+    def instructionApproved(isBeacon: bool, instHash: bytes32, height: uint256, instPath: bytes32[8], instPathIsLeft: bool[8], instPathLen: int128, instRoot: bytes32, blkData: bytes32, blkHash: bytes32, signerSig: uint256, numR: int128, xs: uint256[8], ys: uint256[8], rIdxs: int128[8], numSig: int128, sigIdxs: uint256[8], rp: bytes[33], rpx: uint256, rpy: uint256, r: bytes[33]) -> bool: constant
 
 contract Erc20:
     def transfer(_to: address, _value: uint256) -> bool: modifying
@@ -75,8 +75,9 @@ def withdraw(
     beaconRIdxs: int128[COMM_SIZE],
     beaconNumSig: int128,
     beaconSigIdxs: uint256[COMM_SIZE],
-    beaconRx: uint256,
-    beaconRy: uint256,
+    beaconRp: bytes[PUBKEY_SIZE],
+    beaconRpx: uint256,
+    beaconRpy: uint256,
     beaconR: bytes[PUBKEY_SIZE],
     bridgeHeight: uint256,
     bridgeInstPath: bytes32[INST_MAX_PATH],
@@ -92,8 +93,9 @@ def withdraw(
     bridgeRIdxs: int128[COMM_SIZE],
     bridgeNumSig: int128,
     bridgeSigIdxs: uint256[COMM_SIZE],
-    bridgeRx: uint256,
-    bridgeRy: uint256,
+    bridgeRp: bytes[PUBKEY_SIZE],
+    bridgeRpx: uint256,
+    bridgeRpy: uint256,
     bridgeR: bytes[PUBKEY_SIZE],
 ):
     type: uint256 = 0
@@ -140,8 +142,9 @@ def withdraw(
         beaconRIdxs,
         beaconNumSig,
         beaconSigIdxs,
-        beaconRx,
-        beaconRy,
+        beaconRp,
+        beaconRpx,
+        beaconRpy,
         beaconR,
     )
 
@@ -163,8 +166,9 @@ def withdraw(
         bridgeRIdxs,
         bridgeNumSig,
         bridgeSigIdxs,
-        bridgeRx,
-        bridgeRy,
+        bridgeRp,
+        bridgeRpx,
+        bridgeRpy,
         bridgeR,
     )
 

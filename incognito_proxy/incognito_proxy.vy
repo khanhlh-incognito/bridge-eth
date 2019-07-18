@@ -117,8 +117,9 @@ def verifySig(
     rIdxs: int128[COMM_SIZE],
     numSig: int128,
     sigIdxs: uint256[COMM_SIZE],
-    rx: uint256,
-    ry: uint256,
+    rp: bytes[PUBKEY_SIZE],
+    rpx: uint256,
+    rpy: uint256,
     r: bytes[PUBKEY_SIZE],
     blk: bytes32,
 ) -> bool:
@@ -127,13 +128,21 @@ def verifySig(
         return False
 
     # Check if decompressed xs, ys are correct
+    # log.NotifyUint256(convert(numSig, uint256))
+    # log.NotifyUint256(signerSig)
     for i in range(COMM_SIZE):
         if i >= numR:
             break
         idx: int128 = rIdxs[i]
         pk: bytes[PUBKEY_SIZE] = slice(pubkey, start=idx * PUBKEY_SIZE, len=PUBKEY_SIZE)
+        # log.NotifyBytes32(extract32(pk, 0, type=bytes32))
+        # log.NotifyUint256(sigIdxs[i])
         if not self.verifyCompressPoint(pk, xs[i], ys[i]):
             return False
+
+    # Check if decompressed rpx and rpy are correct
+    if not self.verifyCompressPoint(rp, rpx, rpy):
+        return False
 
     # Check if signerSig is valid
     if not self.mulsig.checkMulSig(
@@ -141,8 +150,8 @@ def verifySig(
         ys,
         sigIdxs,
         numSig,
-        rx,
-        ry,
+        rpx,
+        rpy,
         r,
         signerSig,
         blk,
@@ -170,8 +179,9 @@ def instructionApproved(
     rIdxs: int128[COMM_SIZE],
     numSig: int128,
     sigIdxs: uint256[COMM_SIZE],
-    rx: uint256,
-    ry: uint256,
+    rp: bytes[PUBKEY_SIZE],
+    rpx: uint256,
+    rpy: uint256,
     r: bytes[PUBKEY_SIZE],
 ) -> bool:
     # Find committees signed this block
@@ -192,8 +202,9 @@ def instructionApproved(
         rIdxs,
         numSig,
         sigIdxs,
-        rx,
-        ry,
+        rp,
+        rpx,
+        rpy,
         r,
         blk,
     ):
@@ -229,8 +240,9 @@ def swapBridgeCommittee(
     beaconRIdxs: int128[COMM_SIZE], # indices of members who aggregated R
     beaconNumSig: int128,
     beaconSigIdxs: uint256[COMM_SIZE], # indices of members who signed
-    beaconRx: uint256,
-    beaconRy: uint256,
+    beaconRp: bytes[PUBKEY_SIZE],
+    beaconRpx: uint256,
+    beaconRpy: uint256,
     beaconR: bytes[PUBKEY_SIZE],
     bridgeInstPath: bytes32[INST_MAX_PATH],
     bridgeInstPathIsLeft: bool[INST_MAX_PATH],
@@ -245,8 +257,9 @@ def swapBridgeCommittee(
     bridgeRIdxs: int128[COMM_SIZE],
     bridgeNumSig: int128,
     bridgeSigIdxs: uint256[COMM_SIZE],
-    bridgeRx: uint256,
-    bridgeRy: uint256,
+    bridgeRp: bytes[PUBKEY_SIZE],
+    bridgeRpx: uint256,
+    bridgeRpy: uint256,
     bridgeR: bytes[PUBKEY_SIZE],
 ) -> bool:
     # Check if beaconInstRoot is in block with hash beaconBlkHash
@@ -280,8 +293,9 @@ def swapBridgeCommittee(
         beaconRIdxs,
         beaconNumSig,
         beaconSigIdxs,
-        beaconRx,
-        beaconRy,
+        beaconRp,
+        beaconRpx,
+        beaconRpy,
         beaconR,
     ):
         return False
@@ -304,8 +318,9 @@ def swapBridgeCommittee(
         bridgeRIdxs,
         bridgeNumSig,
         bridgeSigIdxs,
-        bridgeRx,
-        bridgeRy,
+        bridgeRp,
+        bridgeRpx,
+        bridgeRpy,
         bridgeR,
     ):
         return False
@@ -333,8 +348,9 @@ def swapBeaconCommittee(
     beaconRIdxs: int128[COMM_SIZE], # indices of members who aggregated R
     beaconNumSig: int128,
     beaconSigIdxs: uint256[COMM_SIZE], # indices of members who signed
-    beaconRx: uint256,
-    beaconRy: uint256,
+    beaconRp: bytes[PUBKEY_SIZE],
+    beaconRpx: uint256,
+    beaconRpy: uint256,
     beaconR: bytes[PUBKEY_SIZE],
 ) -> bool:
     # Check if beaconInstRoot is in block with hash beaconBlkHash
@@ -368,8 +384,9 @@ def swapBeaconCommittee(
         beaconRIdxs,
         beaconNumSig,
         beaconSigIdxs,
-        beaconRx,
-        beaconRy,
+        beaconRp,
+        beaconRpx,
+        beaconRpy,
         beaconR,
     ):
         return False
@@ -378,7 +395,5 @@ def swapBeaconCommittee(
     self.beaconComm[startHeight] = Committee({Pubkeys: pubkeys, PrevBlk: self.latestBeaconBlk})
     self.latestBeaconBlk = startHeight
     log.NotifyString("updated beacon committee")
-
-    log.NotifyString("no exeception...")
     return True
 

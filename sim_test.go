@@ -82,8 +82,9 @@ func TestSimulatedSwapBridge(t *testing.T) {
 		proof.beaconRIdxs,
 		proof.beaconNumSig,
 		proof.beaconSigIdxs,
-		proof.beaconRx,
-		proof.beaconRy,
+		proof.beaconRp,
+		proof.beaconRpx,
+		proof.beaconRpy,
 		proof.beaconR,
 
 		proof.bridgeInstPath,
@@ -99,8 +100,9 @@ func TestSimulatedSwapBridge(t *testing.T) {
 		proof.bridgeRIdxs,
 		proof.bridgeNumSig,
 		proof.bridgeSigIdxs,
-		proof.bridgeRx,
-		proof.bridgeRy,
+		proof.bridgeRp,
+		proof.bridgeRpx,
+		proof.bridgeRpy,
 		proof.bridgeR,
 	)
 	if err != nil {
@@ -155,8 +157,9 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 		proof.beaconRIdxs,
 		proof.beaconNumSig,
 		proof.beaconSigIdxs,
-		proof.beaconRx,
-		proof.beaconRy,
+		proof.beaconRp,
+		proof.beaconRpx,
+		proof.beaconRpy,
 		proof.beaconR,
 	)
 	if err != nil {

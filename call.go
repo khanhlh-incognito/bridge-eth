@@ -25,8 +25,9 @@ func withdraw(v *vault.Vault, auth *bind.TransactOpts, proof *decodedProof) (*ty
 		proof.beaconRIdxs,
 		proof.beaconNumSig,
 		proof.beaconSigIdxs,
-		proof.beaconRx,
-		proof.beaconRy,
+		proof.beaconRp,
+		proof.beaconRpx,
+		proof.beaconRpy,
 		proof.beaconR,
 
 		proof.bridgeHeight,
@@ -43,8 +44,9 @@ func withdraw(v *vault.Vault, auth *bind.TransactOpts, proof *decodedProof) (*ty
 		proof.bridgeRIdxs,
 		proof.bridgeNumSig,
 		proof.bridgeSigIdxs,
-		proof.bridgeRx,
-		proof.bridgeRy,
+		proof.bridgeRp,
+		proof.bridgeRpx,
+		proof.bridgeRpy,
 		proof.bridgeR,
 	)
 	if err != nil {
