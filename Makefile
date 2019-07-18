@@ -1,7 +1,10 @@
-all: swap burn
+all: beacon bridge burn
 
-swap: incognito_proxy/incognito_proxy.go vault/vault.go erc20/ERC20.go checkMulSig/MulSigP256.go
+beacon: incognito_proxy/incognito_proxy.go vault/vault.go erc20/ERC20.go checkMulSig/MulSigP256.go
 	go test -run=TestSimulatedSwapBeacon
+
+bridge: incognito_proxy/incognito_proxy.go vault/vault.go erc20/ERC20.go checkMulSig/MulSigP256.go
+	go test -run=TestSimulatedSwapBridge
 
 burn: incognito_proxy/incognito_proxy.go vault/vault.go erc20/ERC20.go checkMulSig/MulSigP256.go
 	go test -run=TestSimulatedBurn
