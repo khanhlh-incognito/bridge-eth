@@ -26,7 +26,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/howeyc/fsnotify v0.9.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
-	github.com/incognitochain/incognito-chain v0.0.0-20190711050455-828c2d63e29f // indirect
+	github.com/incognitochain/incognito-chain v0.0.0-20190711050455-828c2d63e29f
 	github.com/influxdata/influxdb v1.7.7 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.1 // indirect
 	github.com/julienschmidt/httprouter v1.2.0 // indirect

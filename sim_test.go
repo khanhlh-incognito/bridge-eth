@@ -189,6 +189,7 @@ func TestSimulatedBurn(t *testing.T) {
 	withdrawer := common.HexToAddress("0x0FFBd68F130809BcA7b32D9536c8339E9A844620")
 	fmt.Printf("withdrawer init balance: %d\n", p.getBalance(withdrawer))
 
+	auth.GasLimit = 8000000
 	tx, err := withdraw(p.v, auth, proof)
 	if err != nil {
 		fmt.Println("err:", err)
