@@ -133,7 +133,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 	// 	t.Fatal(err)
 	// }
 	// fmt.Println("deployed MulSigP256")
-	msAddr := common.HexToAddress("0x1383AA86AC1f7BF638baAD2311448a40493f691F")
+	msAddr := common.HexToAddress(MulSigP256)
 	fmt.Printf("addr: %x\n", msAddr[:])
 
 	// Deploy incognito_proxy
@@ -161,7 +161,7 @@ func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
 		return nil, nil, err
 	}
 
-	client, err := ethclient.Dial("https://ropsten.infura.io")
+	client, err := ethclient.Dial("https://rinkeby.infura.io")
 	if err != nil {
 		return nil, nil, err
 	}

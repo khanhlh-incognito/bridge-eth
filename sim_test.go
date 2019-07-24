@@ -269,7 +269,9 @@ func newAccount() *account {
 }
 
 func printReceipt(sim *backends.SimulatedBackend, tx *types.Transaction) {
-	ctx, _ := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	receipt, err := sim.TransactionReceipt(ctx, tx.Hash())
 	if err != nil {
 		fmt.Println("receipt err:", err)
