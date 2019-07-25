@@ -3,6 +3,8 @@ package bridge
 import (
 	"fmt"
 	"testing"
+
+	"github.com/incognitochain/bridge-eth/common"
 )
 
 func TestInstructionInMerkleTree(t *testing.T) {
@@ -16,7 +18,7 @@ func TestInstructionInMerkleTree(t *testing.T) {
 	beaconHeight := proof.beaconHeight.Bytes()
 	h := [32]byte{}
 	copy(h[32-len(beaconHeight):], beaconHeight)
-	beaconInstHash := cc.Keccak256(proof.instruction, beaconHeight)
+	beaconInstHash := common.Keccak256(proof.instruction, beaconHeight)
 	res, err := c.inc.InstructionInMerkleTree(
 		nil,
 		beaconInstHash,
@@ -70,7 +72,7 @@ func TestInstructionApproved(t *testing.T) {
 	copy(h[32-len(beaconHeight):], beaconHeight)
 	inst := [300]byte{}
 	copy(inst[:], proof.instruction)
-	beaconInstHash := cc.Keccak256(inst[:], beaconHeight)
+	beaconInstHash := common.Keccak256(inst[:], beaconHeight)
 	res, err := c.inc.InstructionApproved(
 		nil,
 		true,
