@@ -13,9 +13,139 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
+	cc "github.com/incognitochain/bridge-eth/common"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
 )
+
+func TestInstructionInMerkleTree(t *testing.T) {
+	// Get proof
+	proof, err := getAndDecodeBurnProof("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, c := connectAndInstantiate(t)
+	beaconHeight := proof.beaconHeight.Bytes()
+	h := [32]byte{}
+	copy(h[32-len(beaconHeight):], beaconHeight)
+	beaconInstHash := cc.Keccak256(proof.instruction, beaconHeight)
+	res, err := c.inc.InstructionInMerkleTree(
+		nil,
+		beaconInstHash,
+		proof.beaconInstRoot,
+		proof.beaconInstPath,
+		proof.beaconInstPathIsLeft,
+		proof.beaconInstPathLen,
+	)
+	fmt.Println(res, err)
+}
+
+func TestVerifySig(t *testing.T) {
+	// Get proof
+	proof, err := getAndDecodeBurnProof("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, c := connectAndInstantiate(t)
+	comm, err := c.inc.FindComm(nil, proof.bridgeHeight, false)
+	fmt.Printf("comm: %x %v\n", comm, err)
+	res, err := c.inc.VerifySig(
+		nil,
+		comm,
+		proof.bridgeSignerSig,
+		proof.bridgeNumR,
+		proof.bridgeXs,
+		proof.bridgeYs,
+		proof.bridgeRIdxs,
+		proof.bridgeNumSig,
+		proof.bridgeSigIdxs,
+		proof.bridgeRp,
+		proof.bridgeRpx,
+		proof.bridgeRpy,
+		proof.bridgeR,
+		proof.bridgeBlkHash,
+	)
+	fmt.Println(res, err)
+}
+
+func TestInstructionApproved(t *testing.T) {
+	// Get proof
+	proof, err := getAndDecodeBurnProof("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, c := connectAndInstantiate(t)
+	beaconHeight := proof.beaconHeight.Bytes()
+	h := [32]byte{}
+	copy(h[32-len(beaconHeight):], beaconHeight)
+	inst := [300]byte{}
+	copy(inst[:], proof.instruction)
+	beaconInstHash := cc.Keccak256(inst[:], beaconHeight)
+	res, err := c.inc.InstructionApproved(
+		nil,
+		true,
+		beaconInstHash,
+		proof.beaconHeight,
+		proof.beaconInstPath,
+		proof.beaconInstPathIsLeft,
+		proof.beaconInstPathLen,
+		proof.beaconInstRoot,
+		proof.beaconBlkData,
+		proof.beaconBlkHash,
+		proof.beaconSignerSig,
+		proof.beaconNumR,
+		proof.beaconXs,
+		proof.beaconYs,
+		proof.beaconRIdxs,
+		proof.beaconNumSig,
+		proof.beaconSigIdxs,
+		proof.beaconRp,
+		proof.beaconRpx,
+		proof.beaconRpy,
+		proof.beaconR,
+	)
+	fmt.Println(res, err)
+}
+
+func TestMulSig(t *testing.T) {
+	// Get proof
+	proof, err := getAndDecodeBurnProof("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, c := connectAndInstantiate(t)
+	res, err := c.ms.CheckMulSig(
+		nil,
+		proof.beaconXs,
+		proof.beaconYs,
+		proof.beaconSigIdxs,
+		proof.beaconNumSig,
+		proof.beaconRpx,
+		proof.beaconRpy,
+		proof.beaconR,
+		proof.beaconSignerSig,
+		proof.beaconBlkHash,
+	)
+	fmt.Println(res, err)
+
+	res, err = c.ms.CheckMulSig(
+		nil,
+		proof.bridgeXs,
+		proof.bridgeYs,
+		proof.bridgeSigIdxs,
+		proof.bridgeNumSig,
+		proof.bridgeRpx,
+		proof.bridgeRpy,
+		proof.bridgeR,
+		proof.bridgeSignerSig,
+		proof.bridgeBlkHash,
+	)
+	fmt.Println(res, err)
+}
 
 func TestBurn(t *testing.T) {
 	txID := ""
@@ -41,6 +171,20 @@ func TestBurn(t *testing.T) {
 	}
 
 	// Burn
+	fmt.Printf("beacon Rp: %x\n", proof.beaconRp)
+	fmt.Printf("beacon Rpx: %d\n", proof.beaconRpx)
+	fmt.Printf("beacon Rpy: %d\n", proof.beaconRpy)
+	incAddr := common.HexToAddress(IncognitoProxyAddress)
+	c2, _ := incognito_proxy.NewIncognitoProxy(incAddr, client)
+	x, err := c2.VerifyCompressPoint(nil, proof.beaconRp, proof.beaconRpx, proof.beaconRpy)
+	fmt.Println(x, err)
+	msAddr, err := c2.Mulsig(nil)
+	fmt.Printf("%x\n", msAddr)
+	bpks, err := c2.BeaconCommPubkeys(nil, big.NewInt(0))
+	fmt.Printf("%x\n", bpks)
+	brpks, err := c2.BridgeCommPubkeys(nil, big.NewInt(0))
+	fmt.Printf("%x\n", brpks)
+
 	auth := bind.NewKeyedTransactor(privKey)
 	tx, err := withdraw(c, auth, proof)
 	if err != nil {
@@ -121,7 +265,8 @@ func TestDeployProxyAndVault(t *testing.T) {
 	defer client.Close()
 
 	// Genesis committee
-	url := "http://test-node.incognito.org:9334"
+	// url := "http://test-node.incognito.org:9334"
+	url := "http://0.0.0.0:9334"
 	beaconComm, bridgeComm, err := getCommittee(url)
 	if err != nil {
 		t.Fatal(err)
