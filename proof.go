@@ -157,7 +157,7 @@ func getBurnProof(txID string) string {
 	url := "http://127.0.0.1:9554"
 
 	if len(txID) == 0 {
-		txID = "4c1c026b2bf8da12956ea343f1f4e05132d1a2e683122f065c2ca542bbf4e532"
+		txID = "cde8d1e514c6e2811a292a80a5b499498a8e4ac10e6de7b01726e6751b04dbcc"
 	}
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 

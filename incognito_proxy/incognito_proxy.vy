@@ -144,19 +144,20 @@ def verifySig(
     if not self.verifyCompressPoint(rp, rpx, rpy):
         return False
 
-    # Check if signerSig is valid
-    if not self.mulsig.checkMulSig(
-        xs,
-        ys,
-        sigIdxs,
-        numSig,
-        rpx,
-        rpy,
-        r,
-        signerSig,
-        blk,
-    ):
-        return False
+    # NOTE: comment out checkMulSig to increase #validators of testnet
+    # # Check if signerSig is valid
+    # if not self.mulsig.checkMulSig(
+    #     xs,
+    #     ys,
+    #     sigIdxs,
+    #     numSig,
+    #     rpx,
+    #     rpy,
+    #     r,
+    #     signerSig,
+    #     blk,
+    # ):
+    #     return False
 
     return True
 
