@@ -306,7 +306,7 @@ func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
 		return nil, nil, err
 	}
 
-	client, err := ethclient.Dial("https://rinkeby.infura.io")
+	client, err := ethclient.Dial("https://ropsten.infura.io")
 	if err != nil {
 		return nil, nil, err
 	}
