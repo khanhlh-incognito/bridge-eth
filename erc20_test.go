@@ -136,7 +136,6 @@ func depositERC20(
 	amount int64,
 ) error {
 	auth := bind.NewKeyedTransactor(privKey)
-	auth.GasLimit = 1000000
 	tx, err := v.DepositERC20(auth, tokenAddr, big.NewInt(amount), IncPaymentAddr)
 	if err != nil {
 		return err
