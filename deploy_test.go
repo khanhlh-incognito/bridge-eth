@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
@@ -10,12 +11,72 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
+	"github.com/pkg/errors"
 )
+
+func TestMassSend(t *testing.T) {
+	addrs := []string{
+		"0xb6b038cF4cfbBd466E917B8D1eeC9882cefeB5d2",
+		"0x7a5CeB62B3E0f2c5e450AC64d54369E5d81fB5Db",
+		"0x1c0abE5b12257451DDcbe51f53f3F888dde32842",
+		"0xd5808Ba261c91d640a2D4149E8cdb3fD4512efe4",
+		"0x2228ad9ec671a1Aee2786C04c695A580A3653853",
+	}
+
+	privKey, client, err := connect()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	// Deposit
+	nonce, err := client.NonceAt(context.Background(), crypto.PubkeyToAddress(privKey.PublicKey), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i, addr := range addrs {
+		txHash, err := transfer(client, privKey, addr, nonce+uint64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Printf("sent, txHash: %s\n", txHash)
+	}
+}
+
+func transfer(
+	client *ethclient.Client,
+	privKey *ecdsa.PrivateKey,
+	to string,
+	nonce uint64,
+) (string, error) {
+	toAddress := common.HexToAddress(to)
+	value := big.NewInt(0.1 * params.Ether)
+	gasLimit := uint64(21000)
+	gasPrice := big.NewInt(20000000000)
+	tx := types.NewTransaction(nonce, toAddress, value, gasLimit, gasPrice, nil)
+
+	chainID, err := client.NetworkID(context.Background())
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privKey)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	err = client.SendTransaction(context.Background(), tx)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	return signedTx.Hash().String(), nil
+}
 
 func TestBurn(t *testing.T) {
 	txID := ""
@@ -152,13 +213,14 @@ func TestDeployProxyAndVault(t *testing.T) {
 	msAddr := common.HexToAddress(MulSigP256)
 	fmt.Printf("addr: %x\n", msAddr[:])
 
-	// Deploy incognito_proxy
+	// // Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
 	auth.GasPrice = big.NewInt(20000000000)
 	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, beaconComm, bridgeComm, msAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// incAddr := common.HexToAddress(IncognitoProxyAddress)
 	fmt.Println("deployed incognito_proxy")
 	fmt.Printf("addr: %x\n", incAddr[:])
 
@@ -178,7 +240,7 @@ func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
 		return nil, nil, err
 	}
 
-	client, err := ethclient.Dial("https://kovan.infura.io")
+	client, err := ethclient.Dial("https://kovan.infura.io/v3/29fead42346b4bfa88dd5fd7e56b6406")
 	if err != nil {
 		return nil, nil, err
 	}

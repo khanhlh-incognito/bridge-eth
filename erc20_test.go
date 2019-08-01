@@ -103,10 +103,10 @@ func TestERC20Deploy(t *testing.T) {
 
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
-	name := "v3"
-	symbol := "$"
-	decimals := big.NewInt(0)
-	supply := big.NewInt(1000000000000000000)
+	name := "Phuong"
+	symbol := "HPV"
+	decimals := big.NewInt(8)
+	supply := big.NewInt(1000000)
 	addr, _, _, err := erc20.DeployErc20(auth, client, name, symbol, decimals, supply)
 	if err != nil {
 		t.Fatal(err)

@@ -154,10 +154,10 @@ func getCommittee(url string) ([]byte, []byte, error) {
 }
 
 func getBurnProof(txID string) string {
-	url := "http://127.0.0.1:9554"
+	url := "https://dev-test-node.incognito.org/"
 
 	if len(txID) == 0 {
-		txID = "cde8d1e514c6e2811a292a80a5b499498a8e4ac10e6de7b01726e6751b04dbcc"
+		txID = "ca76b024280b6ce5f287a5943c502e5eb413edbc761dc025a98f31ca217e8cd5"
 	}
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 
