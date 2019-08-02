@@ -3,7 +3,6 @@ package bridge
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"os"
@@ -22,11 +21,10 @@ import (
 
 func TestMassSend(t *testing.T) {
 	addrs := []string{
-		"0xb6b038cF4cfbBd466E917B8D1eeC9882cefeB5d2",
-		"0x7a5CeB62B3E0f2c5e450AC64d54369E5d81fB5Db",
-		"0x1c0abE5b12257451DDcbe51f53f3F888dde32842",
-		"0xd5808Ba261c91d640a2D4149E8cdb3fD4512efe4",
-		"0x2228ad9ec671a1Aee2786C04c695A580A3653853",
+		"0xDF1A9BE4dA9Ed6CDC28bea3c23E81B8a3e4480Ae",
+		"0x354e2c1ee8f254f379A17679Dd14e3afa61c0346",
+		"0x9a6A22438307C68A794485b86Faa6b72Aa67Ded7",
+		"0x7A279AEe9cc310B64F0F159904271c0a68014082",
 	}
 
 	privKey, client, err := connect()
@@ -58,7 +56,7 @@ func transfer(
 ) (string, error) {
 	toAddress := common.HexToAddress(to)
 	value := big.NewInt(0.1 * params.Ether)
-	gasLimit := uint64(21000)
+	gasLimit := uint64(30000)
 	gasPrice := big.NewInt(20000000000)
 	tx := types.NewTransaction(nonce, toAddress, value, gasLimit, gasPrice, nil)
 
@@ -71,7 +69,7 @@ func transfer(
 		return "", errors.WithStack(err)
 	}
 
-	err = client.SendTransaction(context.Background(), tx)
+	err = client.SendTransaction(context.Background(), signedTx)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
