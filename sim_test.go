@@ -44,21 +44,22 @@ func TestSimulatedSwapBridge(t *testing.T) {
 	}
 
 	r := getProofResult{}
-	err := json.Unmarshal([]byte(body), &r)
-	if err != nil {
-		t.Fatal(err)
+	if err := json.Unmarshal([]byte(body), &r); err != nil {
+		t.Fatalf("%+v", err)
+	}
+	if len(r.Result.Instruction) == 0 {
+		t.Fatal("invalid swap proof")
 	}
 	proof, err := decodeProof(&r)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%+v", err)
 	}
-	_ = proof
 
-	p, err := setupWithLocalCommittee()
+	p, err := setupWithHardcodedCommittee()
+	// p, err := setupWithLocalCommittee()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%+v", err)
 	}
-	_ = p
 
 	auth.GasLimit = 7000000
 	fmt.Printf("inst len: %d\n", len(proof.instruction))
@@ -119,21 +120,22 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 	}
 
 	r := getProofResult{}
-	err := json.Unmarshal([]byte(body), &r)
-	if err != nil {
-		t.Fatal(err)
+	if err := json.Unmarshal([]byte(body), &r); err != nil {
+		t.Fatalf("%+v", err)
+	}
+	if len(r.Result.Instruction) == 0 {
+		t.Fatal("invalid swap proof")
 	}
 	proof, err := decodeProof(&r)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%+v", err)
 	}
-	_ = proof
 
-	p, err := setupWithLocalCommittee()
+	p, err := setupWithHardcodedCommittee()
+	// p, err := setupWithLocalCommittee()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%+v", err)
 	}
-	_ = p
 
 	auth.GasLimit = 7000000
 	fmt.Printf("inst len: %d\n", len(proof.instruction))
@@ -177,7 +179,7 @@ func TestSimulatedBurn(t *testing.T) {
 
 	p, err := setupWithLocalCommittee()
 	if err != nil {
-		t.Fatalf("Fail to deloy contract: %v\n", err)
+		t.Fatal(err)
 	}
 
 	oldBalance, newBalance, err := deposit(p, int64(5e18))
@@ -253,6 +255,11 @@ func setupWithLocalCommittee() (*Platform, error) {
 	return setup(beaconOld, bridgeOld)
 }
 
+func setupWithHardcodedCommittee() (*Platform, error) {
+	beaconOld, bridgeOld := getCommitteeHardcoded()
+	return setup(beaconOld, bridgeOld)
+}
+
 type account struct {
 	PrivateKey *ecdsa.PrivateKey
 	Address    common.Address
@@ -314,7 +321,7 @@ func printReceipt(sim *backends.SimulatedBackend, tx *types.Transaction) {
 func getBridgeSwapProof() string {
 	url := "http://127.0.0.1:9338"
 
-	block := 10
+	block := 74
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbridgeswapproof\",\n    \"params\": [\n    \t%d\n    ]\n}", block))
 
 	req, _ := http.NewRequest("POST", url, payload)
@@ -343,7 +350,7 @@ func getBridgeSwapProof() string {
 func getBeaconSwapProof() string {
 	url := "http://127.0.0.1:9338"
 
-	block := 7
+	block := 87
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbeaconswapproof\",\n    \"params\": [\n    \t%d\n    ]\n}", block))
 
 	req, _ := http.NewRequest("POST", url, payload)

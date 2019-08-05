@@ -18,6 +18,7 @@ import (
 	"github.com/incognitochain/bridge-eth/jsonresult"
 	"github.com/incognitochain/bridge-eth/privacy"
 	"github.com/incognitochain/bridge-eth/vault"
+	"github.com/pkg/errors"
 )
 
 const inst_max_path = 8
@@ -37,8 +38,11 @@ type contracts struct {
 
 type getProofResult struct {
 	Result jsonresult.GetInstructionProof
-	Error  string
-	Id     int
+	Error  struct {
+		Code       int
+		Message    string
+		StackTrace string
+	}
 }
 
 type decodedProof struct {
@@ -210,7 +214,9 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	beaconMulSig := &privacy.SchnMultiSig{}
 	err := beaconMulSig.SetBytes(decode(r.Result.BeaconSignerSig))
 	if err != nil {
-		return nil, err
+		a := decode(r.Result.BeaconSignerSig)
+		fmt.Printf("%s %x %d\n", r.Result.BeaconSignerSig, a, len(a))
+		return nil, errors.Wrap(err, "invalid beaconSignerSig")
 	}
 	beaconSignerSig := beaconMulSig.S
 	beaconNumR := big.NewInt(int64(len(r.Result.BeaconRIdxs)))
@@ -220,7 +226,7 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	for i, rIdx := range r.Result.BeaconRIdxs {
 		p, err := decompress(r.Result.BeaconPubkeys[rIdx])
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "invalid beaconRIdxs i %d rIdx %d", i, rIdx)
 		}
 		beaconXs[i] = p.X
 		beaconYs[i] = p.Y
@@ -231,7 +237,7 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	for i, sIdx := range r.Result.BeaconSigIdxs {
 		j := findSigIdx(sIdx, r.Result.BeaconRIdxs)
 		if j < 0 {
-			return nil, fmt.Errorf("failed finding beacon sigIdx %d %v", sIdx, r.Result.BeaconRIdxs)
+			return nil, errors.Errorf("failed finding beacon sigIdx %d %v", sIdx, r.Result.BeaconRIdxs)
 		}
 		beaconSigIdxs[i] = big.NewInt(int64(j))
 	}
@@ -279,7 +285,7 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	for i, sIdx := range r.Result.BridgeSigIdxs {
 		j := findSigIdx(sIdx, r.Result.BridgeRIdxs)
 		if j < 0 {
-			return nil, fmt.Errorf("failed finding bridge sigIdx %d %v", sIdx, r.Result.BridgeRIdxs)
+			return nil, errors.Errorf("failed finding bridge sigIdx %d %v", sIdx, r.Result.BeaconRIdxs)
 		}
 		bridgeSigIdxs[i] = big.NewInt(int64(j))
 		fmt.Printf("bridgeSigIdxs[%d]: %d\n", i, j)
@@ -382,4 +388,31 @@ func newBigIntArray() [comm_size]*big.Int {
 		arr[i] = big.NewInt(0)
 	}
 	return arr
+}
+
+func getCommitteeHardcoded() ([]byte, []byte) {
+	beaconComm := []string{
+		"02a96a04ad76a0034efc8819e93308823ce7a3b76fd694f961ee909124096baf00",
+		"0242653de0e9af9dd3725008519157314eb5a845dec2cd646ce9e03f780175b700",
+		"028c49fc5f3e001c36095335c53b0b7320f6a1c932424e92c9de344b55e80ddf00",
+		"0205aae74cb0128a1863c970cbe87e827e28f92a91c2d4768fdb30a279dd081c00",
+	}
+	beacons := []byte{}
+	for _, p := range beaconComm {
+		pk, _ := hex.DecodeString(p)
+		beacons = append(beacons, pk...)
+	}
+
+	bridgeComm := []string{
+		"0253d262c2b6a55606ff9d32e195231ec57e4d23a6efd1c02143a58fd0c2591d01",
+		"02dee56cbbde5ef6d03a9e69bf3784ae4a8460d0058a6082eee4be2ed5c4fd3301",
+		"02ec388db662801da0fe3c41f39085369ed4df71d42ec96924012243dc9c67d201",
+		"039cc81f72a88a7436eb74bf10c7693af165324ba4d15baeb4e8d2f1c2ce25a101",
+	}
+	bridges := []byte{}
+	for _, p := range bridgeComm {
+		pk, _ := hex.DecodeString(p)
+		bridges = append(bridges, pk...)
+	}
+	return beacons, bridges
 }

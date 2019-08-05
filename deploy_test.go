@@ -245,20 +245,3 @@ func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
 
 	return privKey, client, nil
 }
-
-func getCommitteeHardcoded() ([]byte, []byte, error) {
-	beaconComm := []string{"02a96a04ad76a0034efc8819e93308823ce7a3b76fd694f961ee909124096baf00", "0242653de0e9af9dd3725008519157314eb5a845dec2cd646ce9e03f780175b700", "028c49fc5f3e001c36095335c53b0b7320f6a1c932424e92c9de344b55e80ddf00"}
-	beacons := []byte{}
-	for _, p := range beaconComm {
-		pk, _ := hex.DecodeString(p)
-		beacons = append(beacons, pk...)
-	}
-
-	bridgeComm := []string{"0253d262c2b6a55606ff9d32e195231ec57e4d23a6efd1c02143a58fd0c2591d01", "02dee56cbbde5ef6d03a9e69bf3784ae4a8460d0058a6082eee4be2ed5c4fd3301", "02ec388db662801da0fe3c41f39085369ed4df71d42ec96924012243dc9c67d201"}
-	bridges := []byte{}
-	for _, p := range bridgeComm {
-		pk, _ := hex.DecodeString(p)
-		bridges = append(bridges, pk...)
-	}
-	return beacons, bridges, nil
-}

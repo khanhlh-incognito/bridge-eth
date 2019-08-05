@@ -272,6 +272,7 @@ def swapBridgeCommittee(
     pubkeys: bytes[PUBKEY_LENGTH]
     type, startHeight, pubkeys = self.parseSwapInst(inst, numPk)
     # log.NotifyBytes32(extract32(pubkeys, 0, type=bytes32))
+    # log.NotifyUint256(startHeight)
 
     # Metadata type and shardID of swap bridge instruction
     assert type == 3617073
