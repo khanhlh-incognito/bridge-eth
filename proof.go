@@ -164,7 +164,7 @@ func getBurnProof(txID string) string {
 	// url := "https://dev-test-node.incognito.org/"
 
 	if len(txID) == 0 {
-		txID = "4c7ca483b0ab84c186cc2b891e03625fe7bad66fb857f236b96ca71d178559eb"
+		txID = "4062e8ab2d7aa565fa509e5b0b3635a2e499be3081ef9e25a2fa97938acfb67e"
 	}
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 
@@ -414,7 +414,6 @@ func getCommitteeHardcoded() (*big.Int, []byte, *big.Int, []byte) {
 		"02dee56cbbde5ef6d03a9e69bf3784ae4a8460d0058a6082eee4be2ed5c4fd3301",
 		"02ec388db662801da0fe3c41f39085369ed4df71d42ec96924012243dc9c67d201",
 		"039cc81f72a88a7436eb74bf10c7693af165324ba4d15baeb4e8d2f1c2ce25a101",
-		"03ace616a2254ca82c576dd093d8f3daba28dd5862b15cb916583a106b8e29a400",
 	}
 	numBridgeVals := big.NewInt(int64(len(bridgeComm)))
 	bridges := []byte{}

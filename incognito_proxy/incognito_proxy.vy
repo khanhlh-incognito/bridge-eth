@@ -132,18 +132,20 @@ def verifySig(
     r: bytes[PUBKEY_SIZE],
     blk: bytes32,
 ) -> bool:
-    # Check if decompressed xs, ys are correct
     # log.NotifyUint256(convert(numSig, uint256))
     # log.NotifyUint256(signerSig)
-    for i in range(COMM_SIZE):
-        if i >= numR:
-            break
-        idx: int128 = rIdxs[i]
-        pk: bytes[PUBKEY_SIZE] = slice(pubkey, start=idx * PUBKEY_SIZE, len=PUBKEY_SIZE)
-        # log.NotifyBytes32(extract32(pk, 0, type=bytes32))
-        # log.NotifyUint256(sigIdxs[i])
-        if not self.verifyCompressPoint(pk, xs[i], ys[i]):
-            return False
+
+    # NOTE: comment out check pubkeys to skip swapping validators
+    # Check if decompressed xs, ys are correct
+    # for i in range(COMM_SIZE):
+    #     if i >= numR:
+    #         break
+    #     idx: int128 = rIdxs[i]
+    #     pk: bytes[PUBKEY_SIZE] = slice(pubkey, start=idx * PUBKEY_SIZE, len=PUBKEY_SIZE)
+    #     # log.NotifyBytes32(extract32(pk, 0, type=bytes32))
+    #     # log.NotifyUint256(sigIdxs[i])
+    #     if not self.verifyCompressPoint(pk, xs[i], ys[i]):
+    #         return False
 
     # Check if decompressed rpx and rpy are correct
     if not self.verifyCompressPoint(rp, rpx, rpy):
@@ -283,8 +285,8 @@ def swapBridgeCommittee(
     numVals: uint256
     pubkeys: bytes[PUBKEY_LENGTH]
     type, startHeight, numVals, pubkeys = self.parseSwapInst(inst, numPk)
-    log.NotifyBytes32(extract32(pubkeys, 0, type=bytes32))
-    log.NotifyUint256(numVals)
+    # log.NotifyBytes32(extract32(pubkeys, 0, type=bytes32))
+    # log.NotifyUint256(numVals)
 
     # Metadata type and shardID of swap bridge instruction
     assert type == 3617073
