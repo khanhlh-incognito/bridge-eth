@@ -197,7 +197,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 	// Genesis committee
 	// url := "http://test-node.incognito.org:9334"
 	url := "http://0.0.0.0:9334"
-	beaconComm, bridgeComm, err := getCommittee(url)
+	numBeaconVals, beaconComm, numBridgeVals, bridgeComm, err := getCommittee(url)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 	// // Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
 	auth.GasPrice = big.NewInt(20000000000)
-	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, beaconComm, bridgeComm, msAddr)
+	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, numBeaconVals, beaconComm, numBridgeVals, bridgeComm, msAddr)
 	if err != nil {
 		t.Fatal(err)
 	}

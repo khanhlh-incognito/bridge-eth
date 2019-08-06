@@ -177,9 +177,10 @@ func TestSimulatedBurn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p, err := setupWithLocalCommittee()
+	p, err := setupWithHardcodedCommittee()
+	// p, err := setupWithLocalCommittee()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%+v", err)
 	}
 
 	oldBalance, newBalance, err := deposit(p, int64(5e18))
@@ -188,7 +189,7 @@ func TestSimulatedBurn(t *testing.T) {
 	}
 	fmt.Printf("deposit to vault: %d -> %d\n", oldBalance, newBalance)
 
-	withdrawer := common.HexToAddress("0x0FFBd68F130809BcA7b32D9536c8339E9A844620")
+	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
 	fmt.Printf("withdrawer init balance: %d\n", p.getBalance(withdrawer))
 
 	auth.GasLimit = 8000000
@@ -207,7 +208,12 @@ func (p *Platform) getBalance(addr common.Address) *big.Int {
 	return bal
 }
 
-func setup(beaconComm, bridgeComm []byte) (*Platform, error) {
+func setup(
+	numBeaconVals *big.Int,
+	beaconComm []byte,
+	numBridgeVals *big.Int,
+	bridgeComm []byte,
+) (*Platform, error) {
 	alloc := make(core.GenesisAlloc)
 	balance, _ := big.NewInt(1).SetString("100000000000000000000", 10) // 100 eth
 	alloc[auth.From] = core.GenesisAccount{Balance: balance}
@@ -226,7 +232,7 @@ func setup(beaconComm, bridgeComm []byte) (*Platform, error) {
 	// printReceipt(sim, tx)
 
 	// IncognitoProxy
-	p.incAddr, tx, p.inc, err = incognito_proxy.DeployIncognitoProxy(auth, sim, beaconComm, bridgeComm, p.msAddr)
+	p.incAddr, tx, p.inc, err = incognito_proxy.DeployIncognitoProxy(auth, sim, numBeaconVals, beaconComm, numBridgeVals, bridgeComm, p.msAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy IncognitoProxy contract: %v", err)
 	}
@@ -248,16 +254,16 @@ func setup(beaconComm, bridgeComm []byte) (*Platform, error) {
 
 func setupWithLocalCommittee() (*Platform, error) {
 	url := "http://127.0.0.1:9334"
-	beaconOld, bridgeOld, err := getCommittee(url)
+	numBeaconVals, beaconOld, numBridgeVals, bridgeOld, err := getCommittee(url)
 	if err != nil {
 		return nil, err
 	}
-	return setup(beaconOld, bridgeOld)
+	return setup(numBeaconVals, beaconOld, numBridgeVals, bridgeOld)
 }
 
 func setupWithHardcodedCommittee() (*Platform, error) {
-	beaconOld, bridgeOld := getCommitteeHardcoded()
-	return setup(beaconOld, bridgeOld)
+	numBeaconVals, beaconOld, numBridgeVals, bridgeOld := getCommitteeHardcoded()
+	return setup(numBeaconVals, beaconOld, numBridgeVals, bridgeOld)
 }
 
 type account struct {
@@ -321,7 +327,7 @@ func printReceipt(sim *backends.SimulatedBackend, tx *types.Transaction) {
 func getBridgeSwapProof() string {
 	url := "http://127.0.0.1:9338"
 
-	block := 74
+	block := 3910
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbridgeswapproof\",\n    \"params\": [\n    \t%d\n    ]\n}", block))
 
 	req, _ := http.NewRequest("POST", url, payload)

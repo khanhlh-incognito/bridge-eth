@@ -101,7 +101,7 @@ func getAndDecodeBurnProof(txID string) (*decodedProof, error) {
 	return decodeProof(&r)
 }
 
-func getCommittee(url string) ([]byte, []byte, error) {
+func getCommittee(url string) (*big.Int, []byte, *big.Int, []byte, error) {
 	payload := strings.NewReader("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbeaconbeststate\",\n    \"params\": []\n}")
 
 	req, _ := http.NewRequest("POST", url, payload)
@@ -116,7 +116,7 @@ func getCommittee(url string) ([]byte, []byte, error) {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	defer res.Body.Close()
@@ -136,10 +136,11 @@ func getCommittee(url string) ([]byte, []byte, error) {
 	r := getBeaconBestStateResult{}
 	err = json.Unmarshal([]byte(body), &r)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	// Genesis committee
+	numBeaconVals := big.NewInt(int64(len(r.Result.BeaconCommittee)))
 	beaconOld := []byte{}
 	for i, val := range r.Result.BeaconCommittee {
 		pk, _, _ := base58.Base58Check{}.Decode(val)
@@ -147,6 +148,7 @@ func getCommittee(url string) ([]byte, []byte, error) {
 		beaconOld = append(beaconOld, pk...)
 	}
 
+	numBridgeVals := big.NewInt(int64(len(r.Result.ShardCommittee["1"])))
 	bridgeOld := []byte{}
 	for i, val := range r.Result.ShardCommittee["1"] {
 		pk, _, _ := base58.Base58Check{}.Decode(val)
@@ -154,14 +156,15 @@ func getCommittee(url string) ([]byte, []byte, error) {
 		bridgeOld = append(bridgeOld, pk...)
 	}
 
-	return beaconOld, bridgeOld, nil
+	return numBeaconVals, beaconOld, numBridgeVals, bridgeOld, nil
 }
 
 func getBurnProof(txID string) string {
-	url := "https://dev-test-node.incognito.org/"
+	url := "http://127.0.0.1:9338"
+	// url := "https://dev-test-node.incognito.org/"
 
 	if len(txID) == 0 {
-		txID = "ca76b024280b6ce5f287a5943c502e5eb413edbc761dc025a98f31ca217e8cd5"
+		txID = "4c7ca483b0ab84c186cc2b891e03625fe7bad66fb857f236b96ca71d178559eb"
 	}
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 
@@ -195,6 +198,8 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	// Block heights
 	beaconHeight := big.NewInt(0).SetBytes(decode(r.Result.BeaconHeight))
 	bridgeHeight := big.NewInt(0).SetBytes(decode(r.Result.BridgeHeight))
+	fmt.Printf("beaconHeight: %d\n", beaconHeight)
+	fmt.Printf("bridgeHeight: %d\n", bridgeHeight)
 
 	beaconInstRoot := decode32(r.Result.BeaconInstRoot)
 	beaconInstPath := [inst_max_path][32]byte{}
@@ -390,13 +395,14 @@ func newBigIntArray() [comm_size]*big.Int {
 	return arr
 }
 
-func getCommitteeHardcoded() ([]byte, []byte) {
+func getCommitteeHardcoded() (*big.Int, []byte, *big.Int, []byte) {
 	beaconComm := []string{
 		"02a96a04ad76a0034efc8819e93308823ce7a3b76fd694f961ee909124096baf00",
 		"0242653de0e9af9dd3725008519157314eb5a845dec2cd646ce9e03f780175b700",
 		"028c49fc5f3e001c36095335c53b0b7320f6a1c932424e92c9de344b55e80ddf00",
 		"0205aae74cb0128a1863c970cbe87e827e28f92a91c2d4768fdb30a279dd081c00",
 	}
+	numBeaconVals := big.NewInt(int64(len(beaconComm)))
 	beacons := []byte{}
 	for _, p := range beaconComm {
 		pk, _ := hex.DecodeString(p)
@@ -408,11 +414,13 @@ func getCommitteeHardcoded() ([]byte, []byte) {
 		"02dee56cbbde5ef6d03a9e69bf3784ae4a8460d0058a6082eee4be2ed5c4fd3301",
 		"02ec388db662801da0fe3c41f39085369ed4df71d42ec96924012243dc9c67d201",
 		"039cc81f72a88a7436eb74bf10c7693af165324ba4d15baeb4e8d2f1c2ce25a101",
+		"03ace616a2254ca82c576dd093d8f3daba28dd5862b15cb916583a106b8e29a400",
 	}
+	numBridgeVals := big.NewInt(int64(len(bridgeComm)))
 	bridges := []byte{}
 	for _, p := range bridgeComm {
 		pk, _ := hex.DecodeString(p)
 		bridges = append(bridges, pk...)
 	}
-	return beacons, bridges
+	return numBeaconVals, beacons, numBridgeVals, bridges
 }

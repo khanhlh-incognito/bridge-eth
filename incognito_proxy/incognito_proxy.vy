@@ -7,11 +7,10 @@ COMM_SIZE: constant(uint256) = 8
 PUBKEY_SIZE: constant(int128) = 33 # each pubkey is 33 bytes
 PUBKEY_LENGTH: constant(int128) = INST_LENGTH # length of the array storing all pubkeys
 
-MIN_SIGN: constant(uint256) = 3
-
 struct Committee:
     Pubkeys: bytes[PUBKEY_LENGTH]
     PrevBlk: uint256
+    NumVals: uint256
 
 # External contract
 contract MulSigP256:
@@ -34,38 +33,48 @@ latestBridgeBlk: public(uint256)
 mulsig: public(MulSigP256)
 
 @public
-def __init__(_beaconComm: bytes[PUBKEY_LENGTH], _bridgeComm: bytes[PUBKEY_LENGTH], _mulsig: address):
-    self.beaconComm[0] = Committee({Pubkeys: _beaconComm, PrevBlk: 0})
-    self.bridgeComm[0] = Committee({Pubkeys: _bridgeComm, PrevBlk: 0})
+def __init__(
+    numBeaconVals: uint256,
+    _beaconComm: bytes[PUBKEY_LENGTH],
+    numBridgeVals: uint256,
+    _bridgeComm: bytes[PUBKEY_LENGTH],
+    _mulsig: address
+):
+    self.beaconComm[0] = Committee({Pubkeys: _beaconComm, PrevBlk: 0, NumVals: numBeaconVals})
+    self.bridgeComm[0] = Committee({Pubkeys: _bridgeComm, PrevBlk: 0, NumVals: numBridgeVals})
     self.mulsig = MulSigP256(_mulsig)
 
 @constant
 @public
-def parseSwapInst(inst: bytes[INST_LENGTH], numPk: int128) -> (uint256, uint256, bytes[PUBKEY_LENGTH]):
+def parseSwapInst(inst: bytes[INST_LENGTH], numPk: int128) -> (uint256, uint256, uint256, bytes[PUBKEY_LENGTH]):
     type: uint256 = convert(slice(inst, start=0, len=3), uint256)
     height: uint256 = extract32(inst, 3, type=uint256)
-    pubkeys: bytes[PUBKEY_LENGTH] = slice(inst, start=35, len=numPk*PUBKEY_SIZE)
-    return type, height, pubkeys
+    numVals: uint256 = extract32(inst, 35, type=uint256)
+    pubkeys: bytes[PUBKEY_LENGTH] = slice(inst, start=67, len=numPk*PUBKEY_SIZE)
+    return type, height, numVals, pubkeys
 
 @constant
 @public
-def findComm(blkHeight: uint256, isBeacon: bool) -> bytes[PUBKEY_LENGTH]:
+def findComm(blkHeight: uint256, isBeacon: bool) -> (bytes[PUBKEY_LENGTH], uint256):
     comm: bytes[PUBKEY_LENGTH]
+    numVals: uint256
     if isBeacon:
         height: uint256 = self.latestBeaconBlk
         for i in range(MAX_RANGE):
             if height <= blkHeight:
                 comm = self.beaconComm[height].Pubkeys
+                numVals = self.beaconComm[height].NumVals
                 break
             height = self.beaconComm[height].PrevBlk
     else:
         height: uint256 = self.latestBridgeBlk
         for i in range(MAX_RANGE):
             if height <= blkHeight:
-                comm= self.bridgeComm[height].Pubkeys
+                comm = self.bridgeComm[height].Pubkeys
+                numVals = self.bridgeComm[height].NumVals
                 break
             height = self.bridgeComm[height].PrevBlk
-    return comm
+    return comm, numVals
 
 @constant
 @public
@@ -123,10 +132,6 @@ def verifySig(
     r: bytes[PUBKEY_SIZE],
     blk: bytes32,
 ) -> bool:
-    # Check if enough validators signed this block
-    if numSig < MIN_SIGN:
-        return False
-
     # Check if decompressed xs, ys are correct
     # log.NotifyUint256(convert(numSig, uint256))
     # log.NotifyUint256(signerSig)
@@ -186,11 +191,17 @@ def instructionApproved(
     r: bytes[PUBKEY_SIZE],
 ) -> bool:
     # Find committees signed this block
-    comm: bytes[PUBKEY_LENGTH] = self.findComm(height, isBeacon)
+    comm: bytes[PUBKEY_LENGTH]
+    numVals: uint256
+    comm, numVals = self.findComm(height, isBeacon)
 
     # Check if instRoot is in block with hash blkHash
     blk: bytes32 = keccak256(concat(blkData, instRoot))
     if not blk == blkHash:
+        return False
+
+    # Check if enough validators signed this block
+    if convert(numSig, uint256) < 1 + numVals * 2 / 3:
         return False
 
     # Check that beacon signature is correct
@@ -269,10 +280,11 @@ def swapBridgeCommittee(
     # Parse instruction and check metadata
     type: uint256
     startHeight: uint256
+    numVals: uint256
     pubkeys: bytes[PUBKEY_LENGTH]
-    type, startHeight, pubkeys = self.parseSwapInst(inst, numPk)
-    # log.NotifyBytes32(extract32(pubkeys, 0, type=bytes32))
-    # log.NotifyUint256(startHeight)
+    type, startHeight, numVals, pubkeys = self.parseSwapInst(inst, numPk)
+    log.NotifyBytes32(extract32(pubkeys, 0, type=bytes32))
+    log.NotifyUint256(numVals)
 
     # Metadata type and shardID of swap bridge instruction
     assert type == 3617073
@@ -328,7 +340,7 @@ def swapBridgeCommittee(
         return False
 
     # Swap committee
-    self.bridgeComm[startHeight] = Committee({Pubkeys: pubkeys, PrevBlk: self.latestBridgeBlk})
+    self.bridgeComm[startHeight] = Committee({Pubkeys: pubkeys, PrevBlk: self.latestBridgeBlk, NumVals: numVals})
     self.latestBridgeBlk = startHeight
     log.NotifyString("updated bridge committee")
     return True
@@ -361,8 +373,9 @@ def swapBeaconCommittee(
     # Parse instruction and check metadata
     type: uint256
     startHeight: uint256
+    numVals: uint256
     pubkeys: bytes[PUBKEY_LENGTH]
-    type, startHeight, pubkeys = self.parseSwapInst(inst, numPk)
+    type, startHeight, numVals, pubkeys = self.parseSwapInst(inst, numPk)
     # log.NotifyBytes32(extract32(pubkeys, 0, type=bytes32))
 
     # Metadata type and shardID of swap bridge instruction
@@ -394,7 +407,7 @@ def swapBeaconCommittee(
         return False
 
     # Swap committee
-    self.beaconComm[startHeight] = Committee({Pubkeys: pubkeys, PrevBlk: self.latestBeaconBlk})
+    self.beaconComm[startHeight] = Committee({Pubkeys: pubkeys, PrevBlk: self.latestBeaconBlk, NumVals: numVals})
     self.latestBeaconBlk = startHeight
     log.NotifyString("updated beacon committee")
     return True

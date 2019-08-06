@@ -38,7 +38,7 @@ func TestVerifySig(t *testing.T) {
 	}
 
 	_, c := connectAndInstantiate(t)
-	comm, err := c.inc.FindComm(nil, proof.bridgeHeight, false)
+	comm, _, err := c.inc.FindComm(nil, proof.bridgeHeight, false)
 	fmt.Printf("comm: %x %v\n", comm, err)
 	res, err := c.inc.VerifySig(
 		nil,
