@@ -164,7 +164,7 @@ func getBurnProof(txID string) string {
 	// url := "https://dev-test-node.incognito.org/"
 
 	if len(txID) == 0 {
-		txID = "4062e8ab2d7aa565fa509e5b0b3635a2e499be3081ef9e25a2fa97938acfb67e"
+		txID = "c81e6541ae73e4216c9e2508dd1981e8038254cdbda5ee69228fa02dfd7f1b86"
 	}
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 

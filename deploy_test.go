@@ -100,20 +100,6 @@ func TestBurn(t *testing.T) {
 	}
 
 	// Burn
-	fmt.Printf("beacon Rp: %x\n", proof.beaconRp)
-	fmt.Printf("beacon Rpx: %d\n", proof.beaconRpx)
-	fmt.Printf("beacon Rpy: %d\n", proof.beaconRpy)
-	incAddr := common.HexToAddress(IncognitoProxyAddress)
-	c2, _ := incognito_proxy.NewIncognitoProxy(incAddr, client)
-	x, err := c2.VerifyCompressPoint(nil, proof.beaconRp, proof.beaconRpx, proof.beaconRpy)
-	fmt.Println(x, err)
-	msAddr, err := c2.Mulsig(nil)
-	fmt.Printf("%x\n", msAddr)
-	bpks, err := c2.BeaconCommPubkeys(nil, big.NewInt(0))
-	fmt.Printf("%x\n", bpks)
-	brpks, err := c2.BridgeCommPubkeys(nil, big.NewInt(0))
-	fmt.Printf("%x\n", brpks)
-
 	auth := bind.NewKeyedTransactor(privKey)
 	tx, err := withdraw(c, auth, proof)
 	if err != nil {
@@ -196,11 +182,12 @@ func TestDeployProxyAndVault(t *testing.T) {
 
 	// Genesis committee
 	// url := "http://test-node.incognito.org:9334"
-	url := "http://0.0.0.0:9334"
-	numBeaconVals, beaconComm, numBridgeVals, bridgeComm, err := getCommittee(url)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// url := "http://0.0.0.0:9334"
+	// numBeaconVals, beaconComm, numBridgeVals, bridgeComm, err := getCommittee(url)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	numBeaconVals, beaconComm, numBridgeVals, bridgeComm := getCommitteeHardcoded()
 
 	// Deploy MulSigP256
 	// msAddr, _, _, err := checkMulSig.DeployMulSigP256(auth, client)
