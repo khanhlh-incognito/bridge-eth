@@ -1,18 +1,20 @@
-all: beacon bridge burn
+all: beacon bridge burn erc20
 
-beacon: incognito_proxy/incognito_proxy.go vault/vault.go erc20/ERC20.go checkMulSig/MulSigP256.go
+beacon: build
 	go test -run=TestSimulatedSwapBeacon
 
-bridge: incognito_proxy/incognito_proxy.go vault/vault.go erc20/ERC20.go checkMulSig/MulSigP256.go
+bridge: build
 	go test -run=TestSimulatedSwapBridge
 
-burn: incognito_proxy/incognito_proxy.go vault/vault.go erc20/ERC20.go checkMulSig/MulSigP256.go
+burn: build
 	go test -run=TestSimulatedBurn
 
-erc20: incognito_proxy/incognito_proxy.go vault/vault.go erc20/ERC20.go checkMulSig/MulSigP256.go
+erc20: build
 	go test -run=TestSimulatedErc20
 
-.PHONY: all swap burn
+build: incognito_proxy/incognito_proxy.go vault/vault.go erc20/ERC20.go checkMulSig/MulSigP256.go
+
+.PHONY: all beacon bridge burn erc20 build
 
 incognito_proxy/incognito_proxy.go: incognito_proxy/incognito_proxy.vy
 	./gengo.sh incognito_proxy/incognito_proxy.vy incognito_proxy incognito_proxy

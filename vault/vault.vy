@@ -39,12 +39,13 @@ def __init__(incognitoProxyAddress: address):
 @public
 @payable
 def deposit(incognito_address: string[INC_ADDRESS_LENGTH]):
-    assert msg.value <= 10 ** 27
+    assert msg.value + self.balance <= 10 ** 27
     log.Deposit(ETH_TOKEN, incognito_address, msg.value)
 
 @public
 def depositERC20(token: address, amount: uint256, incognito_address: string[INC_ADDRESS_LENGTH]):
-    assert amount <= 10 ** 18
+    tokenBalance: uint256 = Erc20(token).balanceOf(self)
+    assert amount + tokenBalance <= 10 ** 18
     success: bool = Erc20(token).transferFrom(msg.sender, self, amount)
     assert success
     log.Deposit(token, incognito_address, amount)
