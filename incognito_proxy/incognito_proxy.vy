@@ -198,6 +198,7 @@ def instructionApproved(
     comm, numVals = self.findComm(height, isBeacon)
 
     # Check if instRoot is in block with hash blkHash
+    # TODO: remove blkHash
     blk: bytes32 = keccak256(concat(blkData, instRoot))
     if not blk == blkHash:
         return False

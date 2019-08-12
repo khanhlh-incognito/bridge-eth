@@ -46,45 +46,45 @@ type getProofResult struct {
 }
 
 type decodedProof struct {
-	instruction  []byte
-	beaconHeight *big.Int
-	bridgeHeight *big.Int
+	Instruction  []byte
+	BeaconHeight *big.Int
+	BridgeHeight *big.Int
 
-	beaconInstPath       [inst_max_path][32]byte
-	beaconInstPathIsLeft [inst_max_path]bool
-	beaconInstPathLen    *big.Int
-	beaconInstRoot       [32]byte
-	beaconBlkData        [32]byte
-	beaconBlkHash        [32]byte
-	beaconSignerSig      *big.Int
-	beaconNumR           *big.Int
-	beaconXs             [comm_size]*big.Int
-	beaconYs             [comm_size]*big.Int
-	beaconRIdxs          [comm_size]*big.Int
-	beaconNumSig         *big.Int
-	beaconSigIdxs        [comm_size]*big.Int
-	beaconRp             []byte
-	beaconRpx            *big.Int
-	beaconRpy            *big.Int
-	beaconR              []byte
+	BeaconInstPath       [inst_max_path][32]byte
+	BeaconInstPathIsLeft [inst_max_path]bool
+	BeaconInstPathLen    *big.Int
+	BeaconInstRoot       [32]byte
+	BeaconBlkData        [32]byte
+	BeaconBlkHash        [32]byte
+	BeaconSignerSig      *big.Int
+	BeaconNumR           *big.Int
+	BeaconXs             [comm_size]*big.Int
+	BeaconYs             [comm_size]*big.Int
+	BeaconRIdxs          [comm_size]*big.Int
+	BeaconNumSig         *big.Int
+	BeaconSigIdxs        [comm_size]*big.Int
+	BeaconRp             []byte
+	BeaconRpx            *big.Int
+	BeaconRpy            *big.Int
+	BeaconR              []byte
 
-	bridgeInstPath       [inst_max_path][32]byte
-	bridgeInstPathIsLeft [inst_max_path]bool
-	bridgeInstPathLen    *big.Int
-	bridgeInstRoot       [32]byte
-	bridgeBlkData        [32]byte
-	bridgeBlkHash        [32]byte
-	bridgeSignerSig      *big.Int
-	bridgeNumR           *big.Int
-	bridgeXs             [comm_size]*big.Int
-	bridgeYs             [comm_size]*big.Int
-	bridgeRIdxs          [comm_size]*big.Int
-	bridgeNumSig         *big.Int
-	bridgeSigIdxs        [comm_size]*big.Int
-	bridgeRp             []byte
-	bridgeRpx            *big.Int
-	bridgeRpy            *big.Int
-	bridgeR              []byte
+	BridgeInstPath       [inst_max_path][32]byte
+	BridgeInstPathIsLeft [inst_max_path]bool
+	BridgeInstPathLen    *big.Int
+	BridgeInstRoot       [32]byte
+	BridgeBlkData        [32]byte
+	BridgeBlkHash        [32]byte
+	BridgeSignerSig      *big.Int
+	BridgeNumR           *big.Int
+	BridgeXs             [comm_size]*big.Int
+	BridgeYs             [comm_size]*big.Int
+	BridgeRIdxs          [comm_size]*big.Int
+	BridgeNumSig         *big.Int
+	BridgeSigIdxs        [comm_size]*big.Int
+	BridgeRp             []byte
+	BridgeRpx            *big.Int
+	BridgeRpy            *big.Int
+	BridgeR              []byte
 }
 
 func getAndDecodeBurnProof(txID string) (*decodedProof, error) {
@@ -164,7 +164,7 @@ func getBurnProof(txID string) string {
 	// url := "https://dev-test-node.incognito.org/"
 
 	if len(txID) == 0 {
-		txID = "c81e6541ae73e4216c9e2508dd1981e8038254cdbda5ee69228fa02dfd7f1b86"
+		txID = "87c89c1c19cec3061eff9cfefdcc531d9456ac48de568b3974c5b0a88d5f3834"
 	}
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 
@@ -301,45 +301,45 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	bridgeR := decode(r.Result.BridgeR)
 
 	return &decodedProof{
-		instruction: inst,
+		Instruction: inst,
 
-		beaconHeight:         beaconHeight,
-		beaconInstPath:       beaconInstPath,
-		beaconInstPathIsLeft: beaconInstPathIsLeft,
-		beaconInstPathLen:    beaconInstPathLen,
-		beaconInstRoot:       beaconInstRoot,
-		beaconBlkData:        beaconBlkData,
-		beaconBlkHash:        beaconBlkHash,
-		beaconSignerSig:      beaconSignerSig,
-		beaconNumR:           beaconNumR,
-		beaconXs:             beaconXs,
-		beaconYs:             beaconYs,
-		beaconRIdxs:          beaconRIdxs,
-		beaconNumSig:         beaconNumSig,
-		beaconSigIdxs:        beaconSigIdxs,
-		beaconRp:             beaconRp,
-		beaconRpx:            beaconRpx,
-		beaconRpy:            beaconRpy,
-		beaconR:              beaconR,
+		BeaconHeight:         beaconHeight,
+		BeaconInstPath:       beaconInstPath,
+		BeaconInstPathIsLeft: beaconInstPathIsLeft,
+		BeaconInstPathLen:    beaconInstPathLen,
+		BeaconInstRoot:       beaconInstRoot,
+		BeaconBlkData:        beaconBlkData,
+		BeaconBlkHash:        beaconBlkHash,
+		BeaconSignerSig:      beaconSignerSig,
+		BeaconNumR:           beaconNumR,
+		BeaconXs:             beaconXs,
+		BeaconYs:             beaconYs,
+		BeaconRIdxs:          beaconRIdxs,
+		BeaconNumSig:         beaconNumSig,
+		BeaconSigIdxs:        beaconSigIdxs,
+		BeaconRp:             beaconRp,
+		BeaconRpx:            beaconRpx,
+		BeaconRpy:            beaconRpy,
+		BeaconR:              beaconR,
 
-		bridgeHeight:         bridgeHeight,
-		bridgeInstPath:       bridgeInstPath,
-		bridgeInstPathIsLeft: bridgeInstPathIsLeft,
-		bridgeInstPathLen:    bridgeInstPathLen,
-		bridgeInstRoot:       bridgeInstRoot,
-		bridgeBlkData:        bridgeBlkData,
-		bridgeBlkHash:        bridgeBlkHash,
-		bridgeSignerSig:      bridgeSignerSig,
-		bridgeNumR:           bridgeNumR,
-		bridgeXs:             bridgeXs,
-		bridgeYs:             bridgeYs,
-		bridgeRIdxs:          bridgeRIdxs,
-		bridgeNumSig:         bridgeNumSig,
-		bridgeSigIdxs:        bridgeSigIdxs,
-		bridgeRp:             bridgeRp,
-		bridgeRpx:            bridgeRpx,
-		bridgeRpy:            bridgeRpy,
-		bridgeR:              bridgeR,
+		BridgeHeight:         bridgeHeight,
+		BridgeInstPath:       bridgeInstPath,
+		BridgeInstPathIsLeft: bridgeInstPathIsLeft,
+		BridgeInstPathLen:    bridgeInstPathLen,
+		BridgeInstRoot:       bridgeInstRoot,
+		BridgeBlkData:        bridgeBlkData,
+		BridgeBlkHash:        bridgeBlkHash,
+		BridgeSignerSig:      bridgeSignerSig,
+		BridgeNumR:           bridgeNumR,
+		BridgeXs:             bridgeXs,
+		BridgeYs:             bridgeYs,
+		BridgeRIdxs:          bridgeRIdxs,
+		BridgeNumSig:         bridgeNumSig,
+		BridgeSigIdxs:        bridgeSigIdxs,
+		BridgeRp:             bridgeRp,
+		BridgeRpx:            bridgeRpx,
+		BridgeRpy:            bridgeRpy,
+		BridgeR:              bridgeR,
 	}, nil
 }
 
