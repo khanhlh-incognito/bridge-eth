@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -8,7 +9,64 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 )
+
+func TestFixedParseBurnInst(t *testing.T) {
+	metaType := []byte{7, 2, 1}
+	token := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3}
+	to := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 6}
+	amount := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 8, 9}
+	in := &burnInst{
+		metaType: big.NewInt(0).SetBytes(metaType),
+		token:    common.BytesToAddress(token),
+		to:       common.BytesToAddress(to),
+		amount:   big.NewInt(0).SetBytes(amount),
+	}
+	data := []byte{}
+	data = append(data, metaType...)
+	data = append(data, token[:]...)
+	data = append(data, to[:]...)
+	data = append(data, amount[:]...)
+
+	p, err := setupFixedCommittee()
+	if err != nil {
+		t.Error(err)
+	}
+	resMeta, resToken, resTo, resAmount, err := p.v.ParseBurnInst(nil, data)
+	out := &burnInst{
+		metaType: resMeta,
+		token:    resToken,
+		to:       resTo,
+		amount:   resAmount,
+	}
+	if err != nil {
+		t.Error(err)
+	}
+	checkBurnInst(t, in, out)
+}
+
+func checkBurnInst(t *testing.T, in, out *burnInst) {
+	if in.metaType.Cmp(out.metaType) != 0 {
+		t.Error(errors.Errorf("incorrect metaType: expect %x, got %x", out.metaType, in.metaType))
+	}
+	if !bytes.Equal(in.token[:], out.token[:]) {
+		t.Error(errors.Errorf("incorrect token: expect %x, got %x", out.token, in.token))
+	}
+	if !bytes.Equal(in.to[:], out.to[:]) {
+		t.Error(errors.Errorf("incorrect to: expect %x, got %x", out.to, in.to))
+	}
+	if in.amount.Cmp(out.amount) != 0 {
+		t.Error(errors.Errorf("incorrect amount: expect %x, got %x", out.amount, in.amount))
+	}
+}
+
+type burnInst struct {
+	metaType *big.Int
+	token    common.Address
+	to       common.Address
+	amount   *big.Int
+}
 
 func TestFixedVaultBurn(t *testing.T) {
 	proof := getFixedBurnProof()
@@ -76,4 +134,10 @@ func getFixedBurnProof() *decodedProof {
 	proof := &decodedProof{}
 	json.Unmarshal([]byte(proofMarshalled), proof)
 	return proof
+}
+
+func toBytes32BigEndian(b []byte) []byte {
+	a := [32]byte{}
+	copy(a[32-len(b):], b)
+	return a[:]
 }
