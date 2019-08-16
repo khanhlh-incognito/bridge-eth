@@ -75,7 +75,6 @@ func TestSimulatedSwapBridge(t *testing.T) {
 		proof.BeaconInstPathLen,
 		proof.BeaconInstRoot,
 		proof.BeaconBlkData,
-		proof.BeaconBlkHash,
 		proof.BeaconSignerSig,
 		proof.BeaconNumR,
 		proof.BeaconXs,
@@ -93,7 +92,6 @@ func TestSimulatedSwapBridge(t *testing.T) {
 		proof.BridgeInstPathLen,
 		proof.BridgeInstRoot,
 		proof.BridgeBlkData,
-		proof.BridgeBlkHash,
 		proof.BridgeSignerSig,
 		proof.BridgeNumR,
 		proof.BridgeXs,
@@ -151,7 +149,6 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 		proof.BeaconInstPathLen,
 		proof.BeaconInstRoot,
 		proof.BeaconBlkData,
-		proof.BeaconBlkHash,
 		proof.BeaconSignerSig,
 		proof.BeaconNumR,
 		proof.BeaconXs,
@@ -169,48 +166,6 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 	}
 	p.sim.Commit()
 	printReceipt(p.sim, tx)
-}
-
-type simplerProof struct {
-	Instruction  []byte
-	BeaconHeight *big.Int
-	BridgeHeight *big.Int
-
-	BeaconInstPath       [inst_max_path][32]byte
-	BeaconInstPathIsLeft [inst_max_path]bool
-	BeaconInstPathLen    *big.Int
-	BeaconInstRoot       [32]byte
-	BeaconBlkData        [32]byte
-	BeaconBlkHash        [32]byte
-	BeaconSignerSig      *big.Int
-	BeaconNumR           *big.Int
-	BeaconXs             [comm_size]*big.Int
-	BeaconYs             [comm_size]*big.Int
-	BeaconRIdxs          [comm_size]*big.Int
-	BeaconNumSig         *big.Int
-	BeaconSigIdxs        [comm_size]*big.Int
-	BeaconRp             []byte
-	BeaconRpx            *big.Int
-	BeaconRpy            *big.Int
-	BeaconR              []byte
-
-	BridgeInstPath       [inst_max_path][32]byte
-	BridgeInstPathIsLeft [inst_max_path]bool
-	BridgeInstPathLen    *big.Int
-	BridgeInstRoot       [32]byte
-	BridgeBlkData        [32]byte
-	BridgeBlkHash        [32]byte
-	BridgeSignerSig      *big.Int
-	BridgeNumR           *big.Int
-	BridgeXs             [comm_size]*big.Int
-	BridgeYs             [comm_size]*big.Int
-	BridgeRIdxs          [comm_size]*big.Int
-	BridgeNumSig         *big.Int
-	BridgeSigIdxs        [comm_size]*big.Int
-	BridgeRp             []byte
-	BridgeRpx            *big.Int
-	BridgeRpy            *big.Int
-	BridgeR              []byte
 }
 
 func TestSimulatedBurn(t *testing.T) {

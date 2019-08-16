@@ -1,6 +1,6 @@
 # External Contracts
 contract Incognito_proxy:
-    def instructionApproved(isBeacon: bool, instHash: bytes32, height: uint256, instPath: bytes32[8], instPathIsLeft: bool[8], instPathLen: int128, instRoot: bytes32, blkData: bytes32, blkHash: bytes32, signerSig: uint256, numR: int128, xs: uint256[8], ys: uint256[8], rIdxs: int128[8], numSig: int128, sigIdxs: uint256[8], rp: bytes[33], rpx: uint256, rpy: uint256, r: bytes[33]) -> bool: constant
+    def instructionApproved(isBeacon: bool, instHash: bytes32, height: uint256, instPath: bytes32[8], instPathIsLeft: bool[8], instPathLen: int128, instRoot: bytes32, blkData: bytes32, signerSig: uint256, numR: int128, xs: uint256[8], ys: uint256[8], rIdxs: int128[8], numSig: int128, sigIdxs: uint256[8], rp: bytes[33], rpx: uint256, rpy: uint256, r: bytes[33]) -> bool: constant
 
 contract Erc20:
     def transfer(_to: address, _value: uint256) -> bool: modifying
@@ -68,7 +68,6 @@ def withdraw(
     beaconInstPathLen: int128,
     beaconInstRoot: bytes32,
     beaconBlkData: bytes32,
-    beaconBlkHash: bytes32,
     beaconSignerSig: uint256,
     beaconNumR: int128,
     beaconXs: uint256[COMM_SIZE],
@@ -86,7 +85,6 @@ def withdraw(
     bridgeInstPathLen: int128,
     bridgeInstRoot: bytes32,
     bridgeBlkData: bytes32,
-    bridgeBlkHash: bytes32,
     bridgeSignerSig: uint256,
     bridgeNumR: int128,
     bridgeXs: uint256[COMM_SIZE],
@@ -135,7 +133,6 @@ def withdraw(
         beaconInstPathLen,
         beaconInstRoot,
         beaconBlkData,
-        beaconBlkHash,
         beaconSignerSig,
         beaconNumR,
         beaconXs,
@@ -159,7 +156,6 @@ def withdraw(
         bridgeInstPathLen,
         bridgeInstRoot,
         bridgeBlkData,
-        bridgeBlkHash,
         bridgeSignerSig,
         bridgeNumR,
         bridgeXs,

@@ -179,7 +179,6 @@ def instructionApproved(
     instPathLen: int128,
     instRoot: bytes32,
     blkData: bytes32,
-    blkHash: bytes32,
     signerSig: uint256,
     numR: int128,
     xs: uint256[COMM_SIZE],
@@ -197,11 +196,8 @@ def instructionApproved(
     numVals: uint256
     comm, numVals = self.findComm(height, isBeacon)
 
-    # Check if instRoot is in block with hash blkHash
-    # TODO: remove blkHash
+    # Get block hash from instRoot and other data
     blk: bytes32 = keccak256(concat(blkData, instRoot))
-    if not blk == blkHash:
-        return False
 
     # Check if enough validators signed this block
     if convert(numSig, uint256) < 1 + numVals * 2 / 3:
@@ -247,7 +243,6 @@ def swapBridgeCommittee(
     beaconInstPathLen: int128,
     beaconInstRoot: bytes32,
     beaconBlkData: bytes32, # hash of the rest of the beacon block
-    beaconBlkHash: bytes32,
     beaconSignerSig: uint256, # aggregated signature
     beaconNumR: int128,
     beaconXs: uint256[COMM_SIZE], # decompressed x of pks who aggregated R
@@ -264,7 +259,6 @@ def swapBridgeCommittee(
     bridgeInstPathLen: int128,
     bridgeInstRoot: bytes32,
     bridgeBlkData: bytes32,
-    bridgeBlkHash: bytes32,
     bridgeSignerSig: uint256,
     bridgeNumR: int128,
     bridgeXs: uint256[COMM_SIZE],
@@ -277,7 +271,7 @@ def swapBridgeCommittee(
     bridgeRpy: uint256,
     bridgeR: bytes[PUBKEY_SIZE],
 ) -> bool:
-    # Check if beaconInstRoot is in block with hash beaconBlkHash
+    # Check if beaconInstRoot is in block
     instHash: bytes32 = keccak256(inst)
 
     # Parse instruction and check metadata
@@ -302,7 +296,6 @@ def swapBridgeCommittee(
         beaconInstPathLen,
         beaconInstRoot,
         beaconBlkData,
-        beaconBlkHash,
         beaconSignerSig,
         beaconNumR,
         beaconXs,
@@ -327,7 +320,6 @@ def swapBridgeCommittee(
         bridgeInstPathLen,
         bridgeInstRoot,
         bridgeBlkData,
-        bridgeBlkHash,
         bridgeSignerSig,
         bridgeNumR,
         bridgeXs,
@@ -357,7 +349,6 @@ def swapBeaconCommittee(
     beaconInstPathLen: int128,
     beaconInstRoot: bytes32,
     beaconBlkData: bytes32, # hash of the rest of the beacon block
-    beaconBlkHash: bytes32,
     beaconSignerSig: uint256, # aggregated signature
     beaconNumR: int128,
     beaconXs: uint256[COMM_SIZE], # decompressed x of pks who aggregated R
@@ -370,7 +361,7 @@ def swapBeaconCommittee(
     beaconRpy: uint256,
     beaconR: bytes[PUBKEY_SIZE],
 ) -> bool:
-    # Check if beaconInstRoot is in block with hash beaconBlkHash
+    # Check if beaconInstRoot is in block
     instHash: bytes32 = keccak256(inst)
 
     # Parse instruction and check metadata
@@ -394,7 +385,6 @@ def swapBeaconCommittee(
         beaconInstPathLen,
         beaconInstRoot,
         beaconBlkData,
-        beaconBlkHash,
         beaconSignerSig,
         beaconNumR,
         beaconXs,

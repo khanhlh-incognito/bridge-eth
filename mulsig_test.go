@@ -40,6 +40,7 @@ func TestVerifySig(t *testing.T) {
 	_, c := connectAndInstantiate(t)
 	comm, _, err := c.inc.FindComm(nil, proof.BridgeHeight, false)
 	fmt.Printf("comm: %x %v\n", comm, err)
+	bridgeBlkHash := keccak256(proof.BridgeBlkData[:], proof.BridgeInstRoot[:])
 	res, err := c.inc.VerifySig(
 		nil,
 		comm,
@@ -54,7 +55,7 @@ func TestVerifySig(t *testing.T) {
 		proof.BridgeRpx,
 		proof.BridgeRpy,
 		proof.BridgeR,
-		proof.BridgeBlkHash,
+		bridgeBlkHash,
 	)
 	fmt.Println(res, err)
 }
@@ -83,7 +84,6 @@ func TestInstructionApproved(t *testing.T) {
 		proof.BeaconInstPathLen,
 		proof.BeaconInstRoot,
 		proof.BeaconBlkData,
-		proof.BeaconBlkHash,
 		proof.BeaconSignerSig,
 		proof.BeaconNumR,
 		proof.BeaconXs,
@@ -107,6 +107,7 @@ func TestMulSig(t *testing.T) {
 	}
 
 	_, c := connectAndInstantiate(t)
+	beaconBlkHash := keccak256(proof.BeaconBlkData[:], proof.BeaconInstRoot[:])
 	res, err := c.ms.CheckMulSig(
 		nil,
 		proof.BeaconXs,
@@ -117,10 +118,11 @@ func TestMulSig(t *testing.T) {
 		proof.BeaconRpy,
 		proof.BeaconR,
 		proof.BeaconSignerSig,
-		proof.BeaconBlkHash,
+		beaconBlkHash,
 	)
 	fmt.Println(res, err)
 
+	bridgeBlkHash := keccak256(proof.BridgeBlkData[:], proof.BridgeInstRoot[:])
 	res, err = c.ms.CheckMulSig(
 		nil,
 		proof.BridgeXs,
@@ -131,7 +133,7 @@ func TestMulSig(t *testing.T) {
 		proof.BridgeRpy,
 		proof.BridgeR,
 		proof.BridgeSignerSig,
-		proof.BridgeBlkHash,
+		bridgeBlkHash,
 	)
 	fmt.Println(res, err)
 }

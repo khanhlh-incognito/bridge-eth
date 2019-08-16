@@ -55,7 +55,6 @@ type decodedProof struct {
 	BeaconInstPathLen    *big.Int
 	BeaconInstRoot       [32]byte
 	BeaconBlkData        [32]byte
-	BeaconBlkHash        [32]byte
 	BeaconSignerSig      *big.Int
 	BeaconNumR           *big.Int
 	BeaconXs             [comm_size]*big.Int
@@ -73,7 +72,6 @@ type decodedProof struct {
 	BridgeInstPathLen    *big.Int
 	BridgeInstRoot       [32]byte
 	BridgeBlkData        [32]byte
-	BridgeBlkHash        [32]byte
 	BridgeSignerSig      *big.Int
 	BridgeNumR           *big.Int
 	BridgeXs             [comm_size]*big.Int
@@ -212,9 +210,7 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	fmt.Printf("beaconInstRoot: %x\n", beaconInstRoot)
 
 	beaconBlkData := toByte32(decode(r.Result.BeaconBlkData))
-	beaconBlkHash := toByte32(decode(r.Result.BeaconBlkHash))
-	fmt.Printf("expected beaconBlkHash: %x\n", keccak256(beaconBlkData[:], beaconInstRoot[:]))
-	fmt.Printf("beaconBlkHash: %x\n\n", beaconBlkHash)
+	// fmt.Printf("expected beaconBlkHash: %x\n", keccak256(beaconBlkData[:], beaconInstRoot[:]))
 
 	beaconMulSig := &privacy.SchnMultiSig{}
 	err := beaconMulSig.SetBytes(decode(r.Result.BeaconSignerSig))
@@ -263,8 +259,6 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	// fmt.Printf("bridgeInstRoot: %x\n", bridgeInstRoot)
 
 	bridgeBlkData := toByte32(decode(r.Result.BridgeBlkData))
-	bridgeBlkHash := toByte32(decode(r.Result.BridgeBlkHash))
-	// fmt.Printf("bridgeBlkHash: %x\n", bridgeBlkHash)
 
 	bridgeMulSig := &privacy.SchnMultiSig{}
 	err = bridgeMulSig.SetBytes(decode(r.Result.BridgeSignerSig))
@@ -309,7 +303,6 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 		BeaconInstPathLen:    beaconInstPathLen,
 		BeaconInstRoot:       beaconInstRoot,
 		BeaconBlkData:        beaconBlkData,
-		BeaconBlkHash:        beaconBlkHash,
 		BeaconSignerSig:      beaconSignerSig,
 		BeaconNumR:           beaconNumR,
 		BeaconXs:             beaconXs,
@@ -328,7 +321,6 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 		BridgeInstPathLen:    bridgeInstPathLen,
 		BridgeInstRoot:       bridgeInstRoot,
 		BridgeBlkData:        bridgeBlkData,
-		BridgeBlkHash:        bridgeBlkHash,
 		BridgeSignerSig:      bridgeSignerSig,
 		BridgeNumR:           bridgeNumR,
 		BridgeXs:             bridgeXs,
