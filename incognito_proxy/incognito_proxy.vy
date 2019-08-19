@@ -179,17 +179,11 @@ def instructionApproved(
     instPathLen: int128,
     instRoot: bytes32,
     blkData: bytes32,
-    signerSig: uint256,
-    numR: int128,
-    xs: uint256[COMM_SIZE],
-    ys: uint256[COMM_SIZE],
-    rIdxs: int128[COMM_SIZE],
+    v: uint256,
+    r: bytes32,
+    s: bytes32,
     numSig: int128,
     sigIdxs: uint256[COMM_SIZE],
-    rp: bytes[PUBKEY_SIZE],
-    rpx: uint256,
-    rpy: uint256,
-    r: bytes[PUBKEY_SIZE],
 ) -> bool:
     # Find committees signed this block
     comm: bytes[PUBKEY_LENGTH]
