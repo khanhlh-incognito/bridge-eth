@@ -18,7 +18,6 @@ import (
 	"github.com/incognitochain/bridge-eth/jsonresult"
 	"github.com/incognitochain/bridge-eth/privacy"
 	"github.com/incognitochain/bridge-eth/vault"
-	"github.com/pkg/errors"
 )
 
 const inst_max_path = 8
@@ -55,34 +54,22 @@ type decodedProof struct {
 	BeaconInstPathLen    *big.Int
 	BeaconInstRoot       [32]byte
 	BeaconBlkData        [32]byte
-	BeaconSignerSig      *big.Int
-	BeaconNumR           *big.Int
-	BeaconXs             [comm_size]*big.Int
-	BeaconYs             [comm_size]*big.Int
-	BeaconRIdxs          [comm_size]*big.Int
 	BeaconNumSig         *big.Int
+	BeaconSigVs          [comm_size]*big.Int
+	BeaconSigRs          [comm_size][32]byte
+	BeaconSigSs          [comm_size][32]byte
 	BeaconSigIdxs        [comm_size]*big.Int
-	BeaconRp             []byte
-	BeaconRpx            *big.Int
-	BeaconRpy            *big.Int
-	BeaconR              []byte
 
 	BridgeInstPath       [inst_max_path][32]byte
 	BridgeInstPathIsLeft [inst_max_path]bool
 	BridgeInstPathLen    *big.Int
 	BridgeInstRoot       [32]byte
 	BridgeBlkData        [32]byte
-	BridgeSignerSig      *big.Int
-	BridgeNumR           *big.Int
-	BridgeXs             [comm_size]*big.Int
-	BridgeYs             [comm_size]*big.Int
-	BridgeRIdxs          [comm_size]*big.Int
 	BridgeNumSig         *big.Int
+	BridgeSigVs          [comm_size]*big.Int
+	BridgeSigRs          [comm_size][32]byte
+	BridgeSigSs          [comm_size][32]byte
 	BridgeSigIdxs        [comm_size]*big.Int
-	BridgeRp             []byte
-	BridgeRpx            *big.Int
-	BridgeRpy            *big.Int
-	BridgeR              []byte
 }
 
 func getAndDecodeBurnProof(txID string) (*decodedProof, error) {
@@ -212,40 +199,13 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	beaconBlkData := toByte32(decode(r.Result.BeaconBlkData))
 	// fmt.Printf("expected beaconBlkHash: %x\n", keccak256(beaconBlkData[:], beaconInstRoot[:]))
 
-	beaconMulSig := &privacy.SchnMultiSig{}
-	err := beaconMulSig.SetBytes(decode(r.Result.BeaconSignerSig))
-	if err != nil {
-		a := decode(r.Result.BeaconSignerSig)
-		fmt.Printf("%s %x %d\n", r.Result.BeaconSignerSig, a, len(a))
-		return nil, errors.Wrap(err, "invalid beaconSignerSig")
-	}
-	beaconSignerSig := beaconMulSig.S
-	beaconNumR := big.NewInt(int64(len(r.Result.BeaconRIdxs)))
-	beaconXs := newBigIntArray()
-	beaconYs := newBigIntArray()
-	beaconRIdxs := newBigIntArray()
-	for i, rIdx := range r.Result.BeaconRIdxs {
-		p, err := decompress(r.Result.BeaconPubkeys[rIdx])
-		if err != nil {
-			return nil, errors.Wrapf(err, "invalid beaconRIdxs i %d rIdx %d", i, rIdx)
-		}
-		beaconXs[i] = p.X
-		beaconYs[i] = p.Y
-		beaconRIdxs[i] = big.NewInt(int64(rIdx))
-	}
+	// TODO(@0xbunyip): decode BeaconSigs to R, S and V
+
 	beaconNumSig := big.NewInt(int64(len(r.Result.BeaconSigIdxs)))
 	beaconSigIdxs := newBigIntArray()
 	for i, sIdx := range r.Result.BeaconSigIdxs {
-		j := findSigIdx(sIdx, r.Result.BeaconRIdxs)
-		if j < 0 {
-			return nil, errors.Errorf("failed finding beacon sigIdx %d %v", sIdx, r.Result.BeaconRIdxs)
-		}
-		beaconSigIdxs[i] = big.NewInt(int64(j))
+		beaconSigIdxs[i] = big.NewInt(int64(sIdx))
 	}
-	beaconRp := beaconMulSig.R.Compress()
-	beaconRpx := beaconMulSig.R.X
-	beaconRpy := beaconMulSig.R.Y
-	beaconR := decode(r.Result.BeaconR)
 
 	// For bridge
 	bridgeInstRoot := decode32(r.Result.BridgeInstRoot)
@@ -257,42 +217,16 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	}
 	bridgeInstPathLen := big.NewInt(int64(len(r.Result.BridgeInstPath)))
 	// fmt.Printf("bridgeInstRoot: %x\n", bridgeInstRoot)
-
 	bridgeBlkData := toByte32(decode(r.Result.BridgeBlkData))
 
-	bridgeMulSig := &privacy.SchnMultiSig{}
-	err = bridgeMulSig.SetBytes(decode(r.Result.BridgeSignerSig))
-	if err != nil {
-		return nil, err
-	}
-	bridgeSignerSig := bridgeMulSig.S
-	bridgeNumR := big.NewInt(int64(len(r.Result.BridgeRIdxs)))
-	bridgeXs := newBigIntArray()
-	bridgeYs := newBigIntArray()
-	bridgeRIdxs := newBigIntArray()
-	for i, rIdx := range r.Result.BridgeRIdxs {
-		p, err := decompress(r.Result.BridgePubkeys[rIdx])
-		if err != nil {
-			return nil, err
-		}
-		bridgeXs[i] = p.X
-		bridgeYs[i] = p.Y
-		bridgeRIdxs[i] = big.NewInt(int64(rIdx))
-	}
+	// TODO(@0xbunyip): decode BeaconSigs to R, S and V
+
 	bridgeNumSig := big.NewInt(int64(len(r.Result.BridgeSigIdxs)))
 	bridgeSigIdxs := newBigIntArray()
 	for i, sIdx := range r.Result.BridgeSigIdxs {
-		j := findSigIdx(sIdx, r.Result.BridgeRIdxs)
-		if j < 0 {
-			return nil, errors.Errorf("failed finding bridge sigIdx %d %v", sIdx, r.Result.BeaconRIdxs)
-		}
-		bridgeSigIdxs[i] = big.NewInt(int64(j))
-		fmt.Printf("bridgeSigIdxs[%d]: %d\n", i, j)
+		bridgeSigIdxs[i] = big.NewInt(int64(sIdx))
+		// fmt.Printf("bridgeSigIdxs[%d]: %d\n", i, j)
 	}
-	bridgeRp := bridgeMulSig.R.Compress()
-	bridgeRpx := bridgeMulSig.R.X
-	bridgeRpy := bridgeMulSig.R.Y
-	bridgeR := decode(r.Result.BridgeR)
 
 	return &decodedProof{
 		Instruction: inst,
@@ -303,17 +237,11 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 		BeaconInstPathLen:    beaconInstPathLen,
 		BeaconInstRoot:       beaconInstRoot,
 		BeaconBlkData:        beaconBlkData,
-		BeaconSignerSig:      beaconSignerSig,
-		BeaconNumR:           beaconNumR,
-		BeaconXs:             beaconXs,
-		BeaconYs:             beaconYs,
-		BeaconRIdxs:          beaconRIdxs,
 		BeaconNumSig:         beaconNumSig,
+		BeaconSigVs:          [comm_size]*big.Int{},
+		BeaconSigRs:          [comm_size][32]byte{},
+		BeaconSigSs:          [comm_size][32]byte{},
 		BeaconSigIdxs:        beaconSigIdxs,
-		BeaconRp:             beaconRp,
-		BeaconRpx:            beaconRpx,
-		BeaconRpy:            beaconRpy,
-		BeaconR:              beaconR,
 
 		BridgeHeight:         bridgeHeight,
 		BridgeInstPath:       bridgeInstPath,
@@ -321,17 +249,11 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 		BridgeInstPathLen:    bridgeInstPathLen,
 		BridgeInstRoot:       bridgeInstRoot,
 		BridgeBlkData:        bridgeBlkData,
-		BridgeSignerSig:      bridgeSignerSig,
-		BridgeNumR:           bridgeNumR,
-		BridgeXs:             bridgeXs,
-		BridgeYs:             bridgeYs,
-		BridgeRIdxs:          bridgeRIdxs,
 		BridgeNumSig:         bridgeNumSig,
+		BridgeSigVs:          [comm_size]*big.Int{},
+		BridgeSigRs:          [comm_size][32]byte{},
+		BridgeSigSs:          [comm_size][32]byte{},
 		BridgeSigIdxs:        bridgeSigIdxs,
-		BridgeRp:             bridgeRp,
-		BridgeRpx:            bridgeRpx,
-		BridgeRpy:            bridgeRpy,
-		BridgeR:              bridgeR,
 	}, nil
 }
 
@@ -368,15 +290,6 @@ func decompress(s string) (*privacy.EllipticPoint, error) {
 		return nil, err
 	}
 	return p, nil
-}
-
-func findSigIdx(sIdx int, rIdxs []int) int {
-	for j, rIdx := range rIdxs {
-		if rIdx == sIdx {
-			return j
-		}
-	}
-	return -1
 }
 
 func newBigIntArray() [comm_size]*big.Int {
