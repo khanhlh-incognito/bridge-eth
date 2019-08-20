@@ -4,17 +4,15 @@ INST_MAX_PATH: constant(uint256) = 8 # support up to 2 ** INST_MAX_PATH instruct
 INST_LENGTH: constant(int128) = 300
 
 COMM_SIZE: constant(uint256) = 8
-PUBKEY_SIZE: constant(int128) = 33 # each pubkey is 33 bytes
-PUBKEY_LENGTH: constant(int128) = INST_LENGTH # length of the array storing all pubkeys
 
 struct Committee:
-    Pubkeys: bytes[PUBKEY_LENGTH]
+    Pubkeys: address[COMM_SIZE]
     PrevBlk: uint256
     NumVals: uint256
 
 # External contract
 contract MulSigP256:
-    def checkMulSig(xPks: uint256[8], yPks: uint256[8], idxSigs: uint256[8], numSig: int128, xR: uint256, yR: uint256, bytesR: bytes[33], sig: uint256, mess: bytes32) -> bool: constant
+    def checkMulSig(committee: address[8], msgHash: bytes32, v: uint256[8], r: bytes32[8], s: bytes32[8]) -> bool: constant
 
 SwapBeaconCommittee: event({newCommitteeRoot: bytes32})
 SwapBridgeCommittee: event({newCommitteeRoot: bytes32})
@@ -35,9 +33,9 @@ mulsig: public(MulSigP256)
 @public
 def __init__(
     numBeaconVals: uint256,
-    _beaconComm: bytes[PUBKEY_LENGTH],
+    _beaconComm: address[COMM_SIZE],
     numBridgeVals: uint256,
-    _bridgeComm: bytes[PUBKEY_LENGTH],
+    _bridgeComm: address[COMM_SIZE],
     _mulsig: address
 ):
     self.beaconComm[0] = Committee({Pubkeys: _beaconComm, PrevBlk: 0, NumVals: numBeaconVals})
@@ -46,35 +44,38 @@ def __init__(
 
 @constant
 @public
-def parseSwapInst(inst: bytes[INST_LENGTH], numPk: int128) -> (uint256, uint256, uint256, bytes[PUBKEY_LENGTH]):
+def extractMetaFromInst(inst: bytes[INST_LENGTH], numPk: int128) -> (uint256, uint256, uint256):
     type: uint256 = convert(slice(inst, start=0, len=3), uint256)
     height: uint256 = extract32(inst, 3, type=uint256)
     numVals: uint256 = extract32(inst, 35, type=uint256)
-    pubkeys: bytes[PUBKEY_LENGTH] = slice(inst, start=67, len=numPk*PUBKEY_SIZE)
-    return type, height, numVals, pubkeys
+    return type, height, numVals
 
 @constant
 @public
-def findComm(blkHeight: uint256, isBeacon: bool) -> (bytes[PUBKEY_LENGTH], uint256):
-    comm: bytes[PUBKEY_LENGTH]
-    numVals: uint256
+def extractCommitteeFromInst(inst: bytes[INST_LENGTH], numVals: uint256) -> address[COMM_SIZE]:
+    pubkeys: address[COMM_SIZE]
+    for i in range(COMM_SIZE):
+        if i >= convert(numVals, int128):
+            break
+        pubkeys[i] = extract32(inst, 67+i*32, type=address)
+    return pubkeys
+
+@constant
+@public
+def findCommitteeFromHeight(blkHeight: uint256, isBeacon: bool) -> uint256:
+    height: uint256 = self.latestBeaconBlk
     if isBeacon:
-        height: uint256 = self.latestBeaconBlk
         for i in range(MAX_RANGE):
             if height <= blkHeight:
-                comm = self.beaconComm[height].Pubkeys
-                numVals = self.beaconComm[height].NumVals
                 break
             height = self.beaconComm[height].PrevBlk
     else:
-        height: uint256 = self.latestBridgeBlk
+        height = self.latestBridgeBlk
         for i in range(MAX_RANGE):
             if height <= blkHeight:
-                comm = self.bridgeComm[height].Pubkeys
-                numVals = self.bridgeComm[height].NumVals
                 break
             height = self.bridgeComm[height].PrevBlk
-    return comm, numVals
+    return height
 
 @constant
 @public
@@ -99,72 +100,23 @@ def instructionInMerkleTree(
 
 @constant
 @public
-def verifyCompressPoint(
-    pk: bytes[PUBKEY_SIZE],
-    x: uint256,
-    y: uint256,
-) -> bool:
-    pkx: uint256 = convert(slice(pk, start=1, len=32), uint256)
-    if pkx != x:
-        return False
-    pkFormat: uint256 = convert(slice(pk, start=0, len=1), uint256)
-    format: uint256 = 2
-    if y % 2 == 1:
-        format = 3
-    if pkFormat != format:
-        return False
-    return True
-
-@constant
-@public
 def verifySig(
-    pubkey: bytes[PUBKEY_LENGTH],
-    signerSig: uint256,
-    numR: int128,
-    xs: uint256[COMM_SIZE],
-    ys: uint256[COMM_SIZE],
-    rIdxs: int128[COMM_SIZE],
-    numSig: int128,
-    sigIdxs: uint256[COMM_SIZE],
-    rp: bytes[PUBKEY_SIZE],
-    rpx: uint256,
-    rpy: uint256,
-    r: bytes[PUBKEY_SIZE],
+    signers: address[COMM_SIZE],
+    v: uint256[COMM_SIZE],
+    r: bytes32[COMM_SIZE],
+    s: bytes32[COMM_SIZE],
     blk: bytes32,
 ) -> bool:
-    # log.NotifyUint256(convert(numSig, uint256))
-    # log.NotifyUint256(signerSig)
-
-    # NOTE: comment out check pubkeys to skip swapping validators
-    # Check if decompressed xs, ys are correct
-    # for i in range(COMM_SIZE):
-    #     if i >= numR:
-    #         break
-    #     idx: int128 = rIdxs[i]
-    #     pk: bytes[PUBKEY_SIZE] = slice(pubkey, start=idx * PUBKEY_SIZE, len=PUBKEY_SIZE)
-    #     # log.NotifyBytes32(extract32(pk, 0, type=bytes32))
-    #     # log.NotifyUint256(sigIdxs[i])
-    #     if not self.verifyCompressPoint(pk, xs[i], ys[i]):
-    #         return False
-
-    # Check if decompressed rpx and rpy are correct
-    if not self.verifyCompressPoint(rp, rpx, rpy):
-        return False
-
     # NOTE: comment out checkMulSig to increase #validators of testnet
-    # # Check if signerSig is valid
-    # if not self.mulsig.checkMulSig(
-    #     xs,
-    #     ys,
-    #     sigIdxs,
-    #     numSig,
-    #     rpx,
-    #     rpy,
-    #     r,
-    #     signerSig,
-    #     blk,
-    # ):
-    #     return False
+    # Check if signerSig is valid
+    if not self.mulsig.checkMulSig(
+        signers,
+        blk,
+        v,
+        r,
+        s
+    ):
+        return False
 
     return True
 
@@ -173,22 +125,35 @@ def verifySig(
 def instructionApproved(
     isBeacon: bool,
     instHash: bytes32,
-    height: uint256,
+    blkHeight: uint256,
     instPath: bytes32[INST_MAX_PATH],
     instPathIsLeft: bool[INST_MAX_PATH],
     instPathLen: int128,
     instRoot: bytes32,
     blkData: bytes32,
-    v: uint256,
-    r: bytes32,
-    s: bytes32,
     numSig: int128,
     sigIdxs: uint256[COMM_SIZE],
+    v: uint256[COMM_SIZE],
+    r: bytes32[COMM_SIZE],
+    s: bytes32[COMM_SIZE],
 ) -> bool:
-    # Find committees signed this block
-    comm: bytes[PUBKEY_LENGTH]
+    # Find committee in charge of this block
+    commHeight: uint256 = self.findCommitteeFromHeight(blkHeight, isBeacon)
+    comm: address[COMM_SIZE]
     numVals: uint256
-    comm, numVals = self.findComm(height, isBeacon)
+    if isBeacon:
+        comm = self.beaconComm[commHeight].Pubkeys
+        numVals = self.beaconComm[commHeight].NumVals
+    else:
+        comm = self.bridgeComm[commHeight].Pubkeys
+        numVals = self.bridgeComm[commHeight].NumVals
+
+    # Get pubkey of signers
+    signers: address[COMM_SIZE]
+    for i in range(COMM_SIZE):
+        if i >= numSig:
+            break
+        signers[i] = comm[sigIdxs[i]]
 
     # Get block hash from instRoot and other data
     blk: bytes32 = keccak256(concat(blkData, instRoot))
@@ -199,18 +164,10 @@ def instructionApproved(
 
     # Check that beacon signature is correct
     if not self.verifySig(
-        comm,
-        signerSig,
-        numR,
-        xs,
-        ys,
-        rIdxs,
-        numSig,
-        sigIdxs,
-        rp,
-        rpx,
-        rpy,
+        signers,
+        v,
         r,
+        s,
         blk,
     ):
         return False
@@ -237,33 +194,21 @@ def swapBridgeCommittee(
     beaconInstPathLen: int128,
     beaconInstRoot: bytes32,
     beaconBlkData: bytes32, # hash of the rest of the beacon block
-    beaconSignerSig: uint256, # aggregated signature
-    beaconNumR: int128,
-    beaconXs: uint256[COMM_SIZE], # decompressed x of pks who aggregated R
-    beaconYs: uint256[COMM_SIZE],
-    beaconRIdxs: int128[COMM_SIZE], # indices of members who aggregated R
     beaconNumSig: int128,
     beaconSigIdxs: uint256[COMM_SIZE], # indices of members who signed
-    beaconRp: bytes[PUBKEY_SIZE],
-    beaconRpx: uint256,
-    beaconRpy: uint256,
-    beaconR: bytes[PUBKEY_SIZE],
+    beaconSigVs: uint256[COMM_SIZE],
+    beaconSigRs: bytes32[COMM_SIZE],
+    beaconSigSs: bytes32[COMM_SIZE],
     bridgeInstPath: bytes32[INST_MAX_PATH],
     bridgeInstPathIsLeft: bool[INST_MAX_PATH],
     bridgeInstPathLen: int128,
     bridgeInstRoot: bytes32,
-    bridgeBlkData: bytes32,
-    bridgeSignerSig: uint256,
-    bridgeNumR: int128,
-    bridgeXs: uint256[COMM_SIZE],
-    bridgeYs: uint256[COMM_SIZE],
-    bridgeRIdxs: int128[COMM_SIZE],
+    bridgeBlkData: bytes32, # hash of the rest of the beacon block
     bridgeNumSig: int128,
-    bridgeSigIdxs: uint256[COMM_SIZE],
-    bridgeRp: bytes[PUBKEY_SIZE],
-    bridgeRpx: uint256,
-    bridgeRpy: uint256,
-    bridgeR: bytes[PUBKEY_SIZE],
+    bridgeSigIdxs: uint256[COMM_SIZE], # indices of members who signed
+    bridgeSigVs: uint256[COMM_SIZE],
+    bridgeSigRs: bytes32[COMM_SIZE],
+    bridgeSigSs: bytes32[COMM_SIZE],
 ) -> bool:
     # Check if beaconInstRoot is in block
     instHash: bytes32 = keccak256(inst)
@@ -272,8 +217,8 @@ def swapBridgeCommittee(
     type: uint256
     startHeight: uint256
     numVals: uint256
-    pubkeys: bytes[PUBKEY_LENGTH]
-    type, startHeight, numVals, pubkeys = self.parseSwapInst(inst, numPk)
+    type, startHeight, numVals = self.extractMetaFromInst(inst, numPk)
+    pubkeys: address[COMM_SIZE] = self.extractCommitteeFromInst(inst, numVals)
     # log.NotifyBytes32(extract32(pubkeys, 0, type=bytes32))
     # log.NotifyUint256(numVals)
 
@@ -290,17 +235,11 @@ def swapBridgeCommittee(
         beaconInstPathLen,
         beaconInstRoot,
         beaconBlkData,
-        beaconSignerSig,
-        beaconNumR,
-        beaconXs,
-        beaconYs,
-        beaconRIdxs,
         beaconNumSig,
         beaconSigIdxs,
-        beaconRp,
-        beaconRpx,
-        beaconRpy,
-        beaconR,
+        beaconSigVs,
+        beaconSigRs,
+        beaconSigSs,
     ):
         return False
 
@@ -314,17 +253,11 @@ def swapBridgeCommittee(
         bridgeInstPathLen,
         bridgeInstRoot,
         bridgeBlkData,
-        bridgeSignerSig,
-        bridgeNumR,
-        bridgeXs,
-        bridgeYs,
-        bridgeRIdxs,
         bridgeNumSig,
         bridgeSigIdxs,
-        bridgeRp,
-        bridgeRpx,
-        bridgeRpy,
-        bridgeR,
+        bridgeSigVs,
+        bridgeSigRs,
+        bridgeSigSs,
     ):
         return False
 
@@ -343,17 +276,11 @@ def swapBeaconCommittee(
     beaconInstPathLen: int128,
     beaconInstRoot: bytes32,
     beaconBlkData: bytes32, # hash of the rest of the beacon block
-    beaconSignerSig: uint256, # aggregated signature
-    beaconNumR: int128,
-    beaconXs: uint256[COMM_SIZE], # decompressed x of pks who aggregated R
-    beaconYs: uint256[COMM_SIZE],
-    beaconRIdxs: int128[COMM_SIZE], # indices of members who aggregated R
     beaconNumSig: int128,
     beaconSigIdxs: uint256[COMM_SIZE], # indices of members who signed
-    beaconRp: bytes[PUBKEY_SIZE],
-    beaconRpx: uint256,
-    beaconRpy: uint256,
-    beaconR: bytes[PUBKEY_SIZE],
+    beaconSigVs: uint256[COMM_SIZE],
+    beaconSigRs: bytes32[COMM_SIZE],
+    beaconSigSs: bytes32[COMM_SIZE],
 ) -> bool:
     # Check if beaconInstRoot is in block
     instHash: bytes32 = keccak256(inst)
@@ -362,8 +289,8 @@ def swapBeaconCommittee(
     type: uint256
     startHeight: uint256
     numVals: uint256
-    pubkeys: bytes[PUBKEY_LENGTH]
-    type, startHeight, numVals, pubkeys = self.parseSwapInst(inst, numPk)
+    type, startHeight, numVals = self.extractMetaFromInst(inst, numPk)
+    pubkeys: address[COMM_SIZE] = self.extractCommitteeFromInst(inst, numVals)
     # log.NotifyBytes32(extract32(pubkeys, 0, type=bytes32))
 
     # Metadata type and shardID of swap bridge instruction
@@ -379,17 +306,11 @@ def swapBeaconCommittee(
         beaconInstPathLen,
         beaconInstRoot,
         beaconBlkData,
-        beaconSignerSig,
-        beaconNumR,
-        beaconXs,
-        beaconYs,
-        beaconRIdxs,
         beaconNumSig,
         beaconSigIdxs,
-        beaconRp,
-        beaconRpx,
-        beaconRpy,
-        beaconR,
+        beaconSigVs,
+        beaconSigRs,
+        beaconSigSs,
     ):
         return False
 
