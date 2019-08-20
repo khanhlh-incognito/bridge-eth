@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -100,7 +99,7 @@ func setupFixedCommittee() (*Platform, error) {
 	return setup(numBeaconVals, beaconOld, numBridgeVals, bridgeOld)
 }
 
-func getFixedCommittee() (*big.Int, []byte, *big.Int, []byte) {
+func getFixedCommittee() (*big.Int, [comm_size]common.Address, *big.Int, [comm_size]common.Address) {
 	beaconComm := []string{
 		"02a96a04ad76a0034efc8819e93308823ce7a3b76fd694f961ee909124096baf00",
 		"0242653de0e9af9dd3725008519157314eb5a845dec2cd646ce9e03f780175b700",
@@ -108,11 +107,11 @@ func getFixedCommittee() (*big.Int, []byte, *big.Int, []byte) {
 		"0205aae74cb0128a1863c970cbe87e827e28f92a91c2d4768fdb30a279dd081c00",
 	}
 	numBeaconVals := big.NewInt(int64(len(beaconComm)))
-	beacons := []byte{}
-	for _, p := range beaconComm {
-		pk, _ := hex.DecodeString(p)
-		beacons = append(beacons, pk...)
-	}
+	beacons := [comm_size]common.Address{}
+	// for _, p := range beaconComm {
+	// 	pk, _ := hex.DecodeString(p)
+	// 	beacons = append(beacons, pk...)
+	// }
 
 	bridgeComm := []string{
 		"0253d262c2b6a55606ff9d32e195231ec57e4d23a6efd1c02143a58fd0c2591d01",
@@ -121,11 +120,11 @@ func getFixedCommittee() (*big.Int, []byte, *big.Int, []byte) {
 		"039cc81f72a88a7436eb74bf10c7693af165324ba4d15baeb4e8d2f1c2ce25a101",
 	}
 	numBridgeVals := big.NewInt(int64(len(bridgeComm)))
-	bridges := []byte{}
-	for _, p := range bridgeComm {
-		pk, _ := hex.DecodeString(p)
-		bridges = append(bridges, pk...)
-	}
+	bridges := [comm_size]common.Address{}
+	// for _, p := range bridgeComm {
+	// 	pk, _ := hex.DecodeString(p)
+	// 	bridges = append(bridges, pk...)
+	// }
 	return numBeaconVals, beacons, numBridgeVals, bridges
 }
 

@@ -75,34 +75,22 @@ func TestSimulatedSwapBridge(t *testing.T) {
 		proof.BeaconInstPathLen,
 		proof.BeaconInstRoot,
 		proof.BeaconBlkData,
-		proof.BeaconSignerSig,
-		proof.BeaconNumR,
-		proof.BeaconXs,
-		proof.BeaconYs,
-		proof.BeaconRIdxs,
 		proof.BeaconNumSig,
 		proof.BeaconSigIdxs,
-		proof.BeaconRp,
-		proof.BeaconRpx,
-		proof.BeaconRpy,
-		proof.BeaconR,
+		proof.BeaconSigVs,
+		proof.BeaconSigRs,
+		proof.BeaconSigSs,
 
 		proof.BridgeInstPath,
 		proof.BridgeInstPathIsLeft,
 		proof.BridgeInstPathLen,
 		proof.BridgeInstRoot,
 		proof.BridgeBlkData,
-		proof.BridgeSignerSig,
-		proof.BridgeNumR,
-		proof.BridgeXs,
-		proof.BridgeYs,
-		proof.BridgeRIdxs,
 		proof.BridgeNumSig,
 		proof.BridgeSigIdxs,
-		proof.BridgeRp,
-		proof.BridgeRpx,
-		proof.BridgeRpy,
-		proof.BridgeR,
+		proof.BridgeSigVs,
+		proof.BridgeSigRs,
+		proof.BridgeSigSs,
 	)
 	if err != nil {
 		fmt.Println("err:", err)
@@ -149,17 +137,11 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 		proof.BeaconInstPathLen,
 		proof.BeaconInstRoot,
 		proof.BeaconBlkData,
-		proof.BeaconSignerSig,
-		proof.BeaconNumR,
-		proof.BeaconXs,
-		proof.BeaconYs,
-		proof.BeaconRIdxs,
 		proof.BeaconNumSig,
 		proof.BeaconSigIdxs,
-		proof.BeaconRp,
-		proof.BeaconRpx,
-		proof.BeaconRpy,
-		proof.BeaconR,
+		proof.BeaconSigVs,
+		proof.BeaconSigRs,
+		proof.BeaconSigSs,
 	)
 	if err != nil {
 		fmt.Println("err:", err)
@@ -207,9 +189,9 @@ func (p *Platform) getBalance(addr common.Address) *big.Int {
 
 func setup(
 	numBeaconVals *big.Int,
-	beaconComm []byte,
+	beaconComm [comm_size]common.Address,
 	numBridgeVals *big.Int,
-	bridgeComm []byte,
+	bridgeComm [comm_size]common.Address,
 ) (*Platform, error) {
 	alloc := make(core.GenesisAlloc)
 	balance, _ := big.NewInt(1).SetString("100000000000000000000", 10) // 100 eth
