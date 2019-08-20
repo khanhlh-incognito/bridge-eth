@@ -139,16 +139,18 @@ func TestGetCommittee(t *testing.T) {
 	_, c := connectAndInstantiate(t)
 	beaconBlk, _ := c.inc.LatestBeaconBlk(nil)
 	for {
-		pubkeys, err := c.inc.BeaconCommPubkeys(nil, beaconBlk)
-		if err != nil {
-			t.Fatal(err)
+		for i := 0; i < comm_size; i++ {
+			pubkeys, err := c.inc.BeaconCommPubkeys(nil, beaconBlk, big.NewInt(int64(i)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			fmt.Printf("beaconBlk: %d %x\n", beaconBlk, pubkeys)
 		}
+
 		prevBeaconBlk, err := c.inc.BeaconCommPrevBlk(nil, beaconBlk)
 		if err != nil {
 			t.Fatal(err)
 		}
-		fmt.Printf("beaconBlk: %d %x\n", beaconBlk, pubkeys)
-
 		if beaconBlk.Uint64() == 0 {
 			break
 		}
@@ -156,16 +158,18 @@ func TestGetCommittee(t *testing.T) {
 	}
 	bridgeBlk, _ := c.inc.LatestBridgeBlk(nil)
 	for {
-		pubkeys, err := c.inc.BridgeCommPubkeys(nil, beaconBlk)
-		if err != nil {
-			t.Fatal(err)
+		for i := 0; i < comm_size; i++ {
+			pubkeys, err := c.inc.BridgeCommPubkeys(nil, beaconBlk, big.NewInt(int64(i)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			fmt.Printf("bridgeBlk: %d %x\n", bridgeBlk, pubkeys)
 		}
+
 		prevBridgeBlk, err := c.inc.BridgeCommPrevBlk(nil, bridgeBlk)
 		if err != nil {
 			t.Fatal(err)
 		}
-		fmt.Printf("bridgeBlk: %d %x\n", bridgeBlk, pubkeys)
-
 		if bridgeBlk.Uint64() == 0 {
 			break
 		}

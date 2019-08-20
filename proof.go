@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/incognitochain/bridge-eth/checkMulSig"
-	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/jsonresult"
@@ -22,7 +21,7 @@ import (
 
 const inst_max_path = 8
 const comm_size = 8
-const pubkey_size = 33
+const pubkey_size = 32
 
 type contracts struct {
 	v         *vault.Vault
@@ -86,22 +85,16 @@ func getAndDecodeBurnProof(txID string) (*decodedProof, error) {
 	return decodeProof(&r)
 }
 
-func getCommittee(url string) (*big.Int, []byte, *big.Int, []byte, error) {
+func getCommittee(url string) (*big.Int, [comm_size]common.Address, *big.Int, [comm_size]common.Address, error) {
 	payload := strings.NewReader("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbeaconbeststate\",\n    \"params\": []\n}")
 
 	req, _ := http.NewRequest("POST", url, payload)
 
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Accept", "*/*")
-	req.Header.Add("Cache-Control", "no-cache")
-	req.Header.Add("Host", "127.0.0.1:9334")
-	req.Header.Add("accept-encoding", "gzip, deflate")
-	req.Header.Add("Connection", "keep-alive")
-	req.Header.Add("cache-control", "no-cache")
-
+	beaconOld := [comm_size]common.Address{}
+	bridgeOld := [comm_size]common.Address{}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, beaconOld, nil, bridgeOld, err
 	}
 
 	defer res.Body.Close()
@@ -121,25 +114,24 @@ func getCommittee(url string) (*big.Int, []byte, *big.Int, []byte, error) {
 	r := getBeaconBestStateResult{}
 	err = json.Unmarshal([]byte(body), &r)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, beaconOld, nil, bridgeOld, err
 	}
 
 	// Genesis committee
+	// TODO: parse committee to common.Address
 	numBeaconVals := big.NewInt(int64(len(r.Result.BeaconCommittee)))
-	beaconOld := []byte{}
-	for i, val := range r.Result.BeaconCommittee {
-		pk, _, _ := base58.Base58Check{}.Decode(val)
-		fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
-		beaconOld = append(beaconOld, pk...)
-	}
+	// for i, val := range r.Result.BeaconCommittee {
+	// 	pk, _, _ := base58.Base58Check{}.Decode(val)
+	// 	fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
+	// 	beaconOld = append(beaconOld, pk...)
+	// }
 
 	numBridgeVals := big.NewInt(int64(len(r.Result.ShardCommittee["1"])))
-	bridgeOld := []byte{}
-	for i, val := range r.Result.ShardCommittee["1"] {
-		pk, _, _ := base58.Base58Check{}.Decode(val)
-		fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
-		bridgeOld = append(bridgeOld, pk...)
-	}
+	// for i, val := range r.Result.ShardCommittee["1"] {
+	// 	pk, _, _ := base58.Base58Check{}.Decode(val)
+	// 	fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
+	// 	bridgeOld = append(bridgeOld, pk...)
+	// }
 
 	return numBeaconVals, beaconOld, numBridgeVals, bridgeOld, nil
 }
@@ -300,7 +292,8 @@ func newBigIntArray() [comm_size]*big.Int {
 	return arr
 }
 
-func getCommitteeHardcoded() (*big.Int, []byte, *big.Int, []byte) {
+func getCommitteeHardcoded() (*big.Int, [comm_size]common.Address, *big.Int, [comm_size]common.Address) {
+	// TODO: hardcode and parse committee to common.Address
 	beaconComm := []string{
 		"02a96a04ad76a0034efc8819e93308823ce7a3b76fd694f961ee909124096baf00",
 		"0242653de0e9af9dd3725008519157314eb5a845dec2cd646ce9e03f780175b700",
@@ -308,11 +301,11 @@ func getCommitteeHardcoded() (*big.Int, []byte, *big.Int, []byte) {
 		"0205aae74cb0128a1863c970cbe87e827e28f92a91c2d4768fdb30a279dd081c00",
 	}
 	numBeaconVals := big.NewInt(int64(len(beaconComm)))
-	beacons := []byte{}
-	for _, p := range beaconComm {
-		pk, _ := hex.DecodeString(p)
-		beacons = append(beacons, pk...)
-	}
+	beacons := [comm_size]common.Address{}
+	// for _, p := range beaconComm {
+	// 	pk, _ := hex.DecodeString(p)
+	// 	beacons = append(beacons, pk...)
+	// }
 
 	bridgeComm := []string{
 		"0253d262c2b6a55606ff9d32e195231ec57e4d23a6efd1c02143a58fd0c2591d01",
@@ -321,10 +314,10 @@ func getCommitteeHardcoded() (*big.Int, []byte, *big.Int, []byte) {
 		"039cc81f72a88a7436eb74bf10c7693af165324ba4d15baeb4e8d2f1c2ce25a101",
 	}
 	numBridgeVals := big.NewInt(int64(len(bridgeComm)))
-	bridges := []byte{}
-	for _, p := range bridgeComm {
-		pk, _ := hex.DecodeString(p)
-		bridges = append(bridges, pk...)
-	}
+	bridges := [comm_size]common.Address{}
+	// for _, p := range bridgeComm {
+	// 	pk, _ := hex.DecodeString(p)
+	// 	bridges = append(bridges, pk...)
+	// }
 	return numBeaconVals, beacons, numBridgeVals, bridges
 }
