@@ -1,6 +1,6 @@
 # External Contracts
 contract Incognito_proxy:
-    def instructionApproved(isBeacon: bool, instHash: bytes32, height: uint256, instPath: bytes32[8], instPathIsLeft: bool[8], instPathLen: int128, instRoot: bytes32, blkData: bytes32, signerSig: uint256, numR: int128, xs: uint256[8], ys: uint256[8], rIdxs: int128[8], numSig: int128, sigIdxs: uint256[8], rp: bytes[33], rpx: uint256, rpy: uint256, r: bytes[33]) -> bool: constant
+    def instructionApproved(isBeacon: bool, instHash: bytes32, blkHeight: uint256, instPath: bytes32[8], instPathIsLeft: bool[8], instPathLen: int128, instRoot: bytes32, blkData: bytes32, numSig: int128, sigIdxs: uint256[8], v: uint256[8], r: bytes32[8], s: bytes32[8]) -> bool: constant
 
 contract Erc20:
     def transfer(_to: address, _value: uint256) -> bool: modifying
@@ -12,8 +12,6 @@ contract Erc20:
 INST_LENGTH: constant(int128) = 300
 INST_MAX_PATH: constant(uint256) = 8
 COMM_SIZE: constant(uint256) = 8
-PUBKEY_SIZE: constant(int128) = 33
-PUBKEY_LENGTH: constant(int128) = INST_LENGTH
 INC_ADDRESS_LENGTH: constant(uint256) = 128
 
 ETH_TOKEN: constant(address) = 0x0000000000000000000000000000000000000000
@@ -67,35 +65,23 @@ def withdraw(
     beaconInstPathIsLeft: bool[INST_MAX_PATH],
     beaconInstPathLen: int128,
     beaconInstRoot: bytes32,
-    beaconBlkData: bytes32,
-    beaconSignerSig: uint256,
-    beaconNumR: int128,
-    beaconXs: uint256[COMM_SIZE],
-    beaconYs: uint256[COMM_SIZE],
-    beaconRIdxs: int128[COMM_SIZE],
+    beaconBlkData: bytes32, # hash of the rest of the beacon block
     beaconNumSig: int128,
-    beaconSigIdxs: uint256[COMM_SIZE],
-    beaconRp: bytes[PUBKEY_SIZE],
-    beaconRpx: uint256,
-    beaconRpy: uint256,
-    beaconR: bytes[PUBKEY_SIZE],
+    beaconSigIdxs: uint256[COMM_SIZE], # indices of members who signed
+    beaconSigVs: uint256[COMM_SIZE],
+    beaconSigRs: bytes32[COMM_SIZE],
+    beaconSigSs: bytes32[COMM_SIZE],
     bridgeHeight: uint256,
     bridgeInstPath: bytes32[INST_MAX_PATH],
     bridgeInstPathIsLeft: bool[INST_MAX_PATH],
     bridgeInstPathLen: int128,
     bridgeInstRoot: bytes32,
-    bridgeBlkData: bytes32,
-    bridgeSignerSig: uint256,
-    bridgeNumR: int128,
-    bridgeXs: uint256[COMM_SIZE],
-    bridgeYs: uint256[COMM_SIZE],
-    bridgeRIdxs: int128[COMM_SIZE],
+    bridgeBlkData: bytes32, # hash of the rest of the beacon block
     bridgeNumSig: int128,
-    bridgeSigIdxs: uint256[COMM_SIZE],
-    bridgeRp: bytes[PUBKEY_SIZE],
-    bridgeRpx: uint256,
-    bridgeRpy: uint256,
-    bridgeR: bytes[PUBKEY_SIZE],
+    bridgeSigIdxs: uint256[COMM_SIZE], # indices of members who signed
+    bridgeSigVs: uint256[COMM_SIZE],
+    bridgeSigRs: bytes32[COMM_SIZE],
+    bridgeSigSs: bytes32[COMM_SIZE],
 ):
     type: uint256 = 0
     token: address
@@ -133,17 +119,11 @@ def withdraw(
         beaconInstPathLen,
         beaconInstRoot,
         beaconBlkData,
-        beaconSignerSig,
-        beaconNumR,
-        beaconXs,
-        beaconYs,
-        beaconRIdxs,
         beaconNumSig,
         beaconSigIdxs,
-        beaconRp,
-        beaconRpx,
-        beaconRpy,
-        beaconR,
+        beaconSigVs,
+        beaconSigRs,
+        beaconSigSs,
     )
 
     # Check if instruction is approved on bridge
@@ -156,17 +136,11 @@ def withdraw(
         bridgeInstPathLen,
         bridgeInstRoot,
         bridgeBlkData,
-        bridgeSignerSig,
-        bridgeNumR,
-        bridgeXs,
-        bridgeYs,
-        bridgeRIdxs,
         bridgeNumSig,
         bridgeSigIdxs,
-        bridgeRp,
-        bridgeRpx,
-        bridgeRpy,
-        bridgeR,
+        bridgeSigVs,
+        bridgeSigRs,
+        bridgeSigSs,
     )
 
     # Send and notify
