@@ -12,10 +12,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/incognitochain/bridge-eth/checkMulSig"
+	"github.com/incognitochain/bridge-eth/consensus/bridgesig"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/jsonresult"
-	"github.com/incognitochain/bridge-eth/privacy"
 	"github.com/incognitochain/bridge-eth/vault"
 )
 
@@ -147,14 +147,6 @@ func getBurnProof(txID string) string {
 
 	req, _ := http.NewRequest("POST", url, payload)
 
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Accept", "*/*")
-	req.Header.Add("Cache-Control", "no-cache")
-	req.Header.Add("Host", "127.0.0.1:9338")
-	req.Header.Add("accept-encoding", "gzip, deflate")
-	req.Header.Add("Connection", "keep-alive")
-	req.Header.Add("cache-control", "no-cache")
-
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println("err:", err)
@@ -191,7 +183,10 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	beaconBlkData := toByte32(decode(r.Result.BeaconBlkData))
 	// fmt.Printf("expected beaconBlkHash: %x\n", keccak256(beaconBlkData[:], beaconInstRoot[:]))
 
-	// TODO(@0xbunyip): decode BeaconSigs to R, S and V
+	beaconSigVs, beaconSigRs, beaconSigSs, err := decodeSigs(r.Result.BeaconSigs)
+	if err != nil {
+		return nil, err
+	}
 
 	beaconNumSig := big.NewInt(int64(len(r.Result.BeaconSigIdxs)))
 	beaconSigIdxs := newBigIntArray()
@@ -211,7 +206,10 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	// fmt.Printf("bridgeInstRoot: %x\n", bridgeInstRoot)
 	bridgeBlkData := toByte32(decode(r.Result.BridgeBlkData))
 
-	// TODO(@0xbunyip): decode BeaconSigs to R, S and V
+	bridgeSigVs, bridgeSigRs, bridgeSigSs, err := decodeSigs(r.Result.BridgeSigs)
+	if err != nil {
+		return nil, err
+	}
 
 	bridgeNumSig := big.NewInt(int64(len(r.Result.BridgeSigIdxs)))
 	bridgeSigIdxs := newBigIntArray()
@@ -230,9 +228,9 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 		BeaconInstRoot:       beaconInstRoot,
 		BeaconBlkData:        beaconBlkData,
 		BeaconNumSig:         beaconNumSig,
-		BeaconSigVs:          [comm_size]*big.Int{},
-		BeaconSigRs:          [comm_size][32]byte{},
-		BeaconSigSs:          [comm_size][32]byte{},
+		BeaconSigVs:          beaconSigVs,
+		BeaconSigRs:          beaconSigRs,
+		BeaconSigSs:          beaconSigSs,
 		BeaconSigIdxs:        beaconSigIdxs,
 
 		BridgeHeight:         bridgeHeight,
@@ -242,11 +240,33 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 		BridgeInstRoot:       bridgeInstRoot,
 		BridgeBlkData:        bridgeBlkData,
 		BridgeNumSig:         bridgeNumSig,
-		BridgeSigVs:          [comm_size]*big.Int{},
-		BridgeSigRs:          [comm_size][32]byte{},
-		BridgeSigSs:          [comm_size][32]byte{},
+		BridgeSigVs:          bridgeSigVs,
+		BridgeSigRs:          bridgeSigRs,
+		BridgeSigSs:          bridgeSigSs,
 		BridgeSigIdxs:        bridgeSigIdxs,
 	}, nil
+}
+
+func decodeSigs(sigs []string) (
+	sigVs [comm_size]*big.Int,
+	sigRs [comm_size][32]byte,
+	sigSs [comm_size][32]byte,
+	err error,
+) {
+	sigVs = [comm_size]*big.Int{}
+	sigRs = [comm_size][32]byte{}
+	sigSs = [comm_size][32]byte{}
+	for i, sig := range sigs {
+		v, r, s, e := bridgesig.DecodeECDSASig(decode(sig))
+		if e != nil {
+			err = e
+			return
+		}
+		sigVs[i] = big.NewInt(int64(v))
+		copy(sigRs[i][:], r)
+		copy(sigSs[i][:], s)
+	}
+	return
 }
 
 func toByte32(s []byte) [32]byte {
@@ -269,19 +289,6 @@ func keccak256(b ...[]byte) [32]byte {
 	r := [32]byte{}
 	copy(r[:], h)
 	return r
-}
-
-func decompress(s string) (*privacy.EllipticPoint, error) {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return nil, err
-	}
-	p := &privacy.EllipticPoint{}
-	err = p.Decompress(b)
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
 }
 
 func newBigIntArray() [comm_size]*big.Int {
