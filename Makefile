@@ -12,7 +12,7 @@ burn: build
 erc20: build
 	go test -run=TestSimulatedErc20
 
-build: incognito_proxy/incognito_proxy.go vault/vault.go erc20/ERC20.go checkMulSig/MulSigP256.go
+build: incognito_proxy/incognito_proxy.go vault/vault.go erc20/ERC20.go ecdsa_sig/Ecdsa.go
 
 .PHONY: all beacon bridge burn erc20 build
 
@@ -25,6 +25,6 @@ vault/vault.go: vault/vault.vy
 erc20/ERC20.go: erc20/ERC20.vy
 	./gengo.sh erc20/ERC20.vy erc20 erc20
 
-checkMulSig/MulSigP256.go: checkMulSig/contracts/MulSigP256.sol
-	./gengo.sh checkMulSig/contracts/MulSigP256.sol checkMulSig checkMulSig
+ecdsa_sig/Ecdsa.go: ecdsa_sig/contracts/Ecdsa.sol
+	./gengo.sh ecdsa_sig/contracts/Ecdsa.sol ecdsa_sig ecdsa_sig
 

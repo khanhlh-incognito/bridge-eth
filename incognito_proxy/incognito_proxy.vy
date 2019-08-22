@@ -3,7 +3,7 @@ INST_MAX_PATH: constant(uint256) = 8 # support up to 2 ** INST_MAX_PATH instruct
 
 INST_LENGTH: constant(int128) = 300
 
-COMM_SIZE: constant(uint256) = 8
+COMM_SIZE: constant(uint256) = 10
 
 struct Committee:
     Pubkeys: address[COMM_SIZE]
@@ -11,8 +11,8 @@ struct Committee:
     NumVals: uint256
 
 # External contract
-contract MulSigP256:
-    def checkMulSig(committee: address[8], msgHash: bytes32, v: uint256[8], r: bytes32[8], s: bytes32[8]) -> bool: constant
+contract ECDSA:
+    def verify(numSig: int128, committee: address[COMM_SIZE], msgHash: bytes32, v: uint256[COMM_SIZE], r: bytes32[COMM_SIZE], s: bytes32[COMM_SIZE]) -> bool: constant
 
 SwapBeaconCommittee: event({newCommitteeRoot: bytes32})
 SwapBridgeCommittee: event({newCommitteeRoot: bytes32})
@@ -28,7 +28,7 @@ beaconComm: public(map(uint256, Committee))
 bridgeComm: public(map(uint256, Committee))
 latestBeaconBlk: public(uint256)
 latestBridgeBlk: public(uint256)
-mulsig: public(MulSigP256)
+ecdsa: public(ECDSA)
 
 @public
 def __init__(
@@ -36,11 +36,11 @@ def __init__(
     _beaconComm: address[COMM_SIZE],
     numBridgeVals: uint256,
     _bridgeComm: address[COMM_SIZE],
-    _mulsig: address
+    _ecdsa: address
 ):
     self.beaconComm[0] = Committee({Pubkeys: _beaconComm, PrevBlk: 0, NumVals: numBeaconVals})
     self.bridgeComm[0] = Committee({Pubkeys: _bridgeComm, PrevBlk: 0, NumVals: numBridgeVals})
-    self.mulsig = MulSigP256(_mulsig)
+    self.ecdsa = ECDSA(_ecdsa)
 
 @constant
 @public
@@ -101,6 +101,7 @@ def instructionInMerkleTree(
 @constant
 @public
 def verifySig(
+    numSig: int128,
     signers: address[COMM_SIZE],
     v: uint256[COMM_SIZE],
     r: bytes32[COMM_SIZE],
@@ -109,9 +110,12 @@ def verifySig(
 ) -> bool:
     # NOTE: comment out checkMulSig to increase #validators of testnet
     # Check if signerSig is valid
-    if not self.mulsig.checkMulSig(
+    msgHash: bytes32 = 0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8
+
+    if not self.ecdsa.verify(
+        numSig,
         signers,
-        blk,
+        msgHash,
         v,
         r,
         s
@@ -164,6 +168,7 @@ def instructionApproved(
 
     # Check that beacon signature is correct
     if not self.verifySig(
+        numSig,
         signers,
         v,
         r,

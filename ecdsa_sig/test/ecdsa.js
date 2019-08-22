@@ -11,7 +11,7 @@ contract("ECDSA", () => {
         let r = ['0x012305d4c970ee1872d87b9c8de53bfa698782222bb318861690f9863f4c5a2a','0x03e6a2f1af4613c257eea0b11977d482f22969335504ed55ff07e3225e677fcc','0x86e2b5df59171a87b94e38af69474eb97c3a741fc6e3d488e3e27d63da44612f','0xd7deea8a087d4344bcb39f897de886be7020a22518b177b3541e2cb81d10bf80','0x778bf6835438261ba8485774aec7c44b6239c30a9e68f74aa417af673df31d35','0x98f4a9d71f60ea86321f84e4ca6cce1ef5827e2ae8e22ad1944d70125820a626','0xcba676c98e3489e27ee9d37d4ec39239f60523390f30c30ad6b4feb60eacc5e3','0xbf5e08d182998ec31f19a8d3744be78d5025b7fb33f87b4e71ec1d797cf92ddc','0xd6f28bc51138223f0e6620f42e4fba1159130d4dfa136e7ab35ff4081e4cee32','0x62e9fd38a63b0180a41f777a30717b198782dc8e43ebec3281a3f0e5e6aca069'];
         let v = ['27','28','28','27','27','27','27','28','28','28']; // uint8
 
-        it.only('Test verify valid signature gas', async() => {
+        it('Test verify valid signature gas', async() => {
             // const gasUsed = await c.checkMulSig.estimateGas(pks,xPks,yPks,idxr,idxs,xR,yR,R,sig,mess)
             // txs = await c.scalarMul(xPks[0],xPks[1],xPks[2],xPks[3])
             let muladdr = []
@@ -25,9 +25,10 @@ contract("ECDSA", () => {
                 mulv = mulv.concat(v)
             }
             console.log(muladdr.length)
-            const result = await contract.verify(muladdr, msgHash, mulv, mulr, muls);
+            let numSig = muladdr.length
+            const result = await contract.verify(numSig, muladdr, msgHash, mulv, mulr, muls);
             console.log(result);
-            const gasUsed = await contract.verify.estimateGas(muladdr, msgHash, mulv, mulr, muls);
+            const gasUsed = await contract.verify.estimateGas(numSig, muladdr, msgHash, mulv, mulr, muls);
             console.log(gasUsed);
         });
 
@@ -35,9 +36,10 @@ contract("ECDSA", () => {
             // const gasUsed = await c.checkMulSig.estimateGas(pks,xPks,yPks,idxr,idxs,xR,yR,R,sig,mess)
             // txs = await c.scalarMul(xPks[0],xPks[1],xPks[2],xPks[3])
             console.log(v.length);
-            const result = await contract.verify(address, msgHash, v, r, s);
+            let numSig = address.length
+            const result = await contract.verify(numSig, address, msgHash, v, r, s);
             console.log(result);
-            const gasUsed = await contract.verify.estimateGas(address, msgHash, v, r, s);
+            const gasUsed = await contract.verify.estimateGas(numSig, address, msgHash, v, r, s);
             console.log(gasUsed);
         });
     });

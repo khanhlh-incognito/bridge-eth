@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/incognitochain/bridge-eth/checkMulSig"
+	"github.com/incognitochain/bridge-eth/ecdsa_sig"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
@@ -191,8 +191,8 @@ func instantiate(client *ethclient.Client) (*contracts, error) {
 	}
 
 	// MulSigP256
-	c.msAddr = common.HexToAddress(MulSigP256)
-	c.ms, err = checkMulSig.NewMulSigP256(c.msAddr, client)
+	c.sigAddr = common.HexToAddress(ECDSA)
+	c.sig, err = ecdsa_sig.NewECDSA(c.sigAddr, client)
 	if err != nil {
 		return nil, err
 	}
