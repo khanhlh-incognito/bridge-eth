@@ -1,6 +1,6 @@
 # External Contracts
 contract Incognito_proxy:
-    def instructionApproved(isBeacon: bool, instHash: bytes32, blkHeight: uint256, instPath: bytes32[8], instPathIsLeft: bool[8], instPathLen: int128, instRoot: bytes32, blkData: bytes32, numSig: int128, sigIdxs: uint256[8], v: uint256[8], r: bytes32[8], s: bytes32[8]) -> bool: constant
+    def instructionApproved(isBeacon: bool, instHash: bytes32, blkHeight: uint256, instPath: bytes32[8], instPathIsLeft: bool[8], instPathLen: int128, instRoot: bytes32, blkData: bytes32, numSig: int128, sigIdxs: uint256[10], v: uint256[10], r: bytes32[10], s: bytes32[10]) -> bool: constant
 
 contract Erc20:
     def transfer(_to: address, _value: uint256) -> bool: modifying
@@ -11,7 +11,7 @@ contract Erc20:
 # All these constants must mimic incognity_proxy
 INST_LENGTH: constant(int128) = 300
 INST_MAX_PATH: constant(uint256) = 8
-COMM_SIZE: constant(uint256) = 8
+COMM_SIZE: constant(uint256) = 10
 INC_ADDRESS_LENGTH: constant(uint256) = 128
 
 ETH_TOKEN: constant(address) = 0x0000000000000000000000000000000000000000

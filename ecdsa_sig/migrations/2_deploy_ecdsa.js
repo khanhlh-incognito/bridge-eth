@@ -1,4 +1,4 @@
-const ECDSA = artifacts.require("./Ecdsa.sol");
+const ECDSA = artifacts.require("ECDSA");
 
 module.exports = function(deployer) {
   deployer.deploy(ECDSA);

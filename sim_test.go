@@ -18,7 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/incognitochain/bridge-eth/checkMulSig"
+	"github.com/incognitochain/bridge-eth/ecdsa_sig"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
 )
@@ -203,15 +203,16 @@ func setup(
 	var err error
 	var tx *types.Transaction
 	_ = tx
-	p.msAddr, tx, p.ms, err = checkMulSig.DeployMulSigP256(auth, sim)
+	p.sigAddr, tx, p.sig, err = ecdsa_sig.DeployECDSA(auth, sim)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy mulsig contract: %v", err)
 	}
 	sim.Commit()
+	fmt.Printf("deployed sig, addr: %x\n", p.sigAddr)
 	// printReceipt(sim, tx)
 
 	// IncognitoProxy
-	p.incAddr, tx, p.inc, err = incognito_proxy.DeployIncognitoProxy(auth, sim, numBeaconVals, beaconComm, numBridgeVals, bridgeComm, p.msAddr)
+	p.incAddr, tx, p.inc, err = incognito_proxy.DeployIncognitoProxy(auth, sim, numBeaconVals, beaconComm, numBridgeVals, bridgeComm, p.sigAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy IncognitoProxy contract: %v", err)
 	}

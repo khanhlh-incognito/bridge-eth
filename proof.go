@@ -11,8 +11,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/incognitochain/bridge-eth/checkMulSig"
 	"github.com/incognitochain/bridge-eth/consensus/bridgesig"
+	"github.com/incognitochain/bridge-eth/ecdsa_sig"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/jsonresult"
@@ -21,7 +21,7 @@ import (
 )
 
 const inst_max_path = 8
-const comm_size = 8
+const comm_size = 10
 const pubkey_size = 32
 
 type contracts struct {
@@ -31,8 +31,8 @@ type contracts struct {
 	incAddr   common.Address
 	token     *erc20.Erc20
 	tokenAddr common.Address
-	ms        *checkMulSig.MulSigP256
-	msAddr    common.Address
+	sig       *ecdsa_sig.ECDSA
+	sigAddr   common.Address
 }
 
 type getProofResult struct {
