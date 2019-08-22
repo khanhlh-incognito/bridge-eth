@@ -17,6 +17,7 @@ import (
 	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/jsonresult"
 	"github.com/incognitochain/bridge-eth/vault"
+	"github.com/pkg/errors"
 )
 
 const inst_max_path = 8
@@ -101,8 +102,8 @@ func getCommittee(url string) (*big.Int, [comm_size]common.Address, *big.Int, [c
 	body, _ := ioutil.ReadAll(res.Body)
 
 	type beaconBestStateResult struct {
-		BeaconCommittee []string
-		ShardCommittee  map[string][]string
+		BeaconCommittee []CommitteePublicKey
+		ShardCommittee  map[string][]CommitteePublicKey
 	}
 
 	type getBeaconBestStateResult struct {
@@ -118,20 +119,23 @@ func getCommittee(url string) (*big.Int, [comm_size]common.Address, *big.Int, [c
 	}
 
 	// Genesis committee
-	// TODO: parse committee to common.Address
 	numBeaconVals := big.NewInt(int64(len(r.Result.BeaconCommittee)))
-	// for i, val := range r.Result.BeaconCommittee {
-	// 	pk, _, _ := base58.Base58Check{}.Decode(val)
-	// 	fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
-	// 	beaconOld = append(beaconOld, pk...)
-	// }
+	for i, pk := range r.Result.BeaconCommittee {
+		addr, err := convertPubkeyToAddress(pk)
+		if err != nil {
+			return nil, beaconOld, nil, bridgeOld, err
+		}
+		beaconOld[i] = addr
+	}
 
 	numBridgeVals := big.NewInt(int64(len(r.Result.ShardCommittee["1"])))
-	// for i, val := range r.Result.ShardCommittee["1"] {
-	// 	pk, _, _ := base58.Base58Check{}.Decode(val)
-	// 	fmt.Printf("pk[%d]: %x %d\n", i, pk, len(pk))
-	// 	bridgeOld = append(bridgeOld, pk...)
-	// }
+	for i, pk := range r.Result.ShardCommittee["1"] {
+		addr, err := convertPubkeyToAddress(pk)
+		if err != nil {
+			return nil, beaconOld, nil, bridgeOld, err
+		}
+		bridgeOld[i] = addr
+	}
 
 	return numBeaconVals, beaconOld, numBridgeVals, bridgeOld, nil
 }
@@ -327,4 +331,20 @@ func getCommitteeHardcoded() (*big.Int, [comm_size]common.Address, *big.Int, [co
 	// 	bridges = append(bridges, pk...)
 	// }
 	return numBeaconVals, beacons, numBridgeVals, bridges
+}
+
+func convertPubkeyToAddress(cKey CommitteePublicKey) (common.Address, error) {
+	pk, err := crypto.DecompressPubkey(cKey.MiningPubKey[BRI_CONSENSUS])
+	if err != nil {
+		return common.Address{}, errors.Wrapf(err, "cKey: %+v", cKey)
+	}
+	address := crypto.PubkeyToAddress(*pk)
+	return address, nil
+}
+
+var BRI_CONSENSUS = "dsa"
+
+type CommitteePublicKey struct {
+	IncPubKey    []byte
+	MiningPubKey map[string][]byte
 }
