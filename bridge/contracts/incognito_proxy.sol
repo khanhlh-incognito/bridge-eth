@@ -11,6 +11,7 @@ contract IncognitoProxy {
     Committee[] public bridgeCommittees;
 
     event LogUint(uint val);
+    event LogString(string val);
 
     constructor(address[] memory beaconCommittee, address[] memory bridgeCommittee) public {
         beaconCommittees.push(Committee({
@@ -78,6 +79,7 @@ contract IncognitoProxy {
 
         // TODO: Swap committee
         latestBridgeBlk = 0;
+        emit LogString("Done");
     }
 
     function instructionApproved(
@@ -150,7 +152,7 @@ contract IncognitoProxy {
         bytes32[] memory s
     ) public returns (bool) {
         // emit LogUint(committee.length);
-        for (uint i = 0; i < committee.length; i++){
+        for (uint i = 0; i < v.length; i++){
             if (ecrecover(msgHash, v[i], r[i], s[i]) != committee[i]) {
                 return false;
             }

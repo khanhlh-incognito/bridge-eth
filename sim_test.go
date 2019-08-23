@@ -185,8 +185,8 @@ func setup(
 		return nil, fmt.Errorf("failed to deploy IncognitoProxy contract: %v", err)
 	}
 	sim.Commit()
-	fmt.Printf("deployed bridge, addr: %x\n", p.incAddr)
-	// printReceipt(sim, tx)
+	fmt.Printf("deployed bridge, addr: %x ", p.incAddr)
+	printReceipt(sim, tx)
 
 	// Vault
 	p.vAddr, tx, p.v, err = vault.DeployVault(auth, sim, p.incAddr)
@@ -194,8 +194,8 @@ func setup(
 		return nil, fmt.Errorf("failed to deploy Vault contract: %v", err)
 	}
 	sim.Commit()
-	fmt.Printf("deployed vault, addr: %x\n", p.vAddr)
-	// printReceipt(sim, tx)
+	fmt.Printf("deployed vault, addr: %x ", p.vAddr)
+	printReceipt(sim, tx)
 
 	return p, nil
 }
