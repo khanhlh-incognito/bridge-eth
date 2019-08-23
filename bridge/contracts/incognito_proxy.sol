@@ -2,12 +2,26 @@ pragma solidity >=0.5.0 <0.6.0;
 pragma experimental ABIEncoderV2;
 
 contract IncognitoProxy {
-    uint public latestBeaconBlk;
-    uint public latestBridgeBlk;
+    struct Committee {
+        address[] pubkeys;
+        uint startBlock;
+    }
+
+    Committee[] public beaconCommittees;
+    Committee[] public bridgeCommittees;
+
+    event LogUint(uint val);
 
     constructor(address[] memory beaconCommittee, address[] memory bridgeCommittee) public {
-        latestBridgeBlk = beaconCommittee.length;
-        latestBridgeBlk = bridgeCommittee.length;
+        beaconCommittees.push(Committee({
+            pubkeys: beaconCommittee,
+            startBlock: 0
+        }));
+
+        bridgeCommittees.push(Committee({
+            pubkeys: bridgeCommittee,
+            startBlock: 0
+        }));
     }
 
     function swapBridgeCommittee(
@@ -27,6 +41,7 @@ contract IncognitoProxy {
         // TODO: Metadata type and shardID of swap bridge instruction
 
         // Verify instruction on beacon
+        uint latestBeaconBlk = beaconCommittees[beaconCommittees.length-1].startBlock;
         require(instructionApproved(
             true,
             instHash,
@@ -42,6 +57,7 @@ contract IncognitoProxy {
         ));
 
         // Verify instruction on bridge
+        uint latestBridgeBlk = bridgeCommittees[bridgeCommittees.length-1].startBlock;
         require(instructionApproved(
             false,
             instHash,
@@ -76,12 +92,16 @@ contract IncognitoProxy {
         uint8[] memory sigV,
         bytes32[] memory sigR,
         bytes32[] memory sigS
-    ) public view returns (bool) {
-        // TODO: Find committee in charge of this block
-        uint a = latestBridgeBlk;
-
+    ) public returns (bool) {
         // TODO: Get pubkey of signers
-        address[] memory signers = new address[](sigIdx.length);
+        address[] memory signers;
+
+        // TODO: Find committee in charge of this block
+        if (isBeacon) {
+            signers = beaconCommittees[beaconCommittees.length-1].pubkeys;
+        } else {
+            signers = bridgeCommittees[bridgeCommittees.length-1].pubkeys;
+        }
 
         // TODO: Get block hash from instRoot and other data
 
@@ -98,6 +118,7 @@ contract IncognitoProxy {
             instPath,
             instPathIsLeft
         ));
+        return true;
     }
 
     function instructionInMerkleTree(
@@ -127,7 +148,8 @@ contract IncognitoProxy {
         uint8[] memory v,
         bytes32[] memory r,
         bytes32[] memory s
-    ) public pure returns (bool) {
+    ) public returns (bool) {
+        // emit LogUint(committee.length);
         for (uint i = 0; i < committee.length; i++){
             if (ecrecover(msgHash, v[i], r[i], s[i]) != committee[i]) {
                 return false;
