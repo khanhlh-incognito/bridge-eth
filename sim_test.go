@@ -1,4 +1,4 @@
-package bridge
+package main
 
 import (
 	"context"
@@ -18,8 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/incognitochain/bridge-eth/ecdsa_sig"
-	"github.com/incognitochain/bridge-eth/incognito_proxy"
+	"github.com/incognitochain/bridge-eth/bridge"
 	"github.com/incognitochain/bridge-eth/vault"
 )
 
@@ -63,35 +62,7 @@ func TestSimulatedSwapBridge(t *testing.T) {
 
 	auth.GasLimit = 7000000
 	fmt.Printf("inst len: %d\n", len(proof.Instruction))
-	numPk := big.NewInt(int64((len(proof.Instruction) - 35) / pubkey_size))
-	fmt.Printf("numPk: %d\n", numPk)
-	tx, err := p.inc.SwapBridgeCommittee(
-		auth,
-		proof.Instruction,
-		numPk,
-
-		proof.BeaconInstPath,
-		proof.BeaconInstPathIsLeft,
-		proof.BeaconInstPathLen,
-		proof.BeaconInstRoot,
-		proof.BeaconBlkData,
-		proof.BeaconNumSig,
-		proof.BeaconSigIdxs,
-		proof.BeaconSigVs,
-		proof.BeaconSigRs,
-		proof.BeaconSigSs,
-
-		proof.BridgeInstPath,
-		proof.BridgeInstPathIsLeft,
-		proof.BridgeInstPathLen,
-		proof.BridgeInstRoot,
-		proof.BridgeBlkData,
-		proof.BridgeNumSig,
-		proof.BridgeSigIdxs,
-		proof.BridgeSigVs,
-		proof.BridgeSigRs,
-		proof.BridgeSigSs,
-	)
+	tx, err := SwapBridge(p.inc, auth, proof)
 	if err != nil {
 		fmt.Println("err:", err)
 	}
@@ -125,24 +96,23 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 
 	auth.GasLimit = 7000000
 	fmt.Printf("inst len: %d\n", len(proof.Instruction))
-	numPk := big.NewInt(int64((len(proof.Instruction) - 35) / pubkey_size))
-	fmt.Printf("numPk: %d\n", numPk)
-	tx, err := p.inc.SwapBeaconCommittee(
-		auth,
-		proof.Instruction,
-		numPk,
+	var tx *types.Transaction
+	// tx, err := p.inc.SwapBeaconCommittee(
+	// 	auth,
+	// 	proof.Instruction,
+	// 	numPk,
 
-		proof.BeaconInstPath,
-		proof.BeaconInstPathIsLeft,
-		proof.BeaconInstPathLen,
-		proof.BeaconInstRoot,
-		proof.BeaconBlkData,
-		proof.BeaconNumSig,
-		proof.BeaconSigIdxs,
-		proof.BeaconSigVs,
-		proof.BeaconSigRs,
-		proof.BeaconSigSs,
-	)
+	// 	proof.BeaconInstPath,
+	// 	proof.BeaconInstPathIsLeft,
+	// 	proof.BeaconInstPathLen,
+	// 	proof.BeaconInstRoot,
+	// 	proof.BeaconBlkData,
+	// 	proof.BeaconNumSig,
+	// 	proof.BeaconSigIdxs,
+	// 	proof.BeaconSigVs,
+	// 	proof.BeaconSigRs,
+	// 	proof.BeaconSigSs,
+	// )
 	if err != nil {
 		fmt.Println("err:", err)
 	}
@@ -188,10 +158,8 @@ func (p *Platform) getBalance(addr common.Address) *big.Int {
 }
 
 func setup(
-	numBeaconVals *big.Int,
-	beaconComm [comm_size]common.Address,
-	numBridgeVals *big.Int,
-	bridgeComm [comm_size]common.Address,
+	beaconComm []common.Address,
+	bridgeComm []common.Address,
 ) (*Platform, error) {
 	alloc := make(core.GenesisAlloc)
 	balance, _ := big.NewInt(1).SetString("100000000000000000000", 10) // 100 eth
@@ -203,16 +171,16 @@ func setup(
 	var err error
 	var tx *types.Transaction
 	_ = tx
-	p.sigAddr, tx, p.sig, err = ecdsa_sig.DeployECDSA(auth, sim)
-	if err != nil {
-		return nil, fmt.Errorf("failed to deploy mulsig contract: %v", err)
-	}
-	sim.Commit()
-	fmt.Printf("deployed sig, addr: %x\n", p.sigAddr)
+	// p.sigAddr, tx, p.sig, err = ecdsa_sig.DeployECDSA(auth, sim)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to deploy mulsig contract: %v", err)
+	// }
+	// sim.Commit()
+	// fmt.Printf("deployed sig, addr: %x\n", p.sigAddr)
 	// printReceipt(sim, tx)
 
 	// IncognitoProxy
-	p.incAddr, tx, p.inc, err = incognito_proxy.DeployIncognitoProxy(auth, sim, numBeaconVals, beaconComm, numBridgeVals, bridgeComm, p.sigAddr)
+	p.incAddr, tx, p.inc, err = bridge.DeployIncognitoProxy(auth, sim, beaconComm, bridgeComm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy IncognitoProxy contract: %v", err)
 	}
@@ -234,16 +202,16 @@ func setup(
 
 func setupWithLocalCommittee() (*Platform, error) {
 	url := "http://127.0.0.1:9334"
-	numBeaconVals, beaconOld, numBridgeVals, bridgeOld, err := getCommittee(url)
+	beaconOld, bridgeOld, err := getCommittee(url)
 	if err != nil {
 		return nil, err
 	}
-	return setup(numBeaconVals, beaconOld, numBridgeVals, bridgeOld)
+	return setup(beaconOld, bridgeOld)
 }
 
 func setupWithHardcodedCommittee() (*Platform, error) {
-	numBeaconVals, beaconOld, numBridgeVals, bridgeOld := getCommitteeHardcoded()
-	return setup(numBeaconVals, beaconOld, numBridgeVals, bridgeOld)
+	beaconOld, bridgeOld := getCommitteeHardcoded()
+	return setup(beaconOld, bridgeOld)
 }
 
 type account struct {

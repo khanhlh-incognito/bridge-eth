@@ -1,4 +1,4 @@
-package bridge
+package main
 
 import (
 	"encoding/hex"
@@ -11,23 +11,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/incognitochain/bridge-eth/bridge"
 	"github.com/incognitochain/bridge-eth/consensus/bridgesig"
 	"github.com/incognitochain/bridge-eth/ecdsa_sig"
 	"github.com/incognitochain/bridge-eth/erc20"
-	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/jsonresult"
 	"github.com/incognitochain/bridge-eth/vault"
 	"github.com/pkg/errors"
 )
 
-const inst_max_path = 8
-const comm_size = 10
-const pubkey_size = 32
-
 type contracts struct {
 	v         *vault.Vault
 	vAddr     common.Address
-	inc       *incognito_proxy.IncognitoProxy
+	inc       *bridge.IncognitoProxy
 	incAddr   common.Address
 	token     *erc20.Erc20
 	tokenAddr common.Address
@@ -49,27 +45,14 @@ type decodedProof struct {
 	BeaconHeight *big.Int
 	BridgeHeight *big.Int
 
-	BeaconInstPath       [inst_max_path][32]byte
-	BeaconInstPathIsLeft [inst_max_path]bool
-	BeaconInstPathLen    *big.Int
-	BeaconInstRoot       [32]byte
-	BeaconBlkData        [32]byte
-	BeaconNumSig         *big.Int
-	BeaconSigVs          [comm_size]*big.Int
-	BeaconSigRs          [comm_size][32]byte
-	BeaconSigSs          [comm_size][32]byte
-	BeaconSigIdxs        [comm_size]*big.Int
-
-	BridgeInstPath       [inst_max_path][32]byte
-	BridgeInstPathIsLeft [inst_max_path]bool
-	BridgeInstPathLen    *big.Int
-	BridgeInstRoot       [32]byte
-	BridgeBlkData        [32]byte
-	BridgeNumSig         *big.Int
-	BridgeSigVs          [comm_size]*big.Int
-	BridgeSigRs          [comm_size][32]byte
-	BridgeSigSs          [comm_size][32]byte
-	BridgeSigIdxs        [comm_size]*big.Int
+	InstPaths       [2][][32]byte
+	InstPathIsLefts [2][]bool
+	InstRoots       [2][32]byte
+	BlkData         [2][32]byte
+	SigIdxs         [2][]*big.Int
+	SigVs           [2][]uint8
+	SigRs           [2][][32]byte
+	SigSs           [2][][32]byte
 }
 
 func getAndDecodeBurnProof(txID string) (*decodedProof, error) {
@@ -86,16 +69,16 @@ func getAndDecodeBurnProof(txID string) (*decodedProof, error) {
 	return decodeProof(&r)
 }
 
-func getCommittee(url string) (*big.Int, [comm_size]common.Address, *big.Int, [comm_size]common.Address, error) {
+func getCommittee(url string) ([]common.Address, []common.Address, error) {
 	payload := strings.NewReader("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbeaconbeststate\",\n    \"params\": []\n}")
 
 	req, _ := http.NewRequest("POST", url, payload)
 
-	beaconOld := [comm_size]common.Address{}
-	bridgeOld := [comm_size]common.Address{}
+	beaconOld := []common.Address{}
+	bridgeOld := []common.Address{}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, beaconOld, nil, bridgeOld, err
+		return beaconOld, bridgeOld, err
 	}
 
 	defer res.Body.Close()
@@ -115,29 +98,27 @@ func getCommittee(url string) (*big.Int, [comm_size]common.Address, *big.Int, [c
 	r := getBeaconBestStateResult{}
 	err = json.Unmarshal([]byte(body), &r)
 	if err != nil {
-		return nil, beaconOld, nil, bridgeOld, err
+		return beaconOld, bridgeOld, err
 	}
 
 	// Genesis committee
-	numBeaconVals := big.NewInt(int64(len(r.Result.BeaconCommittee)))
 	for i, pk := range r.Result.BeaconCommittee {
 		addr, err := convertPubkeyToAddress(pk)
 		if err != nil {
-			return nil, beaconOld, nil, bridgeOld, err
+			return beaconOld, bridgeOld, err
 		}
 		beaconOld[i] = addr
 	}
 
-	numBridgeVals := big.NewInt(int64(len(r.Result.ShardCommittee["1"])))
 	for i, pk := range r.Result.ShardCommittee["1"] {
 		addr, err := convertPubkeyToAddress(pk)
 		if err != nil {
-			return nil, beaconOld, nil, bridgeOld, err
+			return beaconOld, bridgeOld, err
 		}
 		bridgeOld[i] = addr
 	}
 
-	return numBeaconVals, beaconOld, numBridgeVals, bridgeOld, nil
+	return beaconOld, bridgeOld, nil
 }
 
 func getBurnProof(txID string) string {
@@ -175,14 +156,13 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	fmt.Printf("bridgeHeight: %d\n", bridgeHeight)
 
 	beaconInstRoot := decode32(r.Result.BeaconInstRoot)
-	beaconInstPath := [inst_max_path][32]byte{}
-	beaconInstPathIsLeft := [inst_max_path]bool{}
+	beaconInstPath := [][32]byte{}
+	beaconInstPathIsLeft := []bool{}
 	for i, path := range r.Result.BeaconInstPath {
 		beaconInstPath[i] = decode32(path)
 		beaconInstPathIsLeft[i] = r.Result.BeaconInstPathIsLeft[i]
 	}
-	beaconInstPathLen := big.NewInt(int64(len(r.Result.BeaconInstPath)))
-	fmt.Printf("beaconInstRoot: %x\n", beaconInstRoot)
+	// fmt.Printf("beaconInstRoot: %x\n", beaconInstRoot)
 
 	beaconBlkData := toByte32(decode(r.Result.BeaconBlkData))
 	// fmt.Printf("expected beaconBlkHash: %x\n", keccak256(beaconBlkData[:], beaconInstRoot[:]))
@@ -192,21 +172,19 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 		return nil, err
 	}
 
-	beaconNumSig := big.NewInt(int64(len(r.Result.BeaconSigIdxs)))
-	beaconSigIdxs := newBigIntArray()
-	for i, sIdx := range r.Result.BeaconSigIdxs {
-		beaconSigIdxs[i] = big.NewInt(int64(sIdx))
+	beaconSigIdxs := []*big.Int{}
+	for _, sIdx := range r.Result.BeaconSigIdxs {
+		beaconSigIdxs = append(beaconSigIdxs, big.NewInt(int64(sIdx)))
 	}
 
 	// For bridge
 	bridgeInstRoot := decode32(r.Result.BridgeInstRoot)
-	bridgeInstPath := [inst_max_path][32]byte{}
-	bridgeInstPathIsLeft := [inst_max_path]bool{}
+	bridgeInstPath := [][32]byte{}
+	bridgeInstPathIsLeft := []bool{}
 	for i, path := range r.Result.BridgeInstPath {
 		bridgeInstPath[i] = decode32(path)
 		bridgeInstPathIsLeft[i] = r.Result.BridgeInstPathIsLeft[i]
 	}
-	bridgeInstPathLen := big.NewInt(int64(len(r.Result.BridgeInstPath)))
 	// fmt.Printf("bridgeInstRoot: %x\n", bridgeInstRoot)
 	bridgeBlkData := toByte32(decode(r.Result.BridgeBlkData))
 
@@ -215,58 +193,51 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 		return nil, err
 	}
 
-	bridgeNumSig := big.NewInt(int64(len(r.Result.BridgeSigIdxs)))
-	bridgeSigIdxs := newBigIntArray()
-	for i, sIdx := range r.Result.BridgeSigIdxs {
-		bridgeSigIdxs[i] = big.NewInt(int64(sIdx))
+	bridgeSigIdxs := []*big.Int{}
+	for _, sIdx := range r.Result.BridgeSigIdxs {
+		bridgeSigIdxs = append(bridgeSigIdxs, big.NewInt(int64(sIdx)))
 		// fmt.Printf("bridgeSigIdxs[%d]: %d\n", i, j)
 	}
 
+	// Merge beacon and bridge proof
+	instPaths := [2][][32]byte{beaconInstPath, bridgeInstPath}
+	instPathIsLefts := [2][]bool{beaconInstPathIsLeft, bridgeInstPathIsLeft}
+	instRoots := [2][32]byte{beaconInstRoot, bridgeInstRoot}
+	blkData := [2][32]byte{beaconBlkData, bridgeBlkData}
+	sigIdxs := [2][]*big.Int{beaconSigIdxs, bridgeSigIdxs}
+	sigVs := [2][]uint8{beaconSigVs, bridgeSigVs}
+	sigRs := [2][][32]byte{beaconSigRs, bridgeSigRs}
+	sigSs := [2][][32]byte{beaconSigSs, bridgeSigSs}
+
 	return &decodedProof{
-		Instruction: inst,
-
-		BeaconHeight:         beaconHeight,
-		BeaconInstPath:       beaconInstPath,
-		BeaconInstPathIsLeft: beaconInstPathIsLeft,
-		BeaconInstPathLen:    beaconInstPathLen,
-		BeaconInstRoot:       beaconInstRoot,
-		BeaconBlkData:        beaconBlkData,
-		BeaconNumSig:         beaconNumSig,
-		BeaconSigVs:          beaconSigVs,
-		BeaconSigRs:          beaconSigRs,
-		BeaconSigSs:          beaconSigSs,
-		BeaconSigIdxs:        beaconSigIdxs,
-
-		BridgeHeight:         bridgeHeight,
-		BridgeInstPath:       bridgeInstPath,
-		BridgeInstPathIsLeft: bridgeInstPathIsLeft,
-		BridgeInstPathLen:    bridgeInstPathLen,
-		BridgeInstRoot:       bridgeInstRoot,
-		BridgeBlkData:        bridgeBlkData,
-		BridgeNumSig:         bridgeNumSig,
-		BridgeSigVs:          bridgeSigVs,
-		BridgeSigRs:          bridgeSigRs,
-		BridgeSigSs:          bridgeSigSs,
-		BridgeSigIdxs:        bridgeSigIdxs,
+		Instruction:     inst,
+		InstPaths:       instPaths,
+		InstPathIsLefts: instPathIsLefts,
+		InstRoots:       instRoots,
+		BlkData:         blkData,
+		SigIdxs:         sigIdxs,
+		SigVs:           sigVs,
+		SigRs:           sigRs,
+		SigSs:           sigSs,
 	}, nil
 }
 
 func decodeSigs(sigs []string) (
-	sigVs [comm_size]*big.Int,
-	sigRs [comm_size][32]byte,
-	sigSs [comm_size][32]byte,
+	sigVs []uint8,
+	sigRs [][32]byte,
+	sigSs [][32]byte,
 	err error,
 ) {
-	sigVs = [comm_size]*big.Int{}
-	sigRs = [comm_size][32]byte{}
-	sigSs = [comm_size][32]byte{}
+	sigVs = make([]uint8, len(sigs))
+	sigRs = make([][32]byte, len(sigs))
+	sigSs = make([][32]byte, len(sigs))
 	for i, sig := range sigs {
 		v, r, s, e := bridgesig.DecodeECDSASig(decode(sig))
 		if e != nil {
 			err = e
 			return
 		}
-		sigVs[i] = big.NewInt(int64(v))
+		sigVs[i] = uint8(v)
 		copy(sigRs[i][:], r)
 		copy(sigSs[i][:], s)
 	}
@@ -295,15 +266,7 @@ func keccak256(b ...[]byte) [32]byte {
 	return r
 }
 
-func newBigIntArray() [comm_size]*big.Int {
-	arr := [comm_size]*big.Int{}
-	for i := 0; i < comm_size; i++ {
-		arr[i] = big.NewInt(0)
-	}
-	return arr
-}
-
-func getCommitteeHardcoded() (*big.Int, [comm_size]common.Address, *big.Int, [comm_size]common.Address) {
+func getCommitteeHardcoded() ([]common.Address, []common.Address) {
 	// TODO: hardcode and parse committee to common.Address
 	beaconComm := []string{
 		"02a96a04ad76a0034efc8819e93308823ce7a3b76fd694f961ee909124096baf00",
@@ -311,8 +274,8 @@ func getCommitteeHardcoded() (*big.Int, [comm_size]common.Address, *big.Int, [co
 		"028c49fc5f3e001c36095335c53b0b7320f6a1c932424e92c9de344b55e80ddf00",
 		"0205aae74cb0128a1863c970cbe87e827e28f92a91c2d4768fdb30a279dd081c00",
 	}
-	numBeaconVals := big.NewInt(int64(len(beaconComm)))
-	beacons := [comm_size]common.Address{}
+	_ = beaconComm
+	beacons := []common.Address{}
 	// for _, p := range beaconComm {
 	// 	pk, _ := hex.DecodeString(p)
 	// 	beacons = append(beacons, pk...)
@@ -324,13 +287,13 @@ func getCommitteeHardcoded() (*big.Int, [comm_size]common.Address, *big.Int, [co
 		"02ec388db662801da0fe3c41f39085369ed4df71d42ec96924012243dc9c67d201",
 		"039cc81f72a88a7436eb74bf10c7693af165324ba4d15baeb4e8d2f1c2ce25a101",
 	}
-	numBridgeVals := big.NewInt(int64(len(bridgeComm)))
-	bridges := [comm_size]common.Address{}
+	_ = bridgeComm
+	bridges := []common.Address{}
 	// for _, p := range bridgeComm {
 	// 	pk, _ := hex.DecodeString(p)
 	// 	bridges = append(bridges, pk...)
 	// }
-	return numBeaconVals, beacons, numBridgeVals, bridges
+	return beacons, bridges
 }
 
 func convertPubkeyToAddress(cKey CommitteePublicKey) (common.Address, error) {

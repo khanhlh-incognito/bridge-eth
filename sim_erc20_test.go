@@ -1,4 +1,4 @@
-package bridge
+package main
 
 import (
 	"fmt"
@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/incognitochain/bridge-eth/bridge"
 	"github.com/incognitochain/bridge-eth/erc20"
-	"github.com/incognitochain/bridge-eth/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/vault"
 )
 
@@ -98,7 +98,7 @@ func transferErc20(
 
 func setupWithErc20() (
 	sim *backends.SimulatedBackend,
-	inc *incognito_proxy.IncognitoProxy,
+	inc *bridge.IncognitoProxy,
 	incAddr common.Address,
 	v *vault.Vault,
 	vAddr common.Address,

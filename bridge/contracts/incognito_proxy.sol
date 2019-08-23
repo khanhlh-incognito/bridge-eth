@@ -5,6 +5,11 @@ contract IncognitoProxy {
     uint public latestBeaconBlk;
     uint public latestBridgeBlk;
 
+    constructor(address[] memory beaconCommittee, address[] memory bridgeCommittee) public {
+        latestBridgeBlk = beaconCommittee.length;
+        latestBridgeBlk = bridgeCommittee.length;
+    }
+
     function swapBridgeCommittee(
         bytes memory inst,
         bytes32[][2] memory instPaths,

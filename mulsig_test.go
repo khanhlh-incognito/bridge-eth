@@ -1,4 +1,4 @@
-package bridge
+package main
 
 // func TestInstructionInMerkleTree(t *testing.T) {
 // 	// Get proof
