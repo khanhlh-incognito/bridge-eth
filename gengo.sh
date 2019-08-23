@@ -1,8 +1,8 @@
 #!/bin/bash
 
 fullfile=$1
-pkgname=$2
-filepath=$3
+filepath=$2
+pkgname=$(basename $filepath)
 filename=$(basename -- "$fullfile")
 extension="${filename##*.}"
 filename="${filename%.*}"
