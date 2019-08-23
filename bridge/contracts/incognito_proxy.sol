@@ -12,6 +12,7 @@ contract IncognitoProxy {
 
     event LogUint(uint val);
     event LogString(string val);
+    event LogBytes32(bytes32 val);
 
     constructor(address[] memory beaconCommittee, address[] memory bridgeCommittee) public {
         beaconCommittees.push(Committee({
@@ -36,42 +37,44 @@ contract IncognitoProxy {
         bytes32[][2] memory sigRs,
         bytes32[][2] memory sigSs
     ) public {
-        // TODO: Check if beaconInstRoot is in block
-        bytes32 instHash;
+        bytes32 instHash = keccak256(inst);
+        emit LogBytes32(instHash);
+        emit LogBytes32(instRoots[0]);
+        emit LogBytes32(instRoots[1]);
 
         // TODO: Metadata type and shardID of swap bridge instruction
 
         // Verify instruction on beacon
         uint latestBeaconBlk = beaconCommittees[beaconCommittees.length-1].startBlock;
-        require(instructionApproved(
-            true,
-            instHash,
-            latestBeaconBlk,
-            instPaths[0],
-            instPathIsLefts[0],
-            instRoots[0],
-            blkData[0],
-            sigIdxs[0],
-            sigVs[0],
-            sigRs[0],
-            sigSs[0]
-        ));
+        // require(instructionApproved(
+        //     true,
+        //     instHash,
+        //     latestBeaconBlk,
+        //     instPaths[0],
+        //     instPathIsLefts[0],
+        //     instRoots[0],
+        //     blkData[0],
+        //     sigIdxs[0],
+        //     sigVs[0],
+        //     sigRs[0],
+        //     sigSs[0]
+        // ));
 
         // Verify instruction on bridge
         uint latestBridgeBlk = bridgeCommittees[bridgeCommittees.length-1].startBlock;
-        require(instructionApproved(
-            false,
-            instHash,
-            latestBridgeBlk,
-            instPaths[1],
-            instPathIsLefts[1],
-            instRoots[1],
-            blkData[1],
-            sigIdxs[1],
-            sigVs[1],
-            sigRs[1],
-            sigSs[1]
-        ));
+        // require(instructionApproved(
+        //     false,
+        //     instHash,
+        //     latestBridgeBlk,
+        //     instPaths[1],
+        //     instPathIsLefts[1],
+        //     instRoots[1],
+        //     blkData[1],
+        //     sigIdxs[1],
+        //     sigVs[1],
+        //     sigRs[1],
+        //     sigSs[1]
+        // ));
 
         // Parse instruction and check metadata
         // (uint meta, uint startHeight, uint numVals) = extractMetaFromInst(inst);
@@ -128,9 +131,18 @@ contract IncognitoProxy {
         bytes32 root,
         bytes32[] memory path,
         bool[] memory left
-    ) public pure returns (bool) {
-        // TODO
-        return true;
+    ) public returns (bool) {
+        bytes32 hash = leaf;
+        for (uint i = 0; i < path.length; i++) {
+            if (left[i]) {
+                hash = keccak256(abi.encodePacked(path[i], hash));
+            } else if (path[i] == 0x0) {
+                hash = keccak256(abi.encodePacked(hash, hash));
+            } else {
+                hash = keccak256(abi.encodePacked(hash, path[i]));
+            }
+        }
+        return hash == root;
     }
 
     function extractMetaFromInst(bytes memory inst) public pure returns(uint, uint, uint) {
