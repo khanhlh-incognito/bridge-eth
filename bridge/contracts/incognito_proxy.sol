@@ -44,11 +44,10 @@ contract IncognitoProxy {
         // emit LogBytes32(instRoots[1]);
 
         // Verify instruction on beacon
-        uint latestBeaconBlk = beaconCommittees[beaconCommittees.length-1].startBlock;
         require(instructionApproved(
             true,
             instHash,
-            latestBeaconBlk,
+            beaconCommittees[beaconCommittees.length-1].startBlock,
             instPaths[0],
             instPathIsLefts[0],
             instRoots[0],
@@ -60,11 +59,10 @@ contract IncognitoProxy {
         ));
 
         // Verify instruction on bridge
-        uint latestBridgeBlk = bridgeCommittees[bridgeCommittees.length-1].startBlock;
         require(instructionApproved(
             false,
             instHash,
-            latestBridgeBlk,
+            bridgeCommittees[bridgeCommittees.length-1].startBlock,
             instPaths[1],
             instPathIsLefts[1],
             instRoots[1],
@@ -76,7 +74,9 @@ contract IncognitoProxy {
         ));
 
         // Parse instruction and check metadata
-        // (uint meta, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
+        (uint meta, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
+        require(meta == 3616817); // Metadata type and shardID of swap bridge instruction
+
         // emit LogUint(meta);
         // emit LogUint(startHeight);
         // emit LogUint(numVals);
@@ -85,10 +85,13 @@ contract IncognitoProxy {
         // emit LogAddress(token);
         // emit LogAddress(to);
         // emit LogUint(amount);
-        // address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
+        address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
 
-        // TODO: Swap committee
-        // latestBridgeBlk = 0;
+        // Swap committee
+        bridgeCommittees.push(Committee({
+            pubkeys: pubkeys,
+            startBlock: startHeight
+        }));
         emit LogString("Done");
     }
 
@@ -125,6 +128,7 @@ contract IncognitoProxy {
         }
 
         // Check that signature is correct
+        // TODO: remove tmp blk hash and reenable checking instInMerkleTree
         bytes32 blk = 0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8;
         require(verifySig(signers, blk, sigV, sigR, sigS));
 
