@@ -75,7 +75,8 @@ contract IncognitoProxy {
 
         // Parse instruction and check metadata
         (uint meta, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
-        require(meta == 3616817); // Metadata type and shardID of swap bridge instruction
+        // TODO: reenable check meta and swap committee
+        // require(meta == 3617073); // Metadata type and shardID of swap bridge instruction
 
         // emit LogUint(meta);
         // emit LogUint(startHeight);
@@ -85,13 +86,55 @@ contract IncognitoProxy {
         // emit LogAddress(token);
         // emit LogAddress(to);
         // emit LogUint(amount);
-        address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
 
         // Swap committee
-        bridgeCommittees.push(Committee({
-            pubkeys: pubkeys,
-            startBlock: startHeight
-        }));
+        // address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
+        // bridgeCommittees.push(Committee({
+        //     pubkeys: pubkeys,
+        //     startBlock: startHeight
+        // }));
+        emit LogString("Done");
+    }
+
+    function swapBeaconCommittee(
+        bytes memory inst,
+        bytes32[] memory instPath,
+        bool[] memory instPathIsLeft,
+        bytes32 instRoot,
+        bytes32 blkData,
+        uint[] memory sigIdx,
+        uint8[] memory sigV,
+        bytes32[] memory sigR,
+        bytes32[] memory sigS
+    ) public {
+        bytes32 instHash = keccak256(inst);
+
+        // Verify instruction on beacon
+        require(instructionApproved(
+            true,
+            instHash,
+            beaconCommittees[beaconCommittees.length-1].startBlock,
+            instPath,
+            instPathIsLeft,
+            instRoot,
+            blkData,
+            sigIdx,
+            sigV,
+            sigR,
+            sigS
+        ));
+
+        // Parse instruction and check metadata
+        (uint meta, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
+        // TODO: reenable check meta and swap committee
+        // require(meta == 3616817); // Metadata type and shardID of swap beacon instruction
+
+        // Swap committee
+        // address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
+        // beaconCommittees.push(Committee({
+        //     pubkeys: pubkeys,
+        //     startBlock: startHeight
+        // }));
         emit LogString("Done");
     }
 

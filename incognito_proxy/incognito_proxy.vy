@@ -298,7 +298,7 @@ def swapBeaconCommittee(
     pubkeys: address[COMM_SIZE] = self.extractCommitteeFromInst(inst, numVals)
     # log.NotifyBytes32(extract32(pubkeys, 0, type=bytes32))
 
-    # Metadata type and shardID of swap bridge instruction
+    # Metadata type and shardID of swap beacon instruction
     assert type == 3616817
 
     # Verify instruction on beacon
