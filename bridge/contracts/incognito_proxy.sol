@@ -38,55 +38,53 @@ contract IncognitoProxy {
         bytes32[][2] memory sigRs,
         bytes32[][2] memory sigSs
     ) public {
-        // bytes32 instHash = keccak256(inst);
+        bytes32 instHash = keccak256(inst);
         // emit LogBytes32(instHash);
         // emit LogBytes32(instRoots[0]);
         // emit LogBytes32(instRoots[1]);
 
-        // TODO: Metadata type and shardID of swap bridge instruction
-
         // Verify instruction on beacon
-        // uint latestBeaconBlk = beaconCommittees[beaconCommittees.length-1].startBlock;
-        // require(instructionApproved(
-        //     true,
-        //     instHash,
-        //     latestBeaconBlk,
-        //     instPaths[0],
-        //     instPathIsLefts[0],
-        //     instRoots[0],
-        //     blkData[0],
-        //     sigIdxs[0],
-        //     sigVs[0],
-        //     sigRs[0],
-        //     sigSs[0]
-        // ));
+        uint latestBeaconBlk = beaconCommittees[beaconCommittees.length-1].startBlock;
+        require(instructionApproved(
+            true,
+            instHash,
+            latestBeaconBlk,
+            instPaths[0],
+            instPathIsLefts[0],
+            instRoots[0],
+            blkData[0],
+            sigIdxs[0],
+            sigVs[0],
+            sigRs[0],
+            sigSs[0]
+        ));
 
         // Verify instruction on bridge
-        // uint latestBridgeBlk = bridgeCommittees[bridgeCommittees.length-1].startBlock;
-        // require(instructionApproved(
-        //     false,
-        //     instHash,
-        //     latestBridgeBlk,
-        //     instPaths[1],
-        //     instPathIsLefts[1],
-        //     instRoots[1],
-        //     blkData[1],
-        //     sigIdxs[1],
-        //     sigVs[1],
-        //     sigRs[1],
-        //     sigSs[1]
-        // ));
+        uint latestBridgeBlk = bridgeCommittees[bridgeCommittees.length-1].startBlock;
+        require(instructionApproved(
+            false,
+            instHash,
+            latestBridgeBlk,
+            instPaths[1],
+            instPathIsLefts[1],
+            instRoots[1],
+            blkData[1],
+            sigIdxs[1],
+            sigVs[1],
+            sigRs[1],
+            sigSs[1]
+        ));
 
         // Parse instruction and check metadata
         // (uint meta, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
         // emit LogUint(meta);
         // emit LogUint(startHeight);
         // emit LogUint(numVals);
-        (uint meta, address token, address to, uint amount) = parseBurnInstruction(inst);
-        emit LogUint(meta);
-        emit LogAddress(token);
-        emit LogAddress(to);
-        emit LogUint(amount);
+        // (uint meta, address token, address to, uint amount) = parseBurnInstruction(inst);
+        // emit LogUint(meta);
+        // emit LogAddress(token);
+        // emit LogAddress(to);
+        // emit LogUint(amount);
         // address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
 
         // TODO: Swap committee
@@ -107,15 +105,10 @@ contract IncognitoProxy {
         bytes32[] memory sigR,
         bytes32[] memory sigS
     ) public returns (bool) {
-        // TODO: Get pubkey of signers
-        address[] memory signers;
-
-        // TODO: Find committee in charge of this block
-        if (isBeacon) {
-            signers = beaconCommittees[beaconCommittees.length-1].pubkeys;
-        } else {
-            signers = bridgeCommittees[bridgeCommittees.length-1].pubkeys;
-        }
+        // Find committee in charge of this block
+        address[] memory signers = findCommitteeFromHeight(blkHeight, isBeacon);
+        emit LogAddress(signers[0]);
+        emit LogAddress(signers[1]);
 
         // TODO: Get block hash from instRoot and other data
 
@@ -125,14 +118,33 @@ contract IncognitoProxy {
         bytes32 blk = 0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8;
         require(verifySig(signers, blk, sigV, sigR, sigS));
 
-        // Check that inst is in block
-        require(instructionInMerkleTree(
-            instHash,
-            instRoot,
-            instPath,
-            instPathIsLeft
-        ));
+        // // Check that inst is in block
+        // require(instructionInMerkleTree(
+        //     instHash,
+        //     instRoot,
+        //     instPath,
+        //     instPathIsLeft
+        // ));
         return true;
+    }
+
+    function findCommitteeFromHeight(uint blkHeight, bool isBeacon) public view returns (address[] memory committee) {
+        // TODO: optmized with binary search
+        if (isBeacon) {
+            uint n = beaconCommittees.length;
+            for (uint i = n; i > 0; i--) {
+                if (beaconCommittees[i-1].startBlock <= blkHeight) {
+                    return beaconCommittees[i-1].pubkeys;
+                }
+            }
+        } else {
+            uint n = bridgeCommittees.length;
+            for (uint i = n; i > 0; i--) {
+                if (bridgeCommittees[i-1].startBlock <= blkHeight) {
+                    return bridgeCommittees[i-1].pubkeys;
+                }
+            }
+        }
     }
 
     function instructionInMerkleTree(

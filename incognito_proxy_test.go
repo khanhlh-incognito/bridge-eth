@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"testing"
 )
@@ -15,7 +14,6 @@ func TestFixedSwapBridge(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Printf("inst: %+v\n", proof.Instruction)
 	tx, err := SwapBridge(p.inc, auth, proof)
 	if err != nil {
 		t.Error(err)
