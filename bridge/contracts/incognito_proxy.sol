@@ -107,12 +107,22 @@ contract IncognitoProxy {
     ) public returns (bool) {
         // Find committee in charge of this block
         address[] memory signers = findCommitteeFromHeight(blkHeight, isBeacon);
-        emit LogAddress(signers[0]);
-        emit LogAddress(signers[1]);
 
-        // TODO: Get block hash from instRoot and other data
+        // Extract signers that signed this block (require sigIdx to be strictly increasing)
+        for (uint i = 0; i < sigIdx.length; i++) {
+            if ((i > 0 && sigIdx[i] <= sigIdx[i-1]) || sigIdx[i] >= signers.length) {
+                return false;
+            }
+            signers[i] = signers[sigIdx[i]];
+        }
 
-        // TODO: Check if enough validators signed this block
+        // Get block hash from instRoot and other data
+        // bytes32 blk = keccak256(abi.encodePacked(blkData, instRoot));
+
+        // Check if enough validators signed this block
+        if (sigIdx.length <= signers.length * 2 / 3) {
+            return false;
+        }
 
         // Check that signature is correct
         bytes32 blk = 0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8;
