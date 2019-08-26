@@ -96,23 +96,7 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 
 	auth.GasLimit = 7000000
 	fmt.Printf("inst len: %d\n", len(proof.Instruction))
-	var tx *types.Transaction
-	// tx, err := p.inc.SwapBeaconCommittee(
-	// 	auth,
-	// 	proof.Instruction,
-	// 	numPk,
-
-	// 	proof.BeaconInstPath,
-	// 	proof.BeaconInstPathIsLeft,
-	// 	proof.BeaconInstPathLen,
-	// 	proof.BeaconInstRoot,
-	// 	proof.BeaconBlkData,
-	// 	proof.BeaconNumSig,
-	// 	proof.BeaconSigIdxs,
-	// 	proof.BeaconSigVs,
-	// 	proof.BeaconSigRs,
-	// 	proof.BeaconSigSs,
-	// )
+	tx, err := SwapBeacon(p.inc, auth, proof)
 	if err != nil {
 		fmt.Println("err:", err)
 	}
