@@ -257,10 +257,10 @@ func printReceipt(sim *backends.SimulatedBackend, tx *types.Transaction) {
 		case "0x6c8f06ff564112a969115be5f33d4a0f87ba918c9c9bc3090fe631968e818be4": // bool
 			format = "%t"
 			data = log.Data[len(log.Data)-1] > 0
-		case "0x8e2fc7b10a4f77a18c553db9a8f8c24d9e379da2557cb61ad4cc513a2f992cbd", "0x0ac68d08c5119b8cdb4058edbf0d4168f208ec3935d26a8f1f0d92eb9d4de8bf":
+		case "0x8e2fc7b10a4f77a18c553db9a8f8c24d9e379da2557cb61ad4cc513a2f992cbd", "0x0ac68d08c5119b8cdb4058edbf0d4168f208ec3935d26a8f1f0d92eb9d4de8bf": // uint
 			format = "%s"
 			data = big.NewInt(int64(0)).SetBytes(log.Data)
-		case "0x0ac6e167e94338a282ec23bdd86f338fc787bd67f48b3ade098144aac3fcd86e":
+		case "0x0ac6e167e94338a282ec23bdd86f338fc787bd67f48b3ade098144aac3fcd86e", "0xb123f68b8ba02b447d91a6629e121111b7dd6061ff418a60139c8bf00522a284": // address
 			format = "%x"
 			data = log.Data[12:]
 		}

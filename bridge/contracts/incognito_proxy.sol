@@ -13,6 +13,7 @@ contract IncognitoProxy {
     event LogUint(uint val);
     event LogString(string val);
     event LogBytes32(bytes32 val);
+    event LogAddress(address val);
 
     constructor(address[] memory beaconCommittee, address[] memory bridgeCommittee) public {
         beaconCommittees.push(Committee({
@@ -37,15 +38,15 @@ contract IncognitoProxy {
         bytes32[][2] memory sigRs,
         bytes32[][2] memory sigSs
     ) public {
-        bytes32 instHash = keccak256(inst);
-        emit LogBytes32(instHash);
-        emit LogBytes32(instRoots[0]);
-        emit LogBytes32(instRoots[1]);
+        // bytes32 instHash = keccak256(inst);
+        // emit LogBytes32(instHash);
+        // emit LogBytes32(instRoots[0]);
+        // emit LogBytes32(instRoots[1]);
 
         // TODO: Metadata type and shardID of swap bridge instruction
 
         // Verify instruction on beacon
-        uint latestBeaconBlk = beaconCommittees[beaconCommittees.length-1].startBlock;
+        // uint latestBeaconBlk = beaconCommittees[beaconCommittees.length-1].startBlock;
         // require(instructionApproved(
         //     true,
         //     instHash,
@@ -61,7 +62,7 @@ contract IncognitoProxy {
         // ));
 
         // Verify instruction on bridge
-        uint latestBridgeBlk = bridgeCommittees[bridgeCommittees.length-1].startBlock;
+        // uint latestBridgeBlk = bridgeCommittees[bridgeCommittees.length-1].startBlock;
         // require(instructionApproved(
         //     false,
         //     instHash,
@@ -77,11 +78,19 @@ contract IncognitoProxy {
         // ));
 
         // Parse instruction and check metadata
-        // (uint meta, uint startHeight, uint numVals) = extractMetaFromInst(inst);
-        // address[] memory pubkeys = extractCommitteeFromInst(inst, numVals);
+        // (uint meta, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
+        // emit LogUint(meta);
+        // emit LogUint(startHeight);
+        // emit LogUint(numVals);
+        (uint meta, address token, address to, uint amount) = parseBurnInstruction(inst);
+        emit LogUint(meta);
+        emit LogAddress(token);
+        emit LogAddress(to);
+        emit LogUint(amount);
+        // address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
 
         // TODO: Swap committee
-        latestBridgeBlk = 0;
+        // latestBridgeBlk = 0;
         emit LogString("Done");
     }
 
@@ -145,14 +154,42 @@ contract IncognitoProxy {
         return hash == root;
     }
 
-    function extractMetaFromInst(bytes memory inst) public pure returns(uint, uint, uint) {
-        // TODO
-        return (0, 0, 0);
+    function extractMetaFromInstruction(bytes memory inst) public pure returns(uint, uint, uint) {
+        uint meta = uint8(inst[2]) + uint8(inst[1]) * 2 ** 8 + uint8(inst[0]) * 2 ** 16;
+        uint height;
+        uint numVals;
+        assembly {
+            // skip first 0x20 bytes (stored length of inst)
+            height := mload(add(inst, 0x23)) // [3:35]
+            numVals := mload(add(inst, 0x43)) // [35:67]
+        }
+        return (meta, height, numVals);
     }
 
-    function extractCommitteeFromInst(bytes memory inst, uint numVals) public pure returns (address[] memory) {
-        // TODO
+    function parseBurnInstruction(bytes memory inst) public pure returns (uint, address, address, uint) {
+        uint meta = uint8(inst[2]) + uint8(inst[1]) * 2 ** 8 + uint8(inst[0]) * 2 ** 16;
+        address token;
+        address to;
+        uint amount;
+        assembly {
+            // skip first 0x20 bytes (stored length of inst)
+            token := mload(add(inst, 0x23)) // [3:35]
+            to := mload(add(inst, 0x43)) // [35:67]
+            amount := mload(add(inst, 0x63)) // [67:99]
+        }
+        return (meta, token, to, amount);
+    }
+
+    function extractCommitteeFromInstruction(bytes memory inst, uint numVals) public pure returns (address[] memory) {
         address[] memory addr = new address[](numVals);
+        address tmp;
+        for (uint i = 0; i < numVals; i++) {
+            assembly {
+                // skip first 0x20 bytes (stored length of inst)
+                tmp := mload(add(add(inst, 0x63), mul(i, 0x20))) // 67+i*32
+            }
+            addr[i] = tmp;
+        }
         return addr;
     }
 
