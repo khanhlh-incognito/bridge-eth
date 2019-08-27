@@ -74,11 +74,9 @@ func getCommittee(url string) ([]common.Address, []common.Address, error) {
 
 	req, _ := http.NewRequest("POST", url, payload)
 
-	beaconOld := []common.Address{}
-	bridgeOld := []common.Address{}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return beaconOld, bridgeOld, err
+		return nil, nil, err
 	}
 
 	defer res.Body.Close()
@@ -98,22 +96,24 @@ func getCommittee(url string) ([]common.Address, []common.Address, error) {
 	r := getBeaconBestStateResult{}
 	err = json.Unmarshal([]byte(body), &r)
 	if err != nil {
-		return beaconOld, bridgeOld, err
+		return nil, nil, err
 	}
 
 	// Genesis committee
+	beaconOld := make([]common.Address, len(r.Result.BeaconCommittee))
 	for i, pk := range r.Result.BeaconCommittee {
 		addr, err := convertPubkeyToAddress(pk)
 		if err != nil {
-			return beaconOld, bridgeOld, err
+			return nil, nil, err
 		}
 		beaconOld[i] = addr
 	}
 
+	bridgeOld := make([]common.Address, len(r.Result.ShardCommittee["1"]))
 	for i, pk := range r.Result.ShardCommittee["1"] {
 		addr, err := convertPubkeyToAddress(pk)
 		if err != nil {
-			return beaconOld, bridgeOld, err
+			return nil, nil, err
 		}
 		bridgeOld[i] = addr
 	}
@@ -122,7 +122,7 @@ func getCommittee(url string) ([]common.Address, []common.Address, error) {
 }
 
 func getBurnProof(txID string) string {
-	url := "http://127.0.0.1:9338"
+	url := "http://127.0.0.1:9344"
 	// url := "https://dev-test-node.incognito.org/"
 
 	if len(txID) == 0 {
@@ -156,8 +156,8 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	fmt.Printf("bridgeHeight: %d\n", bridgeHeight)
 
 	beaconInstRoot := decode32(r.Result.BeaconInstRoot)
-	beaconInstPath := [][32]byte{}
-	beaconInstPathIsLeft := []bool{}
+	beaconInstPath := make([][32]byte, len(r.Result.BeaconInstPath))
+	beaconInstPathIsLeft := make([]bool, len(r.Result.BeaconInstPath))
 	for i, path := range r.Result.BeaconInstPath {
 		beaconInstPath[i] = decode32(path)
 		beaconInstPathIsLeft[i] = r.Result.BeaconInstPathIsLeft[i]
@@ -179,8 +179,8 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 
 	// For bridge
 	bridgeInstRoot := decode32(r.Result.BridgeInstRoot)
-	bridgeInstPath := [][32]byte{}
-	bridgeInstPathIsLeft := []bool{}
+	bridgeInstPath := make([][32]byte, len(r.Result.BridgeInstPath))
+	bridgeInstPathIsLeft := make([]bool, len(r.Result.BridgeInstPath))
 	for i, path := range r.Result.BridgeInstPath {
 		bridgeInstPath[i] = decode32(path)
 		bridgeInstPathIsLeft[i] = r.Result.BridgeInstPathIsLeft[i]

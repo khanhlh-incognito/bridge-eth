@@ -105,13 +105,13 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 }
 
 func TestSimulatedBurn(t *testing.T) {
-	proof, err := getAndDecodeBurnProof("")
+	proof, err := getAndDecodeBurnProof("6859134d3116a2ca73596b84de2caa46db52d2fc4940aa8751d0a11a7f3ec28f")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	p, err := setupWithHardcodedCommittee()
-	// p, err := setupWithLocalCommittee()
+	// p, err := setupWithHardcodedCommittee()
+	p, err := setupWithLocalCommittee()
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
