@@ -2,8 +2,11 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strconv"
 	"testing"
 
 	ec "github.com/ethereum/go-ethereum/common"
@@ -71,7 +74,7 @@ func TestFixedVerifySig(t *testing.T) {
 		pubkey, _ := base64.StdEncoding.DecodeString(b)
 		pk, _ := crypto.DecompressPubkey(pubkey)
 		addr := crypto.PubkeyToAddress(*pk)
-		fmt.Println(addr.Hex())
+		fmt.Printf("%x\n", addr[:])
 		committee = append(committee, addr)
 	}
 
@@ -87,7 +90,7 @@ func TestFixedVerifySig(t *testing.T) {
 		rs = append(rs, toByte32(r))
 		ss = append(ss, toByte32(s))
 	}
-	res, err := p.inc.VerifySig(nil, committee, toByte32(hash.GetBytes()), vs, rs, ss)
+	res, err := p.inc.VerifySig(nil, committee, toByte32(crypto.Keccak256Hash(hash.GetBytes()).Bytes()), vs, rs, ss)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,6 +145,79 @@ func TestFixedSwapBeacon(t *testing.T) {
 	}
 	p.sim.Commit()
 	printReceipt(p.sim, tx)
+}
+
+func TestExtractMeta(t *testing.T) {
+	p, _ := setupFixedCommittee()
+	addrs := []string{
+		"834f98e1b7324450b798359c9febba74fb1fd888",
+		"1250ba2c592ac5d883a0b20112022f541898e65b",
+		"2464c00eab37be5a679d6e5f7c8f87864b03bfce",
+		"6d4850ab610be9849566c09da24b37c5cfa93e50",
+	}
+	testCases := []struct {
+		desc    string
+		inst    []byte
+		meta    int
+		height  int
+		numVals int
+		err     bool
+	}{
+		{
+			desc:    "Extract swap beacon instruction",
+			inst:    buildDecodedSwapConfirmInst(70, 1, 123, addrs),
+			meta:    3616817,
+			height:  123,
+			numVals: len(addrs),
+		},
+		{
+			desc:    "Extract swap bridge instruction",
+			inst:    buildDecodedSwapConfirmInst(71, 1, 19827312, addrs[:2]),
+			meta:    3617073,
+			height:  19827312,
+			numVals: 2,
+		},
+		{
+			desc: "Instruction too short",
+			inst: []byte{1, 2},
+			err:  true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			meta, height, numVals, err := p.inc.ExtractMetaFromInstruction(nil, tc.inst)
+			isErr := err != nil
+			if isErr != tc.err {
+				t.Error(err)
+			}
+			if tc.err {
+				return
+			}
+			if meta.Int64() != int64(tc.meta) {
+				t.Errorf("invalid meta, expect %v, got %v", tc.meta, meta)
+			}
+			if height.Int64() != int64(tc.height) {
+				t.Errorf("invalid height, expect %v, got %v", tc.height, height)
+			}
+			if numVals.Int64() != int64(tc.numVals) {
+				t.Errorf("invalid numVals, expect %v, got %v", tc.numVals, numVals)
+			}
+		})
+	}
+}
+
+func buildDecodedSwapConfirmInst(meta, shard, height int, addrs []string) []byte {
+	a := []byte{}
+	for _, addr := range addrs {
+		d, _ := hex.DecodeString(addr)
+		a = append(a, toBytes32BigEndian(d)...)
+	}
+	decoded := []byte(strconv.Itoa(meta))
+	decoded = append(decoded, []byte(strconv.Itoa(shard))...)
+	decoded = append(decoded, toBytes32BigEndian(big.NewInt(int64(height)).Bytes())...)
+	decoded = append(decoded, toBytes32BigEndian(big.NewInt(int64(len(addrs))).Bytes())...)
+	decoded = append(decoded, a...)
+	return decoded
 }
 
 func getFixedSwapProof() *decodedProof {
