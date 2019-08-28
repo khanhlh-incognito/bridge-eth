@@ -165,7 +165,8 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	// fmt.Printf("beaconInstRoot: %x\n", beaconInstRoot)
 
 	beaconBlkData := toByte32(decode(r.Result.BeaconBlkData))
-	// fmt.Printf("expected beaconBlkHash: %x\n", keccak256(beaconBlkData[:], beaconInstRoot[:]))
+	fmt.Printf("data: %s %s\n", r.Result.BeaconBlkData, r.Result.BeaconInstRoot)
+	fmt.Printf("expected beaconBlkHash: %x\n", keccak256(beaconBlkData[:], beaconInstRoot[:]))
 
 	beaconSigVs, beaconSigRs, beaconSigSs, err := decodeSigs(r.Result.BeaconSigs)
 	if err != nil {

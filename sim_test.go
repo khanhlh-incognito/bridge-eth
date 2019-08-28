@@ -105,7 +105,7 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 }
 
 func TestSimulatedBurn(t *testing.T) {
-	proof, err := getAndDecodeBurnProof("6859134d3116a2ca73596b84de2caa46db52d2fc4940aa8751d0a11a7f3ec28f")
+	proof, err := getAndDecodeBurnProof("7e4a9d8da4fac015af7738a45e56c644120b9473d72508e47a9e057285bf9785")
 	if err != nil {
 		t.Fatal(err)
 	}

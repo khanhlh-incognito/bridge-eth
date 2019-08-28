@@ -59,22 +59,22 @@ contract IncognitoProxy {
         ));
 
         // Verify instruction on bridge
-        require(instructionApproved(
-            false,
-            instHash,
-            bridgeCommittees[bridgeCommittees.length-1].startBlock,
-            instPaths[1],
-            instPathIsLefts[1],
-            instRoots[1],
-            blkData[1],
-            sigIdxs[1],
-            sigVs[1],
-            sigRs[1],
-            sigSs[1]
-        ));
+        // require(instructionApproved(
+        //     false,
+        //     instHash,
+        //     bridgeCommittees[bridgeCommittees.length-1].startBlock,
+        //     instPaths[1],
+        //     instPathIsLefts[1],
+        //     instRoots[1],
+        //     blkData[1],
+        //     sigIdxs[1],
+        //     sigVs[1],
+        //     sigRs[1],
+        //     sigSs[1]
+        // ));
 
         // Parse instruction and check metadata
-        (uint meta, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
+        // (uint meta, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
         // TODO: reenable check meta and swap committee
         // require(meta == 3617073); // Metadata type and shardID of swap bridge instruction
 
@@ -163,7 +163,8 @@ contract IncognitoProxy {
         }
 
         // Get block hash from instRoot and other data
-        // bytes32 blk = keccak256(abi.encodePacked(blkData, instRoot));
+        bytes32 blk = keccak256(abi.encodePacked(blkData, instRoot));
+        emit LogBytes32(blk);
 
         // Check if enough validators signed this block
         if (sigIdx.length <= signers.length * 2 / 3) {
@@ -172,7 +173,7 @@ contract IncognitoProxy {
 
         // Check that signature is correct
         // TODO: remove tmp blk hash and reenable checking instInMerkleTree
-        bytes32 blk = 0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8;
+        // bytes32 blk = 0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8;
         require(verifySig(signers, blk, sigV, sigR, sigS));
 
         // // Check that inst is in block
@@ -268,8 +269,11 @@ contract IncognitoProxy {
         uint8[] memory v,
         bytes32[] memory r,
         bytes32[] memory s
-    ) public returns (bool) {
+    ) public pure returns (bool) {
         // emit LogUint(committee.length);
+        // emit LogUint(v.length);
+        // emit LogUint(r.length);
+        // emit LogUint(s.length);
         for (uint i = 0; i < v.length; i++){
             if (ecrecover(msgHash, v[i], r[i], s[i]) != committee[i]) {
                 return false;
