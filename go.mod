@@ -3,15 +3,12 @@ module github.com/incognitochain/bridge-eth
 go 1.12
 
 require (
-	github.com/0xsirrush/color v1.7.0 // indirect
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/apilayer/freegeoip v3.5.0+incompatible // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190628180533-8e7d5b18fe7a // indirect
 	github.com/btcsuite/btcd v0.0.0-20190629003639-c26ffa870fd8 // indirect
 	github.com/cespare/cp v1.1.1 // indirect
-	github.com/dchest/siphash v1.2.1 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
-	github.com/dgryski/go-identicon v0.0.0-20140725220403-371855927d74 // indirect
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.3 // indirect
@@ -26,18 +23,15 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/howeyc/fsnotify v0.9.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
-	github.com/incognitochain/incognito-chain v0.0.0-20190711050455-828c2d63e29f
 	github.com/influxdata/influxdb v1.7.7 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.1 // indirect
 	github.com/julienschmidt/httprouter v1.2.0 // indirect
 	github.com/karalabe/hid v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
-	github.com/olivere/elastic v6.2.21+incompatible // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/oschwald/maxminddb-golang v1.3.1 // indirect
