@@ -168,6 +168,7 @@ contract IncognitoProxy {
         }
 
         // Get block hash from instRoot and other data
+        // TODO: double hash blk here
         bytes32 blk = keccak256(abi.encodePacked(blkData, instRoot));
         emit LogBytes32(blk);
 
@@ -279,10 +280,8 @@ contract IncognitoProxy {
         bytes32[] memory r,
         bytes32[] memory s
     ) public pure returns (bool) {
-        // emit LogUint(committee.length);
-        // emit LogUint(v.length);
-        // emit LogUint(r.length);
-        // emit LogUint(s.length);
+        require(v.length == r.length);
+        require(v.length == s.length);
         for (uint i = 0; i < v.length; i++){
             if (ecrecover(msgHash, v[i], r[i], s[i]) != committee[i]) {
                 return false;

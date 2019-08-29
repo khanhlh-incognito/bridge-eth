@@ -107,6 +107,7 @@ func getCommittee(url string) ([]common.Address, []common.Address, error) {
 			return nil, nil, err
 		}
 		beaconOld[i] = addr
+		fmt.Printf("beaconOld: %s\n", addr.Hex())
 	}
 
 	bridgeOld := make([]common.Address, len(r.Result.ShardCommittee["1"]))
@@ -116,6 +117,7 @@ func getCommittee(url string) ([]common.Address, []common.Address, error) {
 			return nil, nil, err
 		}
 		bridgeOld[i] = addr
+		fmt.Printf("bridgeOld: %s\n", addr.Hex())
 	}
 
 	return beaconOld, bridgeOld, nil

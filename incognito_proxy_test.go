@@ -2,10 +2,8 @@ package main
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -19,86 +17,151 @@ import (
 	"github.com/pkg/errors"
 )
 
-// {
-// 	"Hash": "951a678d297c56971163532b0cc11118b844ec7326f227ebc21f0171a6097635",
-// 	"Height": 45,
-// 	"ValidationData": "{\"ProducerBLSSig\":\"FVj54LstEsxs7W7jOceiezCSBPJ/F2NGowSqaPFpLzg=\",\"ProducerBriSig\":null,\"ValidatiorsIdx\":[0,1,2,3],\"AggSig\":\"KwrsVXog3ZN2jkjG4MMggsTDnrX3PBRE4dlv67++KlY=\",\"BridgeSig\":[\"GOAcW/psvsZspExMqrtWYOVj+JttJVZmixH9j0mbRXhW/UmmlZvPk4fWRtQCXkZzrAgaIxoMvzj0g0aE2amVQwE=\",\"udWBfZvFO3AUMmMhvl5/2WpJ7hDmWxuxbPskRC1hwPpb1y+mcnzKye45854mfgCyzCY1mzCR7qveF7bVYHRNbwE=\",\"nxfEKeJslQWcEKhR20w8xt/T4JLB3E+ECpkcx+fjFYs4m5q6bABtiKbfFiY9yOAjma42EOtFyKw0fF1dedkTNwA=\",\"POaLQ2r5VjGlH5EqsT5cyr4RnSQbUt+wfRxNroQ21qZ1Iix/eJkDeW3W/rROmo66Os5WBef/huTX+qGx9MN0ngE=\"]}",
-// 	"ConsensusType": "bls",
-// 	"Version": 1,
-// 	"Epoch": 3,
-// 	"Round": 1,
-// 	"Time": 1566966083,
-// 	"PreviousBlockHash": "e7f9031fb8cab29ca19d11011799327568e5cf280cf08979b05cd1c88d8ce9d0",
-// 	"NextBlockHash": "",
-// 	"Instructions": [
-// 		[
-// 			"72",
-// 			"1",
-// 			"1111111111111111111116onJqC",
-// 			"e722D8b71DCC0152D47D2438556a45D3357d631f",
-// 			"13xteieoTFDLUs",
-// 			"7e4a9d8da4fac015af7738a45e56c644120b9473d72508e47a9e057285bf9785",
-// 			"1111111111111111111111111111111116dTTiD",
-// 			"169tMnQY"
-// 		],
-// 		[
-// 			"37",
-// 			"-2",
-// 			"{\"ShardID\":0,\"TxsFee\":{},\"ShardBlockHeight\":33}"
-// 		],
-// 		[
-// 			"37",
-// 			"-2",
-// 			"{\"ShardID\":0,\"TxsFee\":{\"0000000000000000000000000000000000000000000000000000000000000000\":0},\"ShardBlockHeight\":34}"
-// 		]
-// 	],
-// 	"Size": 2293
-// },
-
 func TestFixedVerifySig(t *testing.T) {
-	p, err := setupWithLocalCommittee()
-	// p, err := setupFixedCommittee()
-	if err != nil {
-		t.Error(err)
+	p, _ := setupFixedCommittee()
+
+	testCases := []struct {
+		desc string
+		in   *committeeSig
+		out  bool
+		err  bool
+	}{
+		{
+			desc: "Valid sig",
+			in:   getFixedCommitteeSig(),
+			out:  true,
+		},
+		{
+			desc: "Invalid committee",
+			in: func() *committeeSig {
+				sig := getFixedCommitteeSig()
+				sig.addrs[1][2] = 123
+				return sig
+			}(),
+			out: false,
+		},
+		{
+			desc: "Invalid msgHash",
+			in: func() *committeeSig {
+				sig := getFixedCommitteeSig()
+				sig.msgHash[0] = 123
+				return sig
+			}(),
+			out: false,
+		},
+		{
+			desc: "Invalid v",
+			in: func() *committeeSig {
+				sig := getFixedCommitteeSig()
+				sig.v[1] = 123
+				return sig
+			}(),
+			out: false,
+		},
+		{
+			desc: "Invalid r",
+			in: func() *committeeSig {
+				sig := getFixedCommitteeSig()
+				sig.r[2][3] = 123
+				return sig
+			}(),
+			out: false,
+		},
+		{
+			desc: "Invalid s",
+			in: func() *committeeSig {
+				sig := getFixedCommitteeSig()
+				sig.s[3][4] = 123
+				return sig
+			}(),
+			out: false,
+		},
+		{
+			desc: "Not enough committee members",
+			in: func() *committeeSig {
+				sig := getFixedCommitteeSig()
+				sig.addrs = sig.addrs[:2]
+				return sig
+			}(),
+			err: true,
+		},
+		{
+			desc: "Not enough v",
+			in: func() *committeeSig {
+				sig := getFixedCommitteeSig()
+				sig.v = sig.v[:2]
+				return sig
+			}(),
+			err: true,
+		},
+		{
+			desc: "Not enough r",
+			in: func() *committeeSig {
+				sig := getFixedCommitteeSig()
+				sig.r = sig.r[:2]
+				return sig
+			}(),
+			err: true,
+		},
+		{
+			desc: "Not enough s",
+			in: func() *committeeSig {
+				sig := getFixedCommitteeSig()
+				sig.s = sig.s[:2]
+				return sig
+			}(),
+			err: true,
+		},
 	}
 
-	validationData := "{\"ProducerBLSSig\":\"FVj54LstEsxs7W7jOceiezCSBPJ/F2NGowSqaPFpLzg=\",\"ProducerBriSig\":null,\"ValidatiorsIdx\":[0,1,2,3],\"AggSig\":\"KwrsVXog3ZN2jkjG4MMggsTDnrX3PBRE4dlv67++KlY=\",\"BridgeSig\":[\"GOAcW/psvsZspExMqrtWYOVj+JttJVZmixH9j0mbRXhW/UmmlZvPk4fWRtQCXkZzrAgaIxoMvzj0g0aE2amVQwE=\",\"udWBfZvFO3AUMmMhvl5/2WpJ7hDmWxuxbPskRC1hwPpb1y+mcnzKye45854mfgCyzCY1mzCR7qveF7bVYHRNbwE=\",\"nxfEKeJslQWcEKhR20w8xt/T4JLB3E+ECpkcx+fjFYs4m5q6bABtiKbfFiY9yOAjma42EOtFyKw0fF1dedkTNwA=\",\"POaLQ2r5VjGlH5EqsT5cyr4RnSQbUt+wfRxNroQ21qZ1Iix/eJkDeW3W/rROmo66Os5WBef/huTX+qGx9MN0ngE=\"]}"
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			res, err := p.inc.VerifySig(nil, tc.in.addrs, tc.in.msgHash, tc.in.v, tc.in.r, tc.in.s)
+			isErr := err != nil
+			if isErr != tc.err {
+				t.Error(errors.Errorf("expect error = %t, got %v", tc.err, err))
+			}
+			if tc.err {
+				return
+			}
+			if res != tc.out {
+				t.Errorf("verifySig failed, expect %v, got %v", tc.out, res)
+			}
+		})
+	}
+}
+
+func getFixedCommitteeSig() *committeeSig {
+	validationData := "{\"ProducerBLSSig\":\"D4sg/eVi8yI+rX9WOwCWBEG+4mWXjGNorl2m3ppRCvE=\",\"ProducerBriSig\":null,\"ValidatiorsIdx\":[0,1,2,3],\"AggSig\":\"AriRXDvXcPDqkMNAQjHR61f3xis6YLNskuYF7vQJNzE=\",\"BridgeSig\":[\"/tSXMa9s1PKAxDC9H6etSMPcnAOEqqQYum3TfWtOKQpyvHxA1jllDkLmB68M6pp54bTUWenqXMQVWW+2GAcBjgA=\",\"MJyhaCCm8B6uwK/w6/OMqr7AW1Szo1etRfTcru0ZenZUwea0LVXhPo2QRKeO+Q1n12J2yRv4sUkhRLLL9zw1SwE=\",\"DOpccVDrw6SbGqs4+YP/Ti1nx4gg/xpsuHB7DBuhO2RMl8hAaUz2TVZ6hv+r8z0YLiUw/k6FEFY+5dg/EjMRAQA=\",\"qPEXt4KgFR8ZMw7JelEeEwsWQ7gW/IrzWMpx++zjQ6dLdeXwKcGwxoaBWhWnEpma+MVVQw1LvzzuvtzIBGZDKgE=\"]}"
 	d, _ := DecodeValidationData(validationData)
-
-	hash, _ := (common.Hash{}).NewHashFromStr("951a678d297c56971163532b0cc11118b844ec7326f227ebc21f0171a6097635")
-
-	beacons := []string{
-		"AhixK1RFobDelCNigs4Hy+KBG9NC/dyV1fu9Hen2D++r",
-		"A52NI9M1oXn7gphEPiJarspTXOI1WE4XiU0a/rCcxY9p",
-		"AhIFfgHHQiKma4aznJ33g1jwzi5Sh/vn2OWhi11E80yp",
-		"A57kXi9TfbU0v9dekOCMjVRF4yO322mod4ili3YP3EGO",
-	}
-	committee := []ec.Address{}
-	for _, b := range beacons {
-		pubkey, _ := base64.StdEncoding.DecodeString(b)
-		pk, _ := crypto.DecompressPubkey(pubkey)
-		addr := crypto.PubkeyToAddress(*pk)
-		fmt.Printf("%x\n", addr[:])
-		committee = append(committee, addr)
-	}
-
 	vs := []byte{}
 	rs := [][32]byte{}
 	ss := [][32]byte{}
 	for _, sig := range d.BridgeSig {
-		v, r, s, err := bridgesig.DecodeECDSASig(sig)
-		if err != nil {
-			t.Fatal(err)
-		}
+		v, r, s, _ := bridgesig.DecodeECDSASig(sig)
 		vs = append(vs, v)
 		rs = append(rs, toByte32(r))
 		ss = append(ss, toByte32(s))
 	}
-	res, err := p.inc.VerifySig(nil, committee, toByte32(crypto.Keccak256Hash(hash.GetBytes()).Bytes()), vs, rs, ss)
-	if err != nil {
-		t.Fatal(err)
+
+	hash, _ := common.Hash{}.NewHashFromStr("cb53ba7574335ecfa0fddcb136b387330af322784fb759c80ca7bb790a1c0f9d")
+	addrs, _ := getFixedCommittee()
+	msgHash := toByte32(crypto.Keccak256Hash(hash.GetBytes()).Bytes())
+	return &committeeSig{
+		addrs:   addrs,
+		msgHash: msgHash,
+		v:       vs,
+		r:       rs,
+		s:       ss,
 	}
-	fmt.Println("verify:", res)
+}
+
+type committeeSig struct {
+	addrs   []ec.Address
+	msgHash [32]byte
+	v       []uint8
+	r       [][32]byte
+	s       [][32]byte
 }
 
 type ValidationData struct {
