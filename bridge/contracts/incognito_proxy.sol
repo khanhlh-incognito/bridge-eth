@@ -152,7 +152,12 @@ contract IncognitoProxy {
         bytes32[] memory sigS
     ) public returns (bool) {
         // Find committee in charge of this block
-        address[] memory signers = findCommitteeFromHeight(blkHeight, isBeacon);
+        address[] memory signers;
+        if (isBeacon) {
+            signers = findBeaconCommitteeFromHeight(blkHeight);
+        } else {
+            signers = findBridgeCommitteeFromHeight(blkHeight);
+        }
 
         // Extract signers that signed this block (require sigIdx to be strictly increasing)
         for (uint i = 0; i < sigIdx.length; i++) {
@@ -186,21 +191,21 @@ contract IncognitoProxy {
         return true;
     }
 
-    function findCommitteeFromHeight(uint blkHeight, bool isBeacon) public view returns (address[] memory committee) {
+    function findBeaconCommitteeFromHeight(uint blkHeight) public view returns (address[] memory committee) {
         // TODO: optmized with binary search
-        if (isBeacon) {
-            uint n = beaconCommittees.length;
-            for (uint i = n; i > 0; i--) {
-                if (beaconCommittees[i-1].startBlock <= blkHeight) {
-                    return beaconCommittees[i-1].pubkeys;
-                }
+        uint n = beaconCommittees.length;
+        for (uint i = n; i > 0; i--) {
+            if (beaconCommittees[i-1].startBlock <= blkHeight) {
+                return beaconCommittees[i-1].pubkeys;
             }
-        } else {
-            uint n = bridgeCommittees.length;
-            for (uint i = n; i > 0; i--) {
-                if (bridgeCommittees[i-1].startBlock <= blkHeight) {
-                    return bridgeCommittees[i-1].pubkeys;
-                }
+        }
+    }
+
+    function findBridgeCommitteeFromHeight(uint blkHeight) public view returns (address[] memory committee) {
+        uint n = bridgeCommittees.length;
+        for (uint i = n; i > 0; i--) {
+            if (bridgeCommittees[i-1].startBlock <= blkHeight) {
+                return bridgeCommittees[i-1].pubkeys;
             }
         }
     }

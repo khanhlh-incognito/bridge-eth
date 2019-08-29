@@ -392,6 +392,24 @@ type merklePath struct {
 	left    []bool
 }
 
+func TestIncognitoProxyConstructor(t *testing.T) {
+	p, _ := setupFixedCommittee()
+	beaconStart, err := p.inc.BeaconCommittees(nil, big.NewInt(0))
+	if err != nil {
+		t.Error(err)
+	}
+	if beaconStart.Uint64() != uint64(0) {
+		t.Errorf("incorrect startBlock, expect 0, got %d", beaconStart)
+	}
+	bridgeStart, err := p.inc.BridgeCommittees(nil, big.NewInt(0))
+	if err != nil {
+		t.Error(err)
+	}
+	if bridgeStart.Uint64() != uint64(0) {
+		t.Errorf("incorrect startBlock, expect 0, got %d", bridgeStart)
+	}
+}
+
 func buildDecodedSwapConfirmInst(meta, shard, height int, addrs []string) []byte {
 	a := []byte{}
 	for _, addr := range addrs {
