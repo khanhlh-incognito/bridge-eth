@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"math/big"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -225,7 +224,8 @@ func TestExtractMetaFromInstruction(t *testing.T) {
 	testCases := []struct {
 		desc    string
 		inst    []byte
-		meta    int
+		meta    uint8
+		shard   uint8
 		height  int
 		numVals int
 		err     bool
@@ -233,27 +233,29 @@ func TestExtractMetaFromInstruction(t *testing.T) {
 		{
 			desc:    "Extract swap beacon instruction",
 			inst:    buildDecodedSwapConfirmInst(70, 1, 123, addrs),
-			meta:    3616817,
+			meta:    70,
+			shard:   1,
 			height:  123,
 			numVals: len(addrs),
 		},
 		{
 			desc:    "Extract swap bridge instruction",
-			inst:    buildDecodedSwapConfirmInst(71, 1, 19827312, addrs[:2]),
-			meta:    3617073,
+			inst:    buildDecodedSwapConfirmInst(71, 2, 19827312, addrs[:2]),
+			meta:    71,
+			shard:   2,
 			height:  19827312,
 			numVals: 2,
 		},
 		{
 			desc: "Instruction too short",
-			inst: make([]byte, 66),
+			inst: make([]byte, 65),
 			err:  true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			meta, height, numVals, err := p.inc.ExtractMetaFromInstruction(nil, tc.inst)
+			meta, shard, height, numVals, err := p.inc.ExtractMetaFromInstruction(nil, tc.inst)
 			isErr := err != nil
 			if isErr != tc.err {
 				t.Error(errors.Errorf("expect error = %t, got %v", tc.err, err))
@@ -261,8 +263,11 @@ func TestExtractMetaFromInstruction(t *testing.T) {
 			if tc.err {
 				return
 			}
-			if meta.Int64() != int64(tc.meta) {
+			if meta != tc.meta {
 				t.Errorf("invalid meta, expect %v, got %v", tc.meta, meta)
+			}
+			if shard != tc.shard {
+				t.Errorf("invalid shard, expect %v, got %v", tc.shard, shard)
 			}
 			if height.Int64() != int64(tc.height) {
 				t.Errorf("invalid height, expect %v, got %v", tc.height, height)
@@ -303,7 +308,7 @@ func TestExtractCommitteeFromInstruction(t *testing.T) {
 		},
 		{
 			desc:    "Instruction too short",
-			inst:    make([]byte, 98),
+			inst:    make([]byte, 97),
 			numVals: 1,
 			err:     true,
 		},
@@ -479,8 +484,8 @@ func buildDecodedSwapConfirmInst(meta, shard, height int, addrs []string) []byte
 		d, _ := hex.DecodeString(addr)
 		a = append(a, toBytes32BigEndian(d)...)
 	}
-	decoded := []byte(strconv.Itoa(meta))
-	decoded = append(decoded, []byte(strconv.Itoa(shard))...)
+	decoded := []byte{byte(meta)}
+	decoded = append(decoded, byte(shard))
 	decoded = append(decoded, toBytes32BigEndian(big.NewInt(int64(height)).Bytes())...)
 	decoded = append(decoded, toBytes32BigEndian(big.NewInt(int64(len(addrs))).Bytes())...)
 	decoded = append(decoded, a...)

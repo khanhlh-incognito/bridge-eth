@@ -125,7 +125,7 @@ contract IncognitoProxy {
         ));
 
         // Parse instruction and check metadata
-        (uint meta, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
+        (uint8 meta, uint8 shard, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
         // TODO: reenable check meta and swap committee
         // require(meta == 3616817); // Metadata type and shardID of swap beacon instruction
 
@@ -231,17 +231,18 @@ contract IncognitoProxy {
         return hash == root;
     }
 
-    function extractMetaFromInstruction(bytes memory inst) public pure returns(uint, uint, uint) {
-        require(inst.length >= 0x43); // 0x03 bytes for meta, 0x20 each for height and numVals
-        uint meta = uint8(inst[2]) + uint8(inst[1]) * 2 ** 8 + uint8(inst[0]) * 2 ** 16;
+    function extractMetaFromInstruction(bytes memory inst) public pure returns(uint8, uint8, uint, uint) {
+        require(inst.length >= 0x42); // 0x02 bytes for meta and shard, 0x20 each for height and numVals
+        uint8 meta = uint8(inst[0]);
+        uint8 shard = uint8(inst[1]);
         uint height;
         uint numVals;
         assembly {
             // skip first 0x20 bytes (stored length of inst)
-            height := mload(add(inst, 0x23)) // [3:35]
-            numVals := mload(add(inst, 0x43)) // [35:67]
+            height := mload(add(inst, 0x22)) // [2:34]
+            numVals := mload(add(inst, 0x42)) // [34:66]
         }
-        return (meta, height, numVals);
+        return (meta, shard, height, numVals);
     }
 
     function parseBurnInstruction(bytes memory inst) public pure returns (uint, address, address, uint) {
@@ -259,14 +260,14 @@ contract IncognitoProxy {
     }
 
     function extractCommitteeFromInstruction(bytes memory inst, uint numVals) public pure returns (address[] memory) {
-        require(inst.length == 0x43 + numVals * 0x20);
+        require(inst.length == 0x42 + numVals * 0x20);
         address[] memory addr = new address[](numVals);
         address tmp;
         for (uint i = 0; i < numVals; i++) {
             assembly {
                 // skip first 0x20 bytes (stored length of inst)
-                // also, skip the next 0x43 bytes (stored metadata)
-                tmp := mload(add(add(inst, 0x63), mul(i, 0x20))) // 67+i*32
+                // also, skip the next 0x42 bytes (stored metadata)
+                tmp := mload(add(add(inst, 0x62), mul(i, 0x20))) // 67+i*32
             }
             addr[i] = tmp;
         }
