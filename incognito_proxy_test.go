@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 
 	ec "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/incognitochain/bridge-eth/blockchain"
 	"github.com/incognitochain/bridge-eth/common"
 	"github.com/incognitochain/bridge-eth/consensus/bridgesig"
 	"github.com/pkg/errors"
@@ -276,6 +278,118 @@ func TestExtractCommitteeFromInstruction(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInstructionInMerkleTree(t *testing.T) {
+	p, _ := setupFixedCommittee()
+	testCases := []struct {
+		desc string
+		in   *merklePath
+		out  bool
+		err  bool
+	}{
+		{
+			desc: "In merkle tree",
+			in:   buildMerklePathTestcase(8, 6, 6),
+			out:  true,
+		},
+		{
+			desc: "Not in merkle tree",
+			in:   buildMerklePathTestcase(8, 6, 4),
+			out:  false,
+		},
+		{
+			desc: "Random leaf",
+			in:   buildMerklePathTestcase(8, 6, -1),
+			out:  false,
+		},
+		{
+			desc: "Big tree",
+			in:   buildMerklePathTestcase(100000, 12345, 12345),
+			out:  true,
+		},
+		{
+			desc: "Single node",
+			in:   buildMerklePathTestcase(1, 0, 0),
+			out:  true,
+		},
+		{
+			desc: "Invalid left.length",
+			in: func() *merklePath {
+				mp := buildMerklePathTestcase(10, 9, 9)
+				mp.left = mp.left[:len(mp.left)-2]
+				return mp
+			}(),
+			err: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			isIn, err := p.inc.InstructionInMerkleTree(nil, tc.in.leaf, tc.in.root, tc.in.path, tc.in.left)
+			isErr := err != nil
+			if isErr != tc.err {
+				t.Error(errors.Errorf("expect error = %t, got %v", tc.err, err))
+			}
+			if tc.err {
+				return
+			}
+
+			if tc.out != isIn {
+				t.Errorf("check inst in merkle tree error, expect %v, got %v", tc.out, isIn)
+			}
+		})
+	}
+}
+
+func buildMerklePathTestcase(numInst, startNodeID, leafID int) *merklePath {
+	mp := buildInstructionMerklePath(numInst, startNodeID)
+	if leafID < 0 {
+		// Randomize 32 bytes
+		h := randomMerkleHashes(1)
+		mp.leaf = toByte32(h[0])
+	} else {
+		mp.leaf = toByte32(mp.merkles[leafID])
+	}
+	return mp
+}
+
+func buildInstructionMerklePath(numInst, startNodeID int) *merklePath {
+	data := randomMerkleHashes(numInst)
+	merkles := blockchain.BuildKeccak256MerkleTree(data)
+	p, l := blockchain.GetKeccak256MerkleProofFromTree(merkles, startNodeID)
+	path := [][32]byte{}
+	left := []bool{}
+	for i, x := range p {
+		path = append(path, toByte32(x))
+		left = append(left, l[i])
+	}
+
+	return &merklePath{
+		merkles: merkles,
+		leaf:    toByte32(merkles[startNodeID]),
+		root:    toByte32(merkles[len(merkles)-1]),
+		path:    path,
+		left:    left,
+	}
+}
+
+func randomMerkleHashes(n int) [][]byte {
+	h := [][]byte{}
+	for i := 0; i < n; i++ {
+		b := make([]byte, 32)
+		rand.Read(b)
+		h = append(h, b)
+	}
+	return h
+}
+
+type merklePath struct {
+	merkles [][]byte
+	leaf    [32]byte
+	root    [32]byte
+	path    [][32]byte
+	left    []bool
 }
 
 func buildDecodedSwapConfirmInst(meta, shard, height int, addrs []string) []byte {

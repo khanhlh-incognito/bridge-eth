@@ -210,7 +210,8 @@ contract IncognitoProxy {
         bytes32 root,
         bytes32[] memory path,
         bool[] memory left
-    ) public returns (bool) {
+    ) public pure returns (bool) {
+        require(left.length == path.length);
         bytes32 hash = leaf;
         for (uint i = 0; i < path.length; i++) {
             if (left[i]) {
