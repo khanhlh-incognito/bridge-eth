@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 	"testing"
 
 	ec "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/incognitochain/bridge-eth/common"
 	"github.com/incognitochain/bridge-eth/consensus/bridgesig"
+	"github.com/pkg/errors"
 )
 
 // {
@@ -183,12 +185,13 @@ func TestExtractMetaFromInstruction(t *testing.T) {
 			err:  true,
 		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			meta, height, numVals, err := p.inc.ExtractMetaFromInstruction(nil, tc.inst)
 			isErr := err != nil
 			if isErr != tc.err {
-				t.Error(err)
+				t.Error(errors.Errorf("expect error = %t, got %v", tc.err, err))
 			}
 			if tc.err {
 				return
@@ -201,6 +204,75 @@ func TestExtractMetaFromInstruction(t *testing.T) {
 			}
 			if numVals.Int64() != int64(tc.numVals) {
 				t.Errorf("invalid numVals, expect %v, got %v", tc.numVals, numVals)
+			}
+		})
+	}
+}
+
+func TestExtractCommitteeFromInstruction(t *testing.T) {
+	p, _ := setupFixedCommittee()
+	addrs := []string{
+		"834f98e1b7324450b798359c9febba74fb1fd888",
+		"1250ba2c592ac5d883a0b20112022f541898e65b",
+		"2464c00eab37be5a679d6e5f7c8f87864b03bfce",
+		"6d4850ab610be9849566c09da24b37c5cfa93e50",
+	}
+	testCases := []struct {
+		desc    string
+		inst    []byte
+		numVals int
+		out     []string
+		err     bool
+	}{
+		{
+			desc:    "Extract beacon committee",
+			inst:    buildDecodedSwapConfirmInst(70, 1, 789, addrs),
+			numVals: len(addrs),
+			out:     addrs,
+		},
+		{
+			desc:    "Extract bridge committee",
+			inst:    buildDecodedSwapConfirmInst(71, 1, 19827312, addrs[:2]),
+			numVals: 2,
+			out:     addrs[:2],
+		},
+		{
+			desc:    "Instruction too short",
+			inst:    make([]byte, 98),
+			numVals: 1,
+			err:     true,
+		},
+		{
+			desc:    "numVals too big",
+			inst:    buildDecodedSwapConfirmInst(70, 1, 789, addrs),
+			numVals: 8,
+			err:     true,
+		},
+		{
+			desc:    "numVals too low",
+			inst:    buildDecodedSwapConfirmInst(70, 1, 789, addrs),
+			numVals: 2,
+			err:     true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			comm, err := p.inc.ExtractCommitteeFromInstruction(nil, tc.inst, big.NewInt(int64(tc.numVals)))
+			isErr := err != nil
+			if isErr != tc.err {
+				t.Error(errors.Errorf("expect error = %t, got %v", tc.err, err))
+			}
+			if tc.err {
+				return
+			}
+
+			for i, c := range comm {
+				addr := c.Hex()
+				addr = addr[2:] // ignore 0x
+				if strings.ToLower(addr) != tc.out[i] {
+					t.Errorf("invalid committee[%d], expect %v, got %v", i, tc.out[i], addr)
+				}
 			}
 		})
 	}

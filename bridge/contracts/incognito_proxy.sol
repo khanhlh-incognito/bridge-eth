@@ -225,7 +225,7 @@ contract IncognitoProxy {
     }
 
     function extractMetaFromInstruction(bytes memory inst) public pure returns(uint, uint, uint) {
-        require(inst.length >= 67); // 3 bytes for meta, 32 each for height and numVals
+        require(inst.length >= 0x43); // 0x03 bytes for meta, 0x20 each for height and numVals
         uint meta = uint8(inst[2]) + uint8(inst[1]) * 2 ** 8 + uint8(inst[0]) * 2 ** 16;
         uint height;
         uint numVals;
@@ -252,11 +252,13 @@ contract IncognitoProxy {
     }
 
     function extractCommitteeFromInstruction(bytes memory inst, uint numVals) public pure returns (address[] memory) {
+        require(inst.length == 0x43 + numVals * 0x20);
         address[] memory addr = new address[](numVals);
         address tmp;
         for (uint i = 0; i < numVals; i++) {
             assembly {
                 // skip first 0x20 bytes (stored length of inst)
+                // also, skip the next 0x43 bytes (stored metadata)
                 tmp := mload(add(add(inst, 0x63), mul(i, 0x20))) // 67+i*32
             }
             addr[i] = tmp;
