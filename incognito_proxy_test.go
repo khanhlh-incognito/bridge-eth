@@ -147,7 +147,7 @@ func TestFixedSwapBeacon(t *testing.T) {
 	printReceipt(p.sim, tx)
 }
 
-func TestExtractMeta(t *testing.T) {
+func TestExtractMetaFromInstruction(t *testing.T) {
 	p, _ := setupFixedCommittee()
 	addrs := []string{
 		"834f98e1b7324450b798359c9febba74fb1fd888",
@@ -179,7 +179,7 @@ func TestExtractMeta(t *testing.T) {
 		},
 		{
 			desc: "Instruction too short",
-			inst: []byte{1, 2},
+			inst: make([]byte, 66),
 			err:  true,
 		},
 	}

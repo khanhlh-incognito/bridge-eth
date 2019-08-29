@@ -225,6 +225,7 @@ contract IncognitoProxy {
     }
 
     function extractMetaFromInstruction(bytes memory inst) public pure returns(uint, uint, uint) {
+        require(inst.length >= 67); // 3 bytes for meta, 32 each for height and numVals
         uint meta = uint8(inst[2]) + uint8(inst[1]) * 2 ** 8 + uint8(inst[0]) * 2 ** 16;
         uint height;
         uint numVals;
