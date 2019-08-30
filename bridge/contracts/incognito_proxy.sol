@@ -150,7 +150,7 @@ contract IncognitoProxy {
         uint8[] memory sigV,
         bytes32[] memory sigR,
         bytes32[] memory sigS
-    ) public returns (bool) {
+    ) public view returns (bool) {
         // Find committee in charge of this block
         address[] memory signers;
         if (isBeacon) {
@@ -167,10 +167,9 @@ contract IncognitoProxy {
             signers[i] = signers[sigIdx[i]];
         }
 
-        // Get block hash from instRoot and other data
-        // TODO: double hash blk here
-        bytes32 blk = keccak256(abi.encodePacked(blkData, instRoot));
-        emit LogBytes32(blk);
+        // Get double block hash from instRoot and other data
+        bytes32 blk = keccak256(abi.encodePacked(keccak256(abi.encodePacked(blkData, instRoot))));
+        // emit LogBytes32(blk);
 
         // Check if enough validators signed this block
         if (sigIdx.length <= signers.length * 2 / 3) {
@@ -182,13 +181,13 @@ contract IncognitoProxy {
         // bytes32 blk = 0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8;
         require(verifySig(signers, blk, sigV, sigR, sigS));
 
-        // // Check that inst is in block
-        // require(instructionInMerkleTree(
-        //     instHash,
-        //     instRoot,
-        //     instPath,
-        //     instPathIsLeft
-        // ));
+        // Check that inst is in block
+        require(instructionInMerkleTree(
+            instHash,
+            instRoot,
+            instPath,
+            instPathIsLeft
+        ));
         return true;
     }
 

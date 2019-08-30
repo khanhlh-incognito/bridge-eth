@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/incognitochain/bridge-eth/bridge"
-	"github.com/incognitochain/bridge-eth/consensus/bridgesig"
+	"github.com/incognitochain/bridge-eth/consensus/signatureschemes/bridgesig"
 	"github.com/incognitochain/bridge-eth/ecdsa_sig"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/incognitochain/bridge-eth/jsonresult"

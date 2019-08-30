@@ -12,12 +12,99 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/incognitochain/bridge-eth/blockchain"
 	"github.com/incognitochain/bridge-eth/common"
-	"github.com/incognitochain/bridge-eth/consensus/bridgesig"
+	"github.com/incognitochain/bridge-eth/consensus/signatureschemes/bridgesig"
 	"github.com/pkg/errors"
 )
 
+func TestInstructionApproved(t *testing.T) {
+	p, c, _ := setupFixedCommittee()
+
+	testCases := []struct {
+		desc string
+		in   *instProof
+		out  bool
+		err  bool
+	}{
+		{
+			desc: "Valid instruction",
+			in:   buildInstructionApprovedTestcase(true, c),
+			out:  true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			res, err := p.inc.InstructionApproved(nil, tc.in.isBeacon, tc.in.instHash, tc.in.blkHeight, tc.in.instPath, tc.in.instPathIsLeft, tc.in.instRoot, tc.in.blkData, tc.in.sigIdx, tc.in.sigV, tc.in.sigR, tc.in.sigS)
+			isErr := err != nil
+			if isErr != tc.err {
+				t.Error(errors.Errorf("expect error = %t, got %v", tc.err, err))
+			}
+			if tc.err {
+				return
+			}
+			if res != tc.out {
+				t.Errorf("verify inst approval failed, expect %v, got %v", tc.out, res)
+			}
+		})
+	}
+}
+
+func buildInstructionApprovedTestcase(isBeacon bool, c *committees) *instProof {
+	mp := buildMerklePathTestcase(8, 6, 6)
+
+	// Generate random blkHash
+	h := randomMerkleHashes(1)
+	blkData := toByte32(h[0])
+	blkHash := common.Keccak256(blkData[:], mp.root[:])
+
+	// Sign on blkHash
+	privs := c.beaconPrivs
+	if !isBeacon {
+		privs = c.bridgePrivs
+	}
+	sigV := make([]uint8, len(privs))
+	sigR := make([][32]byte, len(privs))
+	sigS := make([][32]byte, len(privs))
+	sigIdx := make([]*big.Int, len(privs))
+	for i, p := range privs {
+		sig, _ := bridgesig.Sign(p, blkHash[:])
+		sigV[i] = uint8(sig[64] + 27)
+		sigR[i] = toByte32(sig[:32])
+		sigS[i] = toByte32(sig[32:64])
+		sigIdx[i] = big.NewInt(int64(i))
+	}
+
+	return &instProof{
+		isBeacon:       isBeacon,
+		instHash:       mp.leaf,
+		blkHeight:      big.NewInt(0),
+		instPath:       mp.path,
+		instPathIsLeft: mp.left,
+		instRoot:       mp.root,
+		blkData:        blkData,
+		sigIdx:         sigIdx,
+		sigV:           sigV,
+		sigR:           sigR,
+		sigS:           sigS,
+	}
+}
+
+type instProof struct {
+	isBeacon       bool
+	instHash       [32]byte
+	blkHeight      *big.Int
+	instPath       [][32]byte
+	instPathIsLeft []bool
+	instRoot       [32]byte
+	blkData        [32]byte
+	sigIdx         []*big.Int
+	sigV           []uint8
+	sigR           [][32]byte
+	sigS           [][32]byte
+}
+
 func TestFixedVerifySig(t *testing.T) {
-	p, _ := setupFixedCommittee()
+	p, _, _ := setupFixedCommittee()
 
 	testCases := []struct {
 		desc string
@@ -144,10 +231,10 @@ func getFixedCommitteeSig() *committeeSig {
 	}
 
 	hash, _ := common.Hash{}.NewHashFromStr("cb53ba7574335ecfa0fddcb136b387330af322784fb759c80ca7bb790a1c0f9d")
-	addrs, _ := getFixedCommittee()
+	c := getFixedCommittee()
 	msgHash := toByte32(crypto.Keccak256Hash(hash.GetBytes()).Bytes())
 	return &committeeSig{
-		addrs:   addrs,
+		addrs:   c.beacons,
 		msgHash: msgHash,
 		v:       vs,
 		r:       rs,
@@ -200,7 +287,7 @@ func TestFixedSwapBridge(t *testing.T) {
 func TestFixedSwapBeacon(t *testing.T) {
 	proof := getFixedSwapProof()
 
-	p, err := setupFixedCommittee()
+	p, _, err := setupFixedCommittee()
 	if err != nil {
 		t.Error(err)
 	}
@@ -214,7 +301,7 @@ func TestFixedSwapBeacon(t *testing.T) {
 }
 
 func TestExtractMetaFromInstruction(t *testing.T) {
-	p, _ := setupFixedCommittee()
+	p, _, _ := setupFixedCommittee()
 	addrs := []string{
 		"834f98e1b7324450b798359c9febba74fb1fd888",
 		"1250ba2c592ac5d883a0b20112022f541898e65b",
@@ -280,7 +367,7 @@ func TestExtractMetaFromInstruction(t *testing.T) {
 }
 
 func TestExtractCommitteeFromInstruction(t *testing.T) {
-	p, _ := setupFixedCommittee()
+	p, _, _ := setupFixedCommittee()
 	addrs := []string{
 		"834f98e1b7324450b798359c9febba74fb1fd888",
 		"1250ba2c592ac5d883a0b20112022f541898e65b",
@@ -349,7 +436,7 @@ func TestExtractCommitteeFromInstruction(t *testing.T) {
 }
 
 func TestInstructionInMerkleTree(t *testing.T) {
-	p, _ := setupFixedCommittee()
+	p, _, _ := setupFixedCommittee()
 	testCases := []struct {
 		desc string
 		in   *merklePath
@@ -461,7 +548,7 @@ type merklePath struct {
 }
 
 func TestIncognitoProxyConstructor(t *testing.T) {
-	p, _ := setupFixedCommittee()
+	p, _, _ := setupFixedCommittee()
 	beaconStart, err := p.inc.BeaconCommittees(nil, big.NewInt(0))
 	if err != nil {
 		t.Error(err)
