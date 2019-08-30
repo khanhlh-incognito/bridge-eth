@@ -26,9 +26,44 @@ func TestInstructionApproved(t *testing.T) {
 		err  bool
 	}{
 		{
-			desc: "Valid instruction",
+			desc: "Valid beacon swap instruction",
 			in:   buildInstructionApprovedTestcase(true, c),
 			out:  true,
+		},
+		{
+			desc: "Valid bridge swap instruction",
+			in:   buildInstructionApprovedTestcase(false, c),
+			out:  true,
+		},
+		{
+			desc: "SigIdx incorrect",
+			in: func() *instProof {
+				p := buildInstructionApprovedTestcase(true, c)
+				p.sigIdx[0] = big.NewInt(20)
+				return p
+			}(),
+			out: false,
+		},
+		{
+			desc: "Not enough sigs",
+			in: func() *instProof {
+				p := buildInstructionApprovedTestcase(true, c)
+				p.sigIdx = p.sigIdx[:2]
+				return p
+			}(),
+			out: false,
+		},
+		{
+			desc: "Duplicated sigIdx",
+			in: func() *instProof {
+				p := buildInstructionApprovedTestcase(true, c)
+				p.sigIdx[0] = p.sigIdx[1]
+				p.sigV[0] = p.sigV[1]
+				p.sigR[0] = p.sigR[1]
+				p.sigS[0] = p.sigS[1]
+				return p
+			}(),
+			out: false,
 		},
 	}
 

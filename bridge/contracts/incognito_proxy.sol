@@ -188,6 +188,7 @@ contract IncognitoProxy {
             instPath,
             instPathIsLeft
         ));
+
         return true;
     }
 
