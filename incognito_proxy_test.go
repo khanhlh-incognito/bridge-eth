@@ -16,6 +16,92 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestSwapBeaconCommittee(t *testing.T) {
+	_, c, _ := setupFixedCommittee()
+
+	testCases := []struct {
+		desc string
+		in   *decodedProof
+		out  int
+		err  bool
+	}{
+		{
+			desc: "Valid beacon swap instruction",
+			in:   buildSwapBeaconTestcase(c, 789, 70, 1),
+			out:  789,
+		},
+		{
+			desc: "Invalid meta",
+			in:   buildSwapBeaconTestcase(c, 789, 71, 1),
+			err:  true,
+		},
+		{
+			desc: "Invalid shard",
+			in:   buildSwapBeaconTestcase(c, 789, 70, 2),
+			err:  true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, _, _ := setupFixedCommittee()
+			_, err := p.inc.SwapBeaconCommittee(auth, tc.in.Instruction, tc.in.InstPaths[0], tc.in.InstPathIsLefts[0], tc.in.InstRoots[0], tc.in.BlkData[0], tc.in.SigIdxs[0], tc.in.SigVs[0], tc.in.SigRs[0], tc.in.SigSs[0])
+			isErr := err != nil
+			if isErr != tc.err {
+				t.Fatal(errors.Errorf("expect error = %t, got %v", tc.err, err))
+			}
+			if tc.err {
+				return
+			}
+			p.sim.Commit()
+
+			startBlock, err := p.inc.BeaconCommittees(nil, big.NewInt(1))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if startBlock.Int64() != int64(tc.out) {
+				t.Errorf("swap beacon failed, expect %v, got %v", tc.out, startBlock)
+			}
+		})
+	}
+}
+
+func buildSwapBeaconTestcase(c *committees, startBlock, meta, shard int) *decodedProof {
+	addrs := []string{
+		"834f98e1b7324450b798359c9febba74fb1fd888",
+		"1250ba2c592ac5d883a0b20112022f541898e65b",
+		"2464c00eab37be5a679d6e5f7c8f87864b03bfce",
+		"6d4850ab610be9849566c09da24b37c5cfa93e50",
+	}
+
+	// Build instruction merkle tree
+	numInst := 10
+	startNodeID := 7
+	inst := buildDecodedSwapConfirmInst(meta, shard, startBlock, addrs)
+	data := randomMerkleHashes(numInst)
+	data[startNodeID] = inst
+	mp := buildInstructionMerklePath(data, numInst, startNodeID)
+
+	// Generate random blkHash
+	h := randomMerkleHashes(1)
+	blkData := h[0]
+	blkHash := common.Keccak256(blkData, mp.root[:])
+
+	ip := signAndReturnInstProof(c.beaconPrivs, true, mp, blkData, blkHash[:])
+	return &decodedProof{
+		Instruction: inst,
+
+		InstPaths:       [2][][32]byte{ip.instPath},
+		InstPathIsLefts: [2][]bool{ip.instPathIsLeft},
+		InstRoots:       [2][32]byte{ip.instRoot},
+		BlkData:         [2][32]byte{ip.blkData},
+		SigIdxs:         [2][]*big.Int{ip.sigIdx},
+		SigVs:           [2][]uint8{ip.sigV},
+		SigRs:           [2][][32]byte{ip.sigR},
+		SigSs:           [2][][32]byte{ip.sigS},
+	}
+}
+
 func TestInstructionApproved(t *testing.T) {
 	p, c, _ := setupFixedCommittee()
 
@@ -89,20 +175,31 @@ func buildInstructionApprovedTestcase(isBeacon bool, c *committees) *instProof {
 
 	// Generate random blkHash
 	h := randomMerkleHashes(1)
-	blkData := toByte32(h[0])
-	blkHash := common.Keccak256(blkData[:], mp.root[:])
+	blkData := h[0]
+	blkHash := common.Keccak256(blkData, mp.root[:])
 
-	// Sign on blkHash
+	// Get private keys
 	privs := c.beaconPrivs
 	if !isBeacon {
 		privs = c.bridgePrivs
 	}
+
+	return signAndReturnInstProof(privs, isBeacon, mp, blkData, blkHash[:])
+}
+
+func signAndReturnInstProof(
+	privs [][]byte,
+	isBeacon bool,
+	mp *merklePath,
+	blkData []byte,
+	blkHash []byte,
+) *instProof {
 	sigV := make([]uint8, len(privs))
 	sigR := make([][32]byte, len(privs))
 	sigS := make([][32]byte, len(privs))
 	sigIdx := make([]*big.Int, len(privs))
 	for i, p := range privs {
-		sig, _ := bridgesig.Sign(p, blkHash[:])
+		sig, _ := bridgesig.Sign(p, blkHash)
 		sigV[i] = uint8(sig[64] + 27)
 		sigR[i] = toByte32(sig[:32])
 		sigS[i] = toByte32(sig[32:64])
@@ -116,7 +213,7 @@ func buildInstructionApprovedTestcase(isBeacon bool, c *committees) *instProof {
 		instPath:       mp.path,
 		instPathIsLeft: mp.left,
 		instRoot:       mp.root,
-		blkData:        blkData,
+		blkData:        toByte32(blkData),
 		sigIdx:         sigIdx,
 		sigV:           sigV,
 		sigR:           sigR,
@@ -533,7 +630,8 @@ func TestInstructionInMerkleTree(t *testing.T) {
 }
 
 func buildMerklePathTestcase(numInst, startNodeID, leafID int) *merklePath {
-	mp := buildInstructionMerklePath(numInst, startNodeID)
+	data := randomMerkleHashes(numInst)
+	mp := buildInstructionMerklePath(data, numInst, startNodeID)
 	if leafID < 0 {
 		// Randomize 32 bytes
 		h := randomMerkleHashes(1)
@@ -544,8 +642,7 @@ func buildMerklePathTestcase(numInst, startNodeID, leafID int) *merklePath {
 	return mp
 }
 
-func buildInstructionMerklePath(numInst, startNodeID int) *merklePath {
-	data := randomMerkleHashes(numInst)
+func buildInstructionMerklePath(data [][]byte, numInst, startNodeID int) *merklePath {
 	merkles := blockchain.BuildKeccak256MerkleTree(data)
 	p, l := blockchain.GetKeccak256MerkleProofFromTree(merkles, startNodeID)
 	path := [][32]byte{}

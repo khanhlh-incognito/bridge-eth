@@ -124,17 +124,16 @@ contract IncognitoProxy {
             sigS
         ));
 
-        // Parse instruction and check metadata
+        // Parse instruction and check metadata and shardID
         (uint8 meta, uint8 shard, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
-        // TODO: reenable check meta and swap committee
-        // require(meta == 3616817); // Metadata type and shardID of swap beacon instruction
+        require(meta == 70 && shard == 1);
 
         // Swap committee
-        // address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
-        // beaconCommittees.push(Committee({
-        //     pubkeys: pubkeys,
-        //     startBlock: startHeight
-        // }));
+        address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
+        beaconCommittees.push(Committee({
+            pubkeys: pubkeys,
+            startBlock: startHeight
+        }));
         emit LogString("Done");
     }
 
@@ -169,7 +168,6 @@ contract IncognitoProxy {
 
         // Get double block hash from instRoot and other data
         bytes32 blk = keccak256(abi.encodePacked(keccak256(abi.encodePacked(blkData, instRoot))));
-        // emit LogBytes32(blk);
 
         // Check if enough validators signed this block
         if (sigIdx.length <= signers.length * 2 / 3) {
@@ -177,7 +175,6 @@ contract IncognitoProxy {
         }
 
         // Check that signature is correct
-        // TODO: remove tmp blk hash and reenable checking instInMerkleTree
         // bytes32 blk = 0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8;
         require(verifySig(signers, blk, sigV, sigR, sigS));
 
