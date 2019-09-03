@@ -37,7 +37,7 @@ func init() {
 }
 
 func TestSimulatedSwapBridge(t *testing.T) {
-	body := getBridgeSwapProof()
+	body := getBridgeSwapProof(27)
 	if len(body) < 1 {
 		t.Fatal(fmt.Errorf("empty bridge swap proof"))
 	}
@@ -256,10 +256,9 @@ func printReceipt(sim *backends.SimulatedBackend, tx *types.Transaction) {
 	}
 }
 
-func getBridgeSwapProof() string {
-	url := "http://127.0.0.1:9338"
+func getBridgeSwapProof(block int) string {
+	url := "http://127.0.0.1:9344"
 
-	block := 3910
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbridgeswapproof\",\n    \"params\": [\n    \t%d\n    ]\n}", block))
 
 	req, _ := http.NewRequest("POST", url, payload)

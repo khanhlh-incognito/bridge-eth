@@ -270,32 +270,27 @@ func keccak256(b ...[]byte) [32]byte {
 }
 
 func getCommitteeHardcoded() ([]common.Address, []common.Address) {
-	// TODO: hardcode and parse committee to common.Address
 	beaconComm := []string{
-		"02a96a04ad76a0034efc8819e93308823ce7a3b76fd694f961ee909124096baf00",
-		"0242653de0e9af9dd3725008519157314eb5a845dec2cd646ce9e03f780175b700",
-		"028c49fc5f3e001c36095335c53b0b7320f6a1c932424e92c9de344b55e80ddf00",
-		"0205aae74cb0128a1863c970cbe87e827e28f92a91c2d4768fdb30a279dd081c00",
+		"0xA5301a0d25103967bf0e29db1576cba3408fD9bB",
+		"0x9BC0faE7BB432828759B6e391e0cC99995057791",
+		"0x6cbc2937FEe477bbda360A842EeEbF92c2FAb613",
+		"0xcabF3DB93eB48a61d41486AcC9281B6240411403",
 	}
-	_ = beaconComm
-	beacons := []common.Address{}
-	// for _, p := range beaconComm {
-	// 	pk, _ := hex.DecodeString(p)
-	// 	beacons = append(beacons, pk...)
-	// }
+	beacons := make([]common.Address, len(beaconComm))
+	for i, p := range beaconComm {
+		beacons[i] = common.HexToAddress(p)
+	}
 
 	bridgeComm := []string{
-		"0253d262c2b6a55606ff9d32e195231ec57e4d23a6efd1c02143a58fd0c2591d01",
-		"02dee56cbbde5ef6d03a9e69bf3784ae4a8460d0058a6082eee4be2ed5c4fd3301",
-		"02ec388db662801da0fe3c41f39085369ed4df71d42ec96924012243dc9c67d201",
-		"039cc81f72a88a7436eb74bf10c7693af165324ba4d15baeb4e8d2f1c2ce25a101",
+		"0x3c78124783E8e39D1E084FdDD0E097334ba2D945",
+		"0x76E34d8a527961286E55532620Af5b84F3C6538F",
+		"0x68686dB6874588D2404155D00A73F82a50FDd190",
+		"0x1533ac4d2922C150551f2F5dc2b0c1eDE382b890",
 	}
-	_ = bridgeComm
-	bridges := []common.Address{}
-	// for _, p := range bridgeComm {
-	// 	pk, _ := hex.DecodeString(p)
-	// 	bridges = append(bridges, pk...)
-	// }
+	bridges := make([]common.Address, len(bridgeComm))
+	for i, p := range bridgeComm {
+		bridges[i] = common.HexToAddress(p)
+	}
 	return beacons, bridges
 }
 

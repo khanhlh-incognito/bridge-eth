@@ -39,9 +39,6 @@ contract IncognitoProxy {
         bytes32[][2] memory sigSs
     ) public {
         bytes32 instHash = keccak256(inst);
-        // emit LogBytes32(instHash);
-        // emit LogBytes32(instRoots[0]);
-        // emit LogBytes32(instRoots[1]);
 
         // Verify instruction on beacon
         require(instructionApproved(
@@ -59,40 +56,31 @@ contract IncognitoProxy {
         ));
 
         // Verify instruction on bridge
-        // require(instructionApproved(
-        //     false,
-        //     instHash,
-        //     bridgeCommittees[bridgeCommittees.length-1].startBlock,
-        //     instPaths[1],
-        //     instPathIsLefts[1],
-        //     instRoots[1],
-        //     blkData[1],
-        //     sigIdxs[1],
-        //     sigVs[1],
-        //     sigRs[1],
-        //     sigSs[1]
-        // ));
+        require(instructionApproved(
+            false,
+            instHash,
+            bridgeCommittees[bridgeCommittees.length-1].startBlock,
+            instPaths[1],
+            instPathIsLefts[1],
+            instRoots[1],
+            blkData[1],
+            sigIdxs[1],
+            sigVs[1],
+            sigRs[1],
+            sigSs[1]
+        ));
 
         // Parse instruction and check metadata
-        // (uint meta, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
-        // TODO: reenable check meta and swap committee
-        // require(meta == 3617073); // Metadata type and shardID of swap bridge instruction
-
-        // emit LogUint(meta);
-        // emit LogUint(startHeight);
-        // emit LogUint(numVals);
-        // (uint meta, address token, address to, uint amount) = parseBurnInstruction(inst);
-        // emit LogUint(meta);
-        // emit LogAddress(token);
-        // emit LogAddress(to);
-        // emit LogUint(amount);
+        (uint8 meta, uint8 shard, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
+        require(meta == 71 && shard == 1);
 
         // Swap committee
-        // address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
-        // bridgeCommittees.push(Committee({
-        //     pubkeys: pubkeys,
-        //     startBlock: startHeight
-        // }));
+        address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
+        bridgeCommittees.push(Committee({
+            pubkeys: pubkeys,
+            startBlock: startHeight
+        }));
+        emit LogUint(startHeight);
         emit LogString("Done");
     }
 
