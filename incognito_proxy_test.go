@@ -16,6 +16,92 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestSwapBridgeCommittee(t *testing.T) {
+	_, c, _ := setupFixedCommittee()
+
+	testCases := []struct {
+		desc string
+		in   *decodedProof
+		out  int
+		err  bool
+	}{
+		{
+			desc: "Valid bridge swap instruction",
+			in:   buildSwapBridgeTestcase(c, 789, 71, 1),
+			out:  789,
+		},
+		{
+			desc: "Invalid beacon inst",
+			in: func() *decodedProof {
+				proof := buildSwapBridgeTestcase(c, 789, 71, 1)
+				proof.BlkData[1][0] = proof.BlkData[1][0] + 1
+				return proof
+			}(),
+			err: true,
+		},
+		{
+			desc: "Invalid bridge inst",
+			in: func() *decodedProof {
+				proof := buildSwapBridgeTestcase(c, 789, 71, 1)
+				proof.InstRoots[1][0] = proof.InstRoots[1][0] + 1
+				return proof
+			}(),
+			err: true,
+		},
+		{
+			desc: "Invalid meta",
+			in:   buildSwapBridgeTestcase(c, 789, 70, 1),
+			err:  true,
+		},
+		{
+			desc: "Invalid shard",
+			in:   buildSwapBridgeTestcase(c, 789, 71, 2),
+			err:  true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, _, _ := setupFixedCommittee()
+			_, err := p.inc.SwapBridgeCommittee(auth, tc.in.Instruction, tc.in.InstPaths, tc.in.InstPathIsLefts, tc.in.InstRoots, tc.in.BlkData, tc.in.SigIdxs, tc.in.SigVs, tc.in.SigRs, tc.in.SigSs)
+			isErr := err != nil
+			if isErr != tc.err {
+				t.Fatal(errors.Errorf("expect error = %t, got %v", tc.err, err))
+			}
+			if tc.err {
+				return
+			}
+			p.sim.Commit()
+
+			startBlock, err := p.inc.BridgeCommittees(nil, big.NewInt(1))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if startBlock.Int64() != int64(tc.out) {
+				t.Errorf("swap bridge failed, expect %v, got %v", tc.out, startBlock)
+			}
+		})
+	}
+}
+
+func buildSwapBridgeTestcase(c *committees, startBlock, meta, shard int) *decodedProof {
+	inst, mp, blkData, blkHash := buildSwapData(meta, shard, startBlock)
+	ipBeacon := signAndReturnInstProof(c.beaconPrivs, true, mp, blkData, blkHash[:])
+	ipBridge := signAndReturnInstProof(c.bridgePrivs, false, mp, blkData, blkHash[:])
+	return &decodedProof{
+		Instruction: inst,
+
+		InstPaths:       [2][][32]byte{ipBeacon.instPath, ipBridge.instPath},
+		InstPathIsLefts: [2][]bool{ipBeacon.instPathIsLeft, ipBridge.instPathIsLeft},
+		InstRoots:       [2][32]byte{ipBeacon.instRoot, ipBridge.instRoot},
+		BlkData:         [2][32]byte{ipBeacon.blkData, ipBridge.blkData},
+		SigIdxs:         [2][]*big.Int{ipBeacon.sigIdx, ipBridge.sigIdx},
+		SigVs:           [2][]uint8{ipBeacon.sigV, ipBridge.sigV},
+		SigRs:           [2][][32]byte{ipBeacon.sigR, ipBridge.sigR},
+		SigSs:           [2][][32]byte{ipBeacon.sigS, ipBridge.sigS},
+	}
+}
+
 func TestSwapBeaconCommittee(t *testing.T) {
 	_, c, _ := setupFixedCommittee()
 
@@ -67,6 +153,23 @@ func TestSwapBeaconCommittee(t *testing.T) {
 }
 
 func buildSwapBeaconTestcase(c *committees, startBlock, meta, shard int) *decodedProof {
+	inst, mp, blkData, blkHash := buildSwapData(meta, shard, startBlock)
+	ip := signAndReturnInstProof(c.beaconPrivs, true, mp, blkData, blkHash[:])
+	return &decodedProof{
+		Instruction: inst,
+
+		InstPaths:       [2][][32]byte{ip.instPath},
+		InstPathIsLefts: [2][]bool{ip.instPathIsLeft},
+		InstRoots:       [2][32]byte{ip.instRoot},
+		BlkData:         [2][32]byte{ip.blkData},
+		SigIdxs:         [2][]*big.Int{ip.sigIdx},
+		SigVs:           [2][]uint8{ip.sigV},
+		SigRs:           [2][][32]byte{ip.sigR},
+		SigSs:           [2][][32]byte{ip.sigS},
+	}
+}
+
+func buildSwapData(meta, shard, startBlock int) ([]byte, *merklePath, []byte, []byte) {
 	addrs := []string{
 		"834f98e1b7324450b798359c9febba74fb1fd888",
 		"1250ba2c592ac5d883a0b20112022f541898e65b",
@@ -86,20 +189,7 @@ func buildSwapBeaconTestcase(c *committees, startBlock, meta, shard int) *decode
 	h := randomMerkleHashes(1)
 	blkData := h[0]
 	blkHash := common.Keccak256(blkData, mp.root[:])
-
-	ip := signAndReturnInstProof(c.beaconPrivs, true, mp, blkData, blkHash[:])
-	return &decodedProof{
-		Instruction: inst,
-
-		InstPaths:       [2][][32]byte{ip.instPath},
-		InstPathIsLefts: [2][]bool{ip.instPathIsLeft},
-		InstRoots:       [2][32]byte{ip.instRoot},
-		BlkData:         [2][32]byte{ip.blkData},
-		SigIdxs:         [2][]*big.Int{ip.sigIdx},
-		SigVs:           [2][]uint8{ip.sigV},
-		SigRs:           [2][][32]byte{ip.sigR},
-		SigSs:           [2][][32]byte{ip.sigS},
-	}
+	return inst, mp, blkData, blkHash[:]
 }
 
 func TestInstructionApproved(t *testing.T) {
