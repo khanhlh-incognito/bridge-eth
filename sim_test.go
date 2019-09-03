@@ -71,7 +71,7 @@ func TestSimulatedSwapBridge(t *testing.T) {
 }
 
 func TestSimulatedSwapBeacon(t *testing.T) {
-	body := getBeaconSwapProof(32)
+	body := getBeaconSwapProof(20)
 	if len(body) < 1 {
 		t.Fatal(fmt.Errorf("empty beacon swap proof"))
 	}
@@ -87,6 +87,8 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
+	// a, _ := json.Marshal(proof)
+	// fmt.Printf("proof: %s\n", string(a))
 
 	p, err := setupWithHardcodedCommittee()
 	// p, err := setupWithLocalCommittee()
