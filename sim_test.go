@@ -71,7 +71,7 @@ func TestSimulatedSwapBridge(t *testing.T) {
 }
 
 func TestSimulatedSwapBeacon(t *testing.T) {
-	body := getBeaconSwapProof()
+	body := getBeaconSwapProof(32)
 	if len(body) < 1 {
 		t.Fatal(fmt.Errorf("empty beacon swap proof"))
 	}
@@ -87,6 +87,8 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
+	a, _ := json.Marshal(proof)
+	fmt.Printf("proof: %s\n", string(a))
 
 	p, err := setupWithHardcodedCommittee()
 	// p, err := setupWithLocalCommittee()
@@ -284,10 +286,9 @@ func getBridgeSwapProof(block int) string {
 	return string(body)
 }
 
-func getBeaconSwapProof() string {
-	url := "http://127.0.0.1:9338"
+func getBeaconSwapProof(block int) string {
+	url := "http://127.0.0.1:9344"
 
-	block := 87
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbeaconswapproof\",\n    \"params\": [\n    \t%d\n    ]\n}", block))
 
 	req, _ := http.NewRequest("POST", url, payload)

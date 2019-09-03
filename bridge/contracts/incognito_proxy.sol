@@ -122,6 +122,7 @@ contract IncognitoProxy {
             pubkeys: pubkeys,
             startBlock: startHeight
         }));
+        emit LogUint(startHeight);
         emit LogString("Done");
     }
 
