@@ -141,10 +141,11 @@ contract IncognitoProxy {
     ) public view returns (bool) {
         // Find committee in charge of this block
         address[] memory signers;
+        uint _;
         if (isBeacon) {
-            signers = findBeaconCommitteeFromHeight(blkHeight);
+            (signers, _) = findBeaconCommitteeFromHeight(blkHeight);
         } else {
-            signers = findBridgeCommitteeFromHeight(blkHeight);
+            (signers, _) = findBridgeCommitteeFromHeight(blkHeight);
         }
 
         // Extract signers that signed this block (require sigIdx to be strictly increasing)
@@ -178,23 +179,36 @@ contract IncognitoProxy {
         return true;
     }
 
-    function findBeaconCommitteeFromHeight(uint blkHeight) public view returns (address[] memory committee) {
-        // TODO: optmized with binary search
-        uint n = beaconCommittees.length;
-        for (uint i = n; i > 0; i--) {
-            if (beaconCommittees[i-1].startBlock <= blkHeight) {
-                return beaconCommittees[i-1].pubkeys;
+    function findBeaconCommitteeFromHeight(uint blkHeight) public view returns (address[] memory, uint) {
+        uint l = 0;
+        uint r = beaconCommittees.length;
+        require(r > 0);
+        r = r - 1;
+        while (l != r) {
+            uint m = (l + r + 1) / 2;
+            if (beaconCommittees[m].startBlock <= blkHeight) {
+                l = m;
+            } else {
+                r = m - 1;
             }
         }
+        return (beaconCommittees[l].pubkeys, l);
     }
 
-    function findBridgeCommitteeFromHeight(uint blkHeight) public view returns (address[] memory committee) {
-        uint n = bridgeCommittees.length;
-        for (uint i = n; i > 0; i--) {
-            if (bridgeCommittees[i-1].startBlock <= blkHeight) {
-                return bridgeCommittees[i-1].pubkeys;
+    function findBridgeCommitteeFromHeight(uint blkHeight) public view returns (address[] memory, uint) {
+        uint l = 0;
+        uint r = bridgeCommittees.length;
+        require(r > 0);
+        r = r - 1;
+        while (l != r) {
+            uint m = (l + r + 1) / 2;
+            if (bridgeCommittees[m].startBlock <= blkHeight) {
+                l = m;
+            } else {
+                r = m - 1;
             }
         }
+        return (bridgeCommittees[l].pubkeys, l);
     }
 
     function instructionInMerkleTree(

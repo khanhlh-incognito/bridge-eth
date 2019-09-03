@@ -16,6 +16,189 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestFindBeaconCommitteeFromHeight(t *testing.T) {
+	testCases := []struct {
+		desc   string
+		length int
+		find   int64
+		pos    int64
+	}{
+		{
+			desc:   "A lot of committees",
+			length: 100,
+			find:   50,
+			pos:    50,
+		},
+		{
+
+			desc:   "Only 1 committee",
+			length: 0,
+			find:   50,
+			pos:    0,
+		},
+		{
+
+			desc:   "2 committees, get left",
+			length: 1,
+			find:   0,
+			pos:    0,
+		},
+		{
+
+			desc:   "2 committees, get right",
+			length: 1,
+			find:   1,
+			pos:    1,
+		},
+		{
+
+			desc:   "Get first committee",
+			length: 10,
+			find:   0,
+			pos:    0,
+		},
+		{
+			desc:   "Get last committee",
+			length: 10,
+			find:   10000000,
+			pos:    10,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, c, _ := setupFixedCommittee()
+			for i := 0; i < tc.length; i++ {
+				in := repeatSwapBeacon(c, i+1, 70, 1)
+				_, err := p.inc.SwapBeaconCommittee(auth, in.Instruction, in.InstPaths[0], in.InstPathIsLefts[0], in.InstRoots[0], in.BlkData[0], in.SigIdxs[0], in.SigVs[0], in.SigRs[0], in.SigSs[0])
+				if err != nil {
+					t.Fatal(err)
+				}
+				p.sim.Commit()
+			}
+			_, pos, err := p.inc.FindBeaconCommitteeFromHeight(nil, big.NewInt(tc.find))
+			if err != nil || pos.Int64() != tc.pos {
+				t.Errorf("invalid committee position, expect %d, got %d, err = %v", tc.pos, pos, err)
+			}
+		})
+	}
+}
+
+func repeatSwapBeacon(c *committees, startBlock, meta, shard int) *decodedProof {
+	addrs := []string{
+		"A5301a0d25103967bf0e29db1576cba3408fD9bB",
+		"9BC0faE7BB432828759B6e391e0cC99995057791",
+		"6cbc2937FEe477bbda360A842EeEbF92c2FAb613",
+		"cabF3DB93eB48a61d41486AcC9281B6240411403",
+	}
+	inst, mp, blkData, blkHash := buildSwapData(meta, shard, startBlock, addrs)
+	ip := signAndReturnInstProof(c.beaconPrivs, true, mp, blkData, blkHash[:])
+	return &decodedProof{
+		Instruction: inst,
+
+		InstPaths:       [2][][32]byte{ip.instPath},
+		InstPathIsLefts: [2][]bool{ip.instPathIsLeft},
+		InstRoots:       [2][32]byte{ip.instRoot},
+		BlkData:         [2][32]byte{ip.blkData},
+		SigIdxs:         [2][]*big.Int{ip.sigIdx},
+		SigVs:           [2][]uint8{ip.sigV},
+		SigRs:           [2][][32]byte{ip.sigR},
+		SigSs:           [2][][32]byte{ip.sigS},
+	}
+}
+
+func TestFindBridgeCommitteeFromHeight(t *testing.T) {
+	testCases := []struct {
+		desc   string
+		length int
+		find   int64
+		pos    int64
+	}{
+		{
+			desc:   "A lot of committees",
+			length: 100,
+			find:   50,
+			pos:    50,
+		},
+		{
+
+			desc:   "Only 1 committee",
+			length: 0,
+			find:   50,
+			pos:    0,
+		},
+		{
+
+			desc:   "2 committees, get left",
+			length: 1,
+			find:   0,
+			pos:    0,
+		},
+		{
+
+			desc:   "2 committees, get right",
+			length: 1,
+			find:   1,
+			pos:    1,
+		},
+		{
+
+			desc:   "Get first committee",
+			length: 10,
+			find:   0,
+			pos:    0,
+		},
+		{
+			desc:   "Get last committee",
+			length: 10,
+			find:   10000000,
+			pos:    10,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, c, _ := setupFixedCommittee()
+			for i := 0; i < tc.length; i++ {
+				in := repeatSwapBridge(c, i+1, 71, 1)
+				_, err := p.inc.SwapBridgeCommittee(auth, in.Instruction, in.InstPaths, in.InstPathIsLefts, in.InstRoots, in.BlkData, in.SigIdxs, in.SigVs, in.SigRs, in.SigSs)
+				if err != nil {
+					t.Fatal(err)
+				}
+				p.sim.Commit()
+			}
+			_, pos, err := p.inc.FindBridgeCommitteeFromHeight(nil, big.NewInt(tc.find))
+			if err != nil || pos.Int64() != tc.pos {
+				t.Errorf("invalid committee position, expect %d, got %d, err = %v", tc.pos, pos, err)
+			}
+		})
+	}
+}
+
+func repeatSwapBridge(c *committees, startBlock, meta, shard int) *decodedProof {
+	addrs := []string{
+		"3c78124783E8e39D1E084FdDD0E097334ba2D945",
+		"76E34d8a527961286E55532620Af5b84F3C6538F",
+		"68686dB6874588D2404155D00A73F82a50FDd190",
+		"1533ac4d2922C150551f2F5dc2b0c1eDE382b890",
+	}
+	inst, mp, blkData, blkHash := buildSwapData(meta, shard, startBlock, addrs)
+	ipBeacon := signAndReturnInstProof(c.beaconPrivs, true, mp, blkData, blkHash[:])
+	ipBridge := signAndReturnInstProof(c.bridgePrivs, false, mp, blkData, blkHash[:])
+	return &decodedProof{
+		Instruction: inst,
+
+		InstPaths:       [2][][32]byte{ipBeacon.instPath, ipBridge.instPath},
+		InstPathIsLefts: [2][]bool{ipBeacon.instPathIsLeft, ipBridge.instPathIsLeft},
+		InstRoots:       [2][32]byte{ipBeacon.instRoot, ipBridge.instRoot},
+		BlkData:         [2][32]byte{ipBeacon.blkData, ipBridge.blkData},
+		SigIdxs:         [2][]*big.Int{ipBeacon.sigIdx, ipBridge.sigIdx},
+		SigVs:           [2][]uint8{ipBeacon.sigV, ipBridge.sigV},
+		SigRs:           [2][][32]byte{ipBeacon.sigR, ipBridge.sigR},
+		SigSs:           [2][][32]byte{ipBeacon.sigS, ipBridge.sigS},
+	}
+}
+
 func TestSwapBridgeCommittee(t *testing.T) {
 	_, c, _ := setupFixedCommittee()
 
@@ -85,7 +268,13 @@ func TestSwapBridgeCommittee(t *testing.T) {
 }
 
 func buildSwapBridgeTestcase(c *committees, startBlock, meta, shard int) *decodedProof {
-	inst, mp, blkData, blkHash := buildSwapData(meta, shard, startBlock)
+	addrs := []string{
+		"834f98e1b7324450b798359c9febba74fb1fd888",
+		"1250ba2c592ac5d883a0b20112022f541898e65b",
+		"2464c00eab37be5a679d6e5f7c8f87864b03bfce",
+		"6d4850ab610be9849566c09da24b37c5cfa93e50",
+	}
+	inst, mp, blkData, blkHash := buildSwapData(meta, shard, startBlock, addrs)
 	ipBeacon := signAndReturnInstProof(c.beaconPrivs, true, mp, blkData, blkHash[:])
 	ipBridge := signAndReturnInstProof(c.bridgePrivs, false, mp, blkData, blkHash[:])
 	return &decodedProof{
@@ -153,7 +342,13 @@ func TestSwapBeaconCommittee(t *testing.T) {
 }
 
 func buildSwapBeaconTestcase(c *committees, startBlock, meta, shard int) *decodedProof {
-	inst, mp, blkData, blkHash := buildSwapData(meta, shard, startBlock)
+	addrs := []string{
+		"834f98e1b7324450b798359c9febba74fb1fd888",
+		"1250ba2c592ac5d883a0b20112022f541898e65b",
+		"2464c00eab37be5a679d6e5f7c8f87864b03bfce",
+		"6d4850ab610be9849566c09da24b37c5cfa93e50",
+	}
+	inst, mp, blkData, blkHash := buildSwapData(meta, shard, startBlock, addrs)
 	ip := signAndReturnInstProof(c.beaconPrivs, true, mp, blkData, blkHash[:])
 	return &decodedProof{
 		Instruction: inst,
@@ -169,14 +364,7 @@ func buildSwapBeaconTestcase(c *committees, startBlock, meta, shard int) *decode
 	}
 }
 
-func buildSwapData(meta, shard, startBlock int) ([]byte, *merklePath, []byte, []byte) {
-	addrs := []string{
-		"834f98e1b7324450b798359c9febba74fb1fd888",
-		"1250ba2c592ac5d883a0b20112022f541898e65b",
-		"2464c00eab37be5a679d6e5f7c8f87864b03bfce",
-		"6d4850ab610be9849566c09da24b37c5cfa93e50",
-	}
-
+func buildSwapData(meta, shard, startBlock int, addrs []string) ([]byte, *merklePath, []byte, []byte) {
 	// Build instruction merkle tree
 	numInst := 10
 	startNodeID := 7
