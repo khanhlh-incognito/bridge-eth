@@ -19,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/incognitochain/bridge-eth/bridge"
-	"github.com/incognitochain/bridge-eth/vault"
 )
 
 var auth *bind.TransactOpts
@@ -175,7 +174,7 @@ func setup(
 	// printReceipt(sim, tx)
 
 	// Vault
-	p.vAddr, tx, p.v, err = vault.DeployVault(auth, sim, p.incAddr)
+	p.vAddr, tx, p.v, err = bridge.DeployVault(auth, sim, p.incAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy Vault contract: %v", err)
 	}

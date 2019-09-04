@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/incognitochain/bridge-eth/bridge"
 	"github.com/incognitochain/bridge-eth/erc20"
-	"github.com/incognitochain/bridge-eth/vault"
 )
 
 func TestSimulatedErc20(t *testing.T) {
@@ -49,7 +48,7 @@ func getBalanceErc20(token *erc20.Erc20, addr common.Address) *big.Int {
 
 func depositErc20(
 	sim *backends.SimulatedBackend,
-	v *vault.Vault,
+	v *bridge.Vault,
 	vAddr common.Address,
 	token *erc20.Erc20,
 	tokenAddr common.Address,
@@ -100,7 +99,7 @@ func setupWithErc20() (
 	sim *backends.SimulatedBackend,
 	inc *bridge.IncognitoProxy,
 	incAddr common.Address,
-	v *vault.Vault,
+	v *bridge.Vault,
 	vAddr common.Address,
 	token *erc20.Erc20,
 	tokenAddr common.Address,

@@ -13,7 +13,6 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge"
 	"github.com/incognitochain/bridge-eth/ecdsa_sig"
 	"github.com/incognitochain/bridge-eth/erc20"
-	"github.com/incognitochain/bridge-eth/vault"
 )
 
 func TestERC20Burn(t *testing.T) {
@@ -131,7 +130,7 @@ func connectAndInstantiate(t *testing.T) (*ecdsa.PrivateKey, *contracts) {
 
 func depositERC20(
 	privKey *ecdsa.PrivateKey,
-	v *vault.Vault,
+	v *bridge.Vault,
 	tokenAddr common.Address,
 	amount int64,
 ) error {
@@ -178,7 +177,7 @@ func instantiate(client *ethclient.Client) (*contracts, error) {
 
 	// Vault
 	c.vAddr = common.HexToAddress(VaultAddress)
-	c.v, err = vault.NewVault(c.vAddr, client)
+	c.v, err = bridge.NewVault(c.vAddr, client)
 	if err != nil {
 		return nil, err
 	}

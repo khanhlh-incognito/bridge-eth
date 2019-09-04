@@ -16,12 +16,11 @@ import (
 	"github.com/incognitochain/bridge-eth/ecdsa_sig"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/incognitochain/bridge-eth/jsonresult"
-	"github.com/incognitochain/bridge-eth/vault"
 	"github.com/pkg/errors"
 )
 
 type contracts struct {
-	v         *vault.Vault
+	v         *bridge.Vault
 	vAddr     common.Address
 	inc       *bridge.IncognitoProxy
 	incAddr   common.Address
@@ -41,9 +40,8 @@ type getProofResult struct {
 }
 
 type decodedProof struct {
-	Instruction  []byte
-	BeaconHeight *big.Int
-	BridgeHeight *big.Int
+	Instruction []byte
+	Heights     [2]*big.Int
 
 	InstPaths       [2][][32]byte
 	InstPathIsLefts [2][]bool
@@ -154,6 +152,7 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 	// Block heights
 	beaconHeight := big.NewInt(0).SetBytes(decode(r.Result.BeaconHeight))
 	bridgeHeight := big.NewInt(0).SetBytes(decode(r.Result.BridgeHeight))
+	heights := [2]*big.Int{beaconHeight, bridgeHeight}
 	fmt.Printf("beaconHeight: %d\n", beaconHeight)
 	fmt.Printf("bridgeHeight: %d\n", bridgeHeight)
 
@@ -214,6 +213,7 @@ func decodeProof(r *getProofResult) (*decodedProof, error) {
 
 	return &decodedProof{
 		Instruction:     inst,
+		Heights:         heights,
 		InstPaths:       instPaths,
 		InstPathIsLefts: instPathIsLefts,
 		InstRoots:       instRoots,

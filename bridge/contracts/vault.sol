@@ -1,9 +1,9 @@
 pragma solidity >=0.5.0 <0.6.0;
 pragma experimental ABIEncoderV2;
 
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "./IERC20.sol";
 
-contract IncognitoProxy {
+contract Incognito {
   function instructionApproved(
     bool,
     bytes32,
@@ -23,7 +23,7 @@ contract Vault {
   address constant ETH_TOKEN = 0x0000000000000000000000000000000000000000;
   address public owner;
   mapping(bytes32 => bool) public withdrawed;
-  IncognitoProxy public incognito;
+  Incognito public incognito;
 
   event Deposit(address token, string incognitoAddress, uint amount);
   event Withdraw(address token, address to, uint amount);
@@ -31,7 +31,7 @@ contract Vault {
   constructor(address incognitoProxyAddress) public payable {
     /* Set the owner to the creator of this contract */
     owner = msg.sender;
-    incognito = IncognitoProxy(incognitoProxyAddress);
+    incognito = Incognito(incognitoProxyAddress);
   }
 
   function deposit(string memory incognitoAddress) public payable {

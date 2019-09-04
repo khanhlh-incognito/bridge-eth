@@ -12,7 +12,7 @@ burn: build
 erc20: build
 	go test -run=TestSimulatedErc20
 
-build: bridge/incognito_proxy.go
+build: bridge/incognito_proxy.go bridge/vault.go
 
 .PHONY: all beacon bridge burn erc20 build
 
@@ -30,3 +30,6 @@ ecdsa_sig/Ecdsa.go: ecdsa_sig/contracts/Ecdsa.sol
 
 bridge/incognito_proxy.go: bridge/contracts/incognito_proxy.sol
 	./gengo.sh bridge/contracts/incognito_proxy.sol bridge
+
+bridge/vault.go: bridge/contracts/vault.sol
+	./gengo.sh bridge/contracts/vault.sol bridge
