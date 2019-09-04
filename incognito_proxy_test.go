@@ -429,6 +429,7 @@ func TestInstructionApproved(t *testing.T) {
 			}(),
 			out: false,
 		},
+		// TODO: pad dummy singers, sigV only 1
 	}
 
 	for _, tc := range testCases {

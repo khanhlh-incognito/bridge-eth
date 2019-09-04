@@ -101,7 +101,7 @@ func TestBurn(t *testing.T) {
 
 	// Burn
 	auth := bind.NewKeyedTransactor(privKey)
-	tx, err := withdraw(c, auth, proof)
+	tx, err := Withdraw(c, auth, proof)
 	if err != nil {
 		t.Fatal(err)
 	}

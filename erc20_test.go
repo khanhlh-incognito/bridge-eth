@@ -28,7 +28,7 @@ func TestERC20Burn(t *testing.T) {
 
 	// Burn
 	auth := bind.NewKeyedTransactor(privKey)
-	tx, err := withdraw(c.v, auth, proof)
+	tx, err := Withdraw(c.v, auth, proof)
 	if err != nil {
 		t.Fatal(err)
 	}

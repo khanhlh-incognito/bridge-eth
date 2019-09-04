@@ -8,7 +8,7 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge"
 )
 
-func withdraw(v *bridge.Vault, auth *bind.TransactOpts, proof *decodedProof) (*types.Transaction, error) {
+func Withdraw(v *bridge.Vault, auth *bind.TransactOpts, proof *decodedProof) (*types.Transaction, error) {
 	auth.GasPrice = big.NewInt(20000000000)
 	tx, err := v.Withdraw(
 		auth,

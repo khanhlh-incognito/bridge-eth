@@ -100,7 +100,7 @@ contract Vault {
     require(incognito.instructionApproved(
       false,
       bridgeInstHash,
-      heights[0],
+      heights[1],
       instPaths[1],
       instPathIsLefts[1],
       instRoots[1],

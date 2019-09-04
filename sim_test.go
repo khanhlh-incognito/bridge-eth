@@ -36,7 +36,7 @@ func init() {
 }
 
 func TestSimulatedSwapBridge(t *testing.T) {
-	body := getBridgeSwapProof(27)
+	body := getBridgeSwapProof(114)
 	if len(body) < 1 {
 		t.Fatal(fmt.Errorf("empty bridge swap proof"))
 	}
@@ -52,6 +52,8 @@ func TestSimulatedSwapBridge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
+	// a, _ := json.Marshal(proof)
+	// fmt.Println(string(a))
 
 	p, err := setupWithHardcodedCommittee()
 	// p, err := setupWithLocalCommittee()
@@ -106,13 +108,15 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 }
 
 func TestSimulatedBurn(t *testing.T) {
-	proof, err := getAndDecodeBurnProof("0a76a7a1d32986f3bedd459c49035657640369300ac33f9060f368532e1ea610")
+	proof, err := getAndDecodeBurnProof("7f5acd502044466fd1a1ec5ac530db8b44263ead04c7330fe4f9947752ad109a")
 	if err != nil {
 		t.Fatal(err)
 	}
+	// a, _ := json.Marshal(proof)
+	// fmt.Println(string(a))
 
-	// p, err := setupWithHardcodedCommittee()
-	p, err := setupWithLocalCommittee()
+	p, err := setupWithHardcodedCommittee()
+	// p, err := setupWithLocalCommittee()
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
@@ -127,7 +131,7 @@ func TestSimulatedBurn(t *testing.T) {
 	fmt.Printf("withdrawer init balance: %d\n", p.getBalance(withdrawer))
 
 	auth.GasLimit = 8000000
-	tx, err := withdraw(p.v, auth, proof)
+	tx, err := Withdraw(p.v, auth, proof)
 	if err != nil {
 		fmt.Println("err:", err)
 	}

@@ -32,7 +32,7 @@ func TestSimulatedErc20(t *testing.T) {
 	withdrawer := common.HexToAddress("0x0FFBd68F130809BcA7b32D9536c8339E9A844620")
 	fmt.Printf("withdrawer init balance: %d\n", getBalanceErc20(token, withdrawer))
 
-	tx, err := withdraw(v, auth, proof)
+	tx, err := Withdraw(v, auth, proof)
 	if err != nil {
 		t.Fatal(err)
 	}
