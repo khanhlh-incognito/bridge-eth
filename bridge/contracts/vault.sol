@@ -1,7 +1,7 @@
 pragma solidity >=0.5.0 <0.6.0;
 pragma experimental ABIEncoderV2;
 
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
 contract IncognitoProxy {
   function instructionApproved(
@@ -16,7 +16,7 @@ contract IncognitoProxy {
     uint8[] memory,
     bytes32[] memory,
     bytes32[] memory
-  ) public returns (bool) {}
+  ) public view returns (bool);
 }
 
 contract Vault {
@@ -36,16 +36,15 @@ contract Vault {
 
   function deposit(string memory incognitoAddress) public payable {
     // require((msg.value + address(this).balance) <= 10 ** 27, "Balance of this contract has been reaching to its uint's maximum.");
-    assert(msg.value + address(this).balance <= 10 ** 27);
+    require(msg.value + address(this).balance <= 10 ** 27);
     emit Deposit(ETH_TOKEN, incognitoAddress, msg.value);
   }
 
   function depositERC20(address token, uint amount, string memory incognitoAddress) public payable {
-    ERC20 erc20Interface = ERC20(token);
+    IERC20 erc20Interface = IERC20(token);
     uint tokenBalance = erc20Interface.balanceOf(address(this));
-    assert(amount + tokenBalance <= 10 ** 18);
-    bool success = erc20Interface.transferFrom(msg.sender, address(this), amount);
-    assert(success);
+    require(amount + tokenBalance <= 10 ** 18);
+    require(erc20Interface.transferFrom(msg.sender, address(this), amount));
     emit Deposit(token, incognitoAddress, amount);
   }
 
@@ -77,13 +76,12 @@ contract Vault {
   ) internal {
     // Each instruction can only by redeemed once
     bytes32 instHash = keccak256(inst);
-    // bytes32 beaconInstHash = keccak256(concat(inst, Memory.toBytes(heights[0], 32)));
-    bytes32 beaconInstHash = keccak256(abi.encodePacked(inst, bytes32(heights[0])));
-    bytes32 bridgeInstHash = keccak256(abi.encodePacked(inst, bytes32(heights[1])));
-    assert(withdrawed[instHash] == false);
+    bytes32 beaconInstHash = keccak256(abi.encodePacked(inst, heights[0]));
+    bytes32 bridgeInstHash = keccak256(abi.encodePacked(inst, heights[1]));
+    require(withdrawed[instHash] == false);
 
     // Verify instruction on beacon
-    assert(incognito.instructionApproved(
+    require(incognito.instructionApproved(
       true,
       beaconInstHash,
       heights[0],
@@ -98,7 +96,7 @@ contract Vault {
     ));
 
     // Verify instruction on bridge
-    assert(incognito.instructionApproved(
+    require(incognito.instructionApproved(
       false,
       bridgeInstHash,
       heights[0],
@@ -128,14 +126,14 @@ contract Vault {
   ) public payable {
     (uint meta, address token, address payable to, uint burned) = parseBurnInst(inst);
     // Check instruction type
-    assert(meta == 3617329); // Burn metadata and shardID of bridge
+    require(meta == 3617329); // Burn metadata and shardID of bridge
 
-    ERC20 erc20Interface = ERC20(token);
+    IERC20 erc20Interface = IERC20(token);
     // Check if balance is enough
     if (token == ETH_TOKEN) {
-      assert(address(this).balance >= burned);
+      require(address(this).balance >= burned);
     } else {
-      assert(erc20Interface.balanceOf(address(this)) >= burned);
+      require(erc20Interface.balanceOf(address(this)) >= burned);
     }
 
     verifyInst(
@@ -155,8 +153,7 @@ contract Vault {
     if (token == ETH_TOKEN) {
       to.transfer(burned);
     } else {
-      bool success = erc20Interface.transfer(to, burned);
-      assert(success);
+      require(erc20Interface.transfer(to, burned));
     }
     emit Withdraw(token, to, burned);
   }
