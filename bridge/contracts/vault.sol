@@ -2,7 +2,6 @@ pragma solidity >=0.5.0 <0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import {Memory} from "../libs/memory.sol";
 
 contract IncognitoProxy {
   function instructionApproved(
@@ -64,17 +63,6 @@ contract Vault {
     return (meta, token, to, amount);
   }
 
-  function concat(bytes memory self, bytes memory other) internal pure returns (bytes memory) {
-    bytes memory ret = new bytes(self.length + other.length);
-    (uint src, uint srcLen) = Memory.fromBytes(self);
-    (uint src2, uint src2Len) = Memory.fromBytes(other);
-    (uint dest,) = Memory.fromBytes(ret);
-    uint dest2 = dest + src2Len;
-    Memory.copy(src, dest, srcLen);
-    Memory.copy(src2, dest2, src2Len);
-    return ret;
-  }
-
   function verifyInst(
     bytes memory inst,
     uint[2] memory heights,
@@ -89,8 +77,9 @@ contract Vault {
   ) internal {
     // Each instruction can only by redeemed once
     bytes32 instHash = keccak256(inst);
-    bytes32 beaconInstHash = keccak256(concat(inst, Memory.toBytes(heights[0], 32)));
-    bytes32 bridgeInstHash = keccak256(concat(inst, Memory.toBytes(heights[1], 32)));
+    // bytes32 beaconInstHash = keccak256(concat(inst, Memory.toBytes(heights[0], 32)));
+    bytes32 beaconInstHash = keccak256(abi.encodePacked(inst, bytes32(heights[0])));
+    bytes32 bridgeInstHash = keccak256(abi.encodePacked(inst, bytes32(heights[1])));
     assert(withdrawed[instHash] == false);
 
     // Verify instruction on beacon
