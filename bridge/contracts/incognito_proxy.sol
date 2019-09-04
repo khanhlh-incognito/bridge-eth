@@ -245,20 +245,6 @@ contract IncognitoProxy {
         return (meta, shard, height, numVals);
     }
 
-    function parseBurnInstruction(bytes memory inst) public pure returns (uint, address, address, uint) {
-        uint meta = uint8(inst[2]) + uint8(inst[1]) * 2 ** 8 + uint8(inst[0]) * 2 ** 16;
-        address token;
-        address to;
-        uint amount;
-        assembly {
-            // skip first 0x20 bytes (stored length of inst)
-            token := mload(add(inst, 0x23)) // [3:35]
-            to := mload(add(inst, 0x43)) // [35:67]
-            amount := mload(add(inst, 0x63)) // [67:99]
-        }
-        return (meta, token, to, amount);
-    }
-
     function extractCommitteeFromInstruction(bytes memory inst, uint numVals) public pure returns (address[] memory) {
         require(inst.length == 0x42 + numVals * 0x20);
         address[] memory addr = new address[](numVals);

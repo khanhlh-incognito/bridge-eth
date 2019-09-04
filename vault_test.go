@@ -13,18 +13,17 @@ import (
 )
 
 func TestFixedParseBurnInst(t *testing.T) {
-	metaType := []byte{7, 2, 1}
 	token := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3}
 	to := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 6}
 	amount := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 8, 9}
 	in := &burnInst{
-		metaType: big.NewInt(0).SetBytes(metaType),
-		token:    common.BytesToAddress(token),
-		to:       common.BytesToAddress(to),
-		amount:   big.NewInt(0).SetBytes(amount),
+		meta:   72,
+		shard:  1,
+		token:  common.BytesToAddress(token),
+		to:     common.BytesToAddress(to),
+		amount: big.NewInt(0).SetBytes(amount),
 	}
-	data := []byte{}
-	data = append(data, metaType...)
+	data := []byte{in.meta, in.shard}
 	data = append(data, token[:]...)
 	data = append(data, to[:]...)
 	data = append(data, amount[:]...)
@@ -33,12 +32,13 @@ func TestFixedParseBurnInst(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	resMeta, resToken, resTo, resAmount, err := p.v.ParseBurnInst(nil, data)
+	resMeta, resShard, resToken, resTo, resAmount, err := p.v.ParseBurnInst(nil, data)
 	out := &burnInst{
-		metaType: resMeta,
-		token:    resToken,
-		to:       resTo,
-		amount:   resAmount,
+		meta:   resMeta,
+		shard:  resShard,
+		token:  resToken,
+		to:     resTo,
+		amount: resAmount,
 	}
 	if err != nil {
 		t.Error(err)
@@ -47,8 +47,11 @@ func TestFixedParseBurnInst(t *testing.T) {
 }
 
 func checkBurnInst(t *testing.T, in, out *burnInst) {
-	if in.metaType.Cmp(out.metaType) != 0 {
-		t.Error(errors.Errorf("incorrect metaType: expect %x, got %x", out.metaType, in.metaType))
+	if in.meta != out.meta {
+		t.Error(errors.Errorf("incorrect meta: expect %x, got %x", out.meta, in.meta))
+	}
+	if in.shard != out.shard {
+		t.Error(errors.Errorf("incorrect shard: expect %x, got %x", out.shard, in.shard))
 	}
 	if !bytes.Equal(in.token[:], out.token[:]) {
 		t.Error(errors.Errorf("incorrect token: expect %x, got %x", out.token, in.token))
@@ -62,10 +65,11 @@ func checkBurnInst(t *testing.T, in, out *burnInst) {
 }
 
 type burnInst struct {
-	metaType *big.Int
-	token    common.Address
-	to       common.Address
-	amount   *big.Int
+	meta   uint8
+	shard  uint8
+	token  common.Address
+	to     common.Address
+	amount *big.Int
 }
 
 func TestFixedVaultBurn(t *testing.T) {

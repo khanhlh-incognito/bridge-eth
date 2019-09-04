@@ -48,18 +48,19 @@ contract Vault {
     emit Deposit(token, incognitoAddress, amount);
   }
 
-  function parseBurnInst(bytes memory inst) public pure returns (uint, address, address payable, uint) {
-    uint meta = uint8(inst[2]) + uint8(inst[1]) * 2 ** 8 + uint8(inst[0]) * 2 ** 16;
+  function parseBurnInst(bytes memory inst) public pure returns (uint8, uint8, address, address payable, uint) {
+    uint8 meta = uint8(inst[0]);
+    uint8 shard = uint8(inst[1]);
     address token;
     address payable to;
     uint amount;
     assembly {
       // skip first 0x20 bytes (stored length of inst)
-      token := mload(add(inst, 0x23)) // [3:35]
-      to := mload(add(inst, 0x43)) // [35:67]
-      amount := mload(add(inst, 0x63)) // [67:99]
+      token := mload(add(inst, 0x22)) // [2:34]
+      to := mload(add(inst, 0x42)) // [34:66]
+      amount := mload(add(inst, 0x62)) // [66:98]
     }
-    return (meta, token, to, amount);
+    return (meta, shard, token, to, amount);
   }
 
   function verifyInst(
@@ -124,16 +125,14 @@ contract Vault {
     bytes32[][2] memory sigRs,
     bytes32[][2] memory sigSs
   ) public payable {
-    (uint meta, address token, address payable to, uint burned) = parseBurnInst(inst);
-    // Check instruction type
-    require(meta == 3617329); // Burn metadata and shardID of bridge
+    (uint8 meta, uint8 shard, address token, address payable to, uint burned) = parseBurnInst(inst);
+    require(meta == 72 && shard == 1); // Check instruction type
 
-    IERC20 erc20Interface = IERC20(token);
     // Check if balance is enough
     if (token == ETH_TOKEN) {
       require(address(this).balance >= burned);
     } else {
-      require(erc20Interface.balanceOf(address(this)) >= burned);
+      require(IERC20(token).balanceOf(address(this)) >= burned);
     }
 
     verifyInst(
@@ -153,7 +152,7 @@ contract Vault {
     if (token == ETH_TOKEN) {
       to.transfer(burned);
     } else {
-      require(erc20Interface.transfer(to, burned));
+      require(IERC20(token).transfer(to, burned));
     }
     emit Withdraw(token, to, burned);
   }
