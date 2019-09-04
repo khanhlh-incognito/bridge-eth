@@ -16,17 +16,8 @@ build: bridge/incognito_proxy.go bridge/vault.go
 
 .PHONY: all beacon bridge burn erc20 build
 
-incognito_proxy/incognito_proxy.go: incognito_proxy/incognito_proxy.vy
-	./gengo.sh incognito_proxy/incognito_proxy.vy incognito_proxy
-
-vault/vault.go: vault/vault.vy
-	./gengo.sh vault/vault.vy vault
-
 erc20/ERC20.go: erc20/ERC20.vy
 	./gengo.sh erc20/ERC20.vy erc20
-
-ecdsa_sig/Ecdsa.go: ecdsa_sig/contracts/Ecdsa.sol
-	./gengo.sh ecdsa_sig/contracts/Ecdsa.sol ecdsa_sig
 
 bridge/incognito_proxy.go: bridge/contracts/incognito_proxy.sol
 	./gengo.sh bridge/contracts/incognito_proxy.sol bridge
