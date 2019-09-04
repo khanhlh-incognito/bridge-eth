@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/incognitochain/bridge-eth/bridge"
-	"github.com/incognitochain/bridge-eth/ecdsa_sig"
 	"github.com/incognitochain/bridge-eth/erc20"
 )
 
@@ -185,13 +184,6 @@ func instantiate(client *ethclient.Client) (*contracts, error) {
 	// ERC20 token
 	c.tokenAddr = common.HexToAddress(TokenAddress)
 	c.token, err = erc20.NewErc20(c.tokenAddr, client)
-	if err != nil {
-		return nil, err
-	}
-
-	// MulSigP256
-	c.sigAddr = common.HexToAddress(ECDSA)
-	c.sig, err = ecdsa_sig.NewECDSA(c.sigAddr, client)
 	if err != nil {
 		return nil, err
 	}

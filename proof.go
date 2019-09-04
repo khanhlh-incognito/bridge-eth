@@ -14,7 +14,6 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge"
 	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/consensus/signatureschemes/bridgesig"
-	"github.com/incognitochain/bridge-eth/ecdsa_sig"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/incognitochain/bridge-eth/jsonresult"
 	"github.com/pkg/errors"
@@ -27,8 +26,6 @@ type contracts struct {
 	incAddr   common.Address
 	token     *erc20.Erc20
 	tokenAddr common.Address
-	sig       *ecdsa_sig.ECDSA
-	sigAddr   common.Address
 }
 
 type getProofResult struct {

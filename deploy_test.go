@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/incognitochain/bridge-eth/bridge"
-	"github.com/incognitochain/bridge-eth/vault"
 	"github.com/pkg/errors"
 )
 
@@ -118,7 +117,7 @@ func TestDeposit(t *testing.T) {
 
 	// Get contract instance
 	vaultAddr := common.HexToAddress(VaultAddress)
-	c, err := vault.NewVault(vaultAddr, client)
+	c, err := bridge.NewVault(vaultAddr, client)
 	if err != nil {
 		t.Fatal(err)
 	}
