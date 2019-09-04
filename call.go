@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -11,7 +10,6 @@ import (
 
 func withdraw(v *bridge.Vault, auth *bind.TransactOpts, proof *decodedProof) (*types.Transaction, error) {
 	auth.GasPrice = big.NewInt(20000000000)
-	fmt.Printf("%+v\n", proof)
 	tx, err := v.Withdraw(
 		auth,
 		proof.Instruction,

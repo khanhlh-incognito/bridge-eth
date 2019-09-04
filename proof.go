@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/incognitochain/bridge-eth/bridge"
+	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/consensus/signatureschemes/bridgesig"
 	"github.com/incognitochain/bridge-eth/ecdsa_sig"
 	"github.com/incognitochain/bridge-eth/erc20"
@@ -81,8 +82,8 @@ func getCommittee(url string) ([]common.Address, []common.Address, error) {
 	body, _ := ioutil.ReadAll(res.Body)
 
 	type beaconBestStateResult struct {
-		BeaconCommittee []CommitteePublicKey
-		ShardCommittee  map[string][]CommitteePublicKey
+		BeaconCommittee []string
+		ShardCommittee  map[string][]string
 	}
 
 	type getBeaconBestStateResult struct {
@@ -100,7 +101,9 @@ func getCommittee(url string) ([]common.Address, []common.Address, error) {
 	// Genesis committee
 	beaconOld := make([]common.Address, len(r.Result.BeaconCommittee))
 	for i, pk := range r.Result.BeaconCommittee {
-		addr, err := convertPubkeyToAddress(pk)
+		cpk := &CommitteePublicKey{}
+		cpk.FromString(pk)
+		addr, err := convertPubkeyToAddress(*cpk)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -110,7 +113,9 @@ func getCommittee(url string) ([]common.Address, []common.Address, error) {
 
 	bridgeOld := make([]common.Address, len(r.Result.ShardCommittee["1"]))
 	for i, pk := range r.Result.ShardCommittee["1"] {
-		addr, err := convertPubkeyToAddress(pk)
+		cpk := &CommitteePublicKey{}
+		cpk.FromString(pk)
+		addr, err := convertPubkeyToAddress(*cpk)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -308,4 +313,12 @@ var BRI_CONSENSUS = "dsa"
 type CommitteePublicKey struct {
 	IncPubKey    []byte
 	MiningPubKey map[string][]byte
+}
+
+func (pubKey *CommitteePublicKey) FromString(keyString string) error {
+	keyBytes, ver, err := base58.Base58Check{}.Decode(keyString)
+	if (ver != 0) || (err != nil) {
+		return errors.New("Wrong input")
+	}
+	return json.Unmarshal(keyBytes, pubKey)
 }
