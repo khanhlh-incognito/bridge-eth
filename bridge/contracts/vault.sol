@@ -22,8 +22,8 @@ contract IncognitoProxy {
 contract Vault {
   address constant ETH_TOKEN = 0x0000000000000000000000000000000000000000;
   address public owner;
-  mapping(bytes32 => bool) withdrawed;
-  IncognitoProxy incognito;
+  mapping(bytes32 => bool) public withdrawed;
+  IncognitoProxy public incognito;
 
   event Deposit(address token, string incognitoAddress, uint amount);
   event Withdraw(address token, address to, uint amount);

@@ -1,6 +1,6 @@
 const Vault = artifacts.require("Vault");
+const Proxy = artifacts.require("IncognitoProxy");
 
 module.exports = function (deployer) {
-  const incognitoProxyAddress = "0xcb859a5fC20EEeCc4Cec191d8CCe5e31a2CC1dAF";
-  deployer.deploy(Vault, incognitoProxyAddress);
+  deployer.deploy(Vault, Proxy.address);
 };
