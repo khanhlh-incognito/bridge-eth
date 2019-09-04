@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "dependencies": {},
+  "dependencies": {
+    "openzeppelin-solidity": "2.3.0"
+  },
   "devDependencies": {},
   "scripts": {
     "test": "mocha"
