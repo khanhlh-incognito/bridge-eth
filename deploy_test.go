@@ -125,7 +125,7 @@ func TestDeposit(t *testing.T) {
 	// Deposit
 	auth := bind.NewKeyedTransactor(privKey)
 	auth.GasPrice = big.NewInt(20000000000)
-	auth.Value = big.NewInt(0.1 * params.Ether)
+	auth.Value = big.NewInt(0.01 * params.Ether)
 	tx, err := c.Deposit(auth, IncPaymentAddr)
 	if err != nil {
 		t.Fatal(err)
@@ -201,15 +201,16 @@ func TestDeployProxyAndVault(t *testing.T) {
 	}
 	// incAddr := common.HexToAddress(IncognitoProxyAddress)
 	fmt.Println("deployed incognito_proxy")
-	fmt.Printf("addr: %x\n", incAddr[:])
+	fmt.Printf("addr: %s\n", incAddr.Hex())
 
 	// Deploy vault
+	// incAddr := common.HexToAddress("ca71f588362a320b2e004cf8b728001c5c91da45")
 	vaultAddr, _, _, err := bridge.DeployVault(auth, client, incAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println("deployed vault")
-	fmt.Printf("addr: %x\n", vaultAddr[:])
+	fmt.Printf("addr: %s\n", vaultAddr.Hex())
 }
 
 func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
