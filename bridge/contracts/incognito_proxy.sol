@@ -149,6 +149,9 @@ contract IncognitoProxy {
         }
 
         // Extract signers that signed this block (require sigIdx to be strictly increasing)
+        require(sigV.length == sigIdx.length);
+        require(sigV.length == sigR.length);
+        require(sigV.length == sigS.length);
         for (uint i = 0; i < sigIdx.length; i++) {
             if ((i > 0 && sigIdx[i] <= sigIdx[i-1]) || sigIdx[i] >= signers.length) {
                 return false;

@@ -176,50 +176,41 @@ func TestDeposit(t *testing.T) {
 // 	}
 // }
 
-// func TestDeployProxyAndVault(t *testing.T) {
-// 	privKey, client, err := connect()
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer client.Close()
+func TestDeployProxyAndVault(t *testing.T) {
+	privKey, client, err := connect()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
 
-// 	// Genesis committee
-// 	// url := "http://test-node.incognito.org:9334"
-// 	// url := "http://0.0.0.0:9334"
-// 	// numBeaconVals, beaconComm, numBridgeVals, bridgeComm, err := getCommittee(url)
-// 	// if err != nil {
-// 	// 	t.Fatal(err)
-// 	// }
-// 	numBeaconVals, beaconComm, numBridgeVals, bridgeComm := getCommitteeHardcoded()
+	// Genesis committee
+	// url := "http://test-node.incognito.org:9334"
+	// url := "http://0.0.0.0:9334"
+	// numBeaconVals, beaconComm, numBridgeVals, bridgeComm, err := getCommittee(url)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	beaconComm, bridgeComm := getCommitteeHardcoded()
 
-// 	// Deploy MulSigP256
-// 	// msAddr, _, _, err := checkMulSig.DeployMulSigP256(auth, client)
-// 	// if err != nil {
-// 	// 	t.Fatal(err)
-// 	// }
-// 	// fmt.Println("deployed MulSigP256")
-// 	msAddr := common.HexToAddress(MulSigP256)
-// 	fmt.Printf("addr: %x\n", msAddr[:])
+	// Deploy incognito_proxy
+	auth := bind.NewKeyedTransactor(privKey)
+	auth.GasPrice = big.NewInt(20000000000)
+	incAddr, _, _, err := bridge.DeployIncognitoProxy(auth, client, beaconComm, bridgeComm)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// incAddr := common.HexToAddress(IncognitoProxyAddress)
+	fmt.Println("deployed incognito_proxy")
+	fmt.Printf("addr: %x\n", incAddr[:])
 
-// 	// // Deploy incognito_proxy
-// 	auth := bind.NewKeyedTransactor(privKey)
-// 	auth.GasPrice = big.NewInt(20000000000)
-// 	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, numBeaconVals, beaconComm, numBridgeVals, bridgeComm, msAddr)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	// incAddr := common.HexToAddress(IncognitoProxyAddress)
-// 	fmt.Println("deployed incognito_proxy")
-// 	fmt.Printf("addr: %x\n", incAddr[:])
-
-// 	// Deploy vault
-// 	vaultAddr, _, _, err := vault.DeployVault(auth, client, incAddr)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	fmt.Println("deployed vault")
-// 	fmt.Printf("addr: %x\n", vaultAddr[:])
-// }
+	// Deploy vault
+	vaultAddr, _, _, err := bridge.DeployVault(auth, client, incAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("deployed vault")
+	fmt.Printf("addr: %x\n", vaultAddr[:])
+}
 
 func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
 	privKeyHex := os.Getenv("PRIVKEY")

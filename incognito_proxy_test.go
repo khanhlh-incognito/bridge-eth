@@ -415,7 +415,7 @@ func TestInstructionApproved(t *testing.T) {
 				p.sigIdx = p.sigIdx[:2]
 				return p
 			}(),
-			out: false,
+			err: true,
 		},
 		{
 			desc: "Duplicated sigIdx",
@@ -429,7 +429,17 @@ func TestInstructionApproved(t *testing.T) {
 			}(),
 			out: false,
 		},
-		// TODO: pad dummy singers, sigV only 1
+		{
+			desc: "Padded sigIdx",
+			in: func() *instProof {
+				p := buildInstructionApprovedTestcase(true, c)
+				p.sigV = p.sigV[:1]
+				p.sigR = p.sigR[:1]
+				p.sigS = p.sigS[:1]
+				return p
+			}(),
+			err: true,
+		},
 	}
 
 	for _, tc := range testCases {
