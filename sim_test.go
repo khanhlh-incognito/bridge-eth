@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/incognitochain/bridge-eth/bridge"
+	"github.com/incognitochain/bridge-eth/erc20"
 )
 
 var auth *bind.TransactOpts
@@ -107,8 +108,8 @@ func TestSimulatedSwapBeacon(t *testing.T) {
 	printReceipt(p.sim, tx)
 }
 
-func TestSimulatedBurn(t *testing.T) {
-	proof, err := getAndDecodeBurnProof("7f5acd502044466fd1a1ec5ac530db8b44263ead04c7330fe4f9947752ad109a")
+func TestSimulatedBurnETH(t *testing.T) {
+	proof, err := getAndDecodeBurnProof("3056832abff4fae1ed18163ded4d24cd94c1a6f1dc2ee0819170c85d508b7266")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,6 +142,69 @@ func TestSimulatedBurn(t *testing.T) {
 	fmt.Printf("withdrawer new balance: %d\n", p.getBalance(withdrawer))
 }
 
+func TestSimulatedBurnERC20(t *testing.T) {
+	proof, err := getAndDecodeBurnProof("5da2ee413a5d78f25f016fd41994875054afd64d776b95f76515489c9e0f5a13")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// a, _ := json.Marshal(proof)
+	// fmt.Println(string(a))
+
+	p, err := setupWithHardcodedCommittee()
+	// p, err := setupWithLocalCommittee()
+	if err != nil {
+		t.Fatalf("%+v", err)
+	}
+
+	oldBalance, newBalance, err := lockSimERC20(p, int64(1e9))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("deposit erc20 to vault: %d -> %d\n", oldBalance, newBalance)
+
+	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+	fmt.Printf("withdrawer init balance: %d\n", getBalanceERC20(p.token, withdrawer))
+
+	auth.GasLimit = 8000000
+	tx, err := Withdraw(p.v, auth, proof)
+	if err != nil {
+		fmt.Println("err:", err)
+	}
+	p.sim.Commit()
+	printReceipt(p.sim, tx)
+
+	fmt.Printf("withdrawer new balance: %d\n", getBalanceERC20(p.token, withdrawer))
+}
+
+func lockSimERC20(
+	p *Platform,
+	amount int64,
+) (*big.Int, *big.Int, error) {
+	initBalance := getBalanceERC20(p.token, p.vAddr)
+	fmt.Printf("bal: %d\n", getBalanceERC20(p.token, genesisAcc.Address))
+	err := approveERC20(genesisAcc.PrivateKey, p.vAddr, p.token, amount)
+	if err != nil {
+		return nil, nil, err
+	}
+	p.sim.Commit()
+
+	err = depositERC20(genesisAcc.PrivateKey, p.v, p.tokenAddr, amount)
+	if err != nil {
+		return nil, nil, err
+	}
+	p.sim.Commit()
+	newBalance := getBalanceERC20(p.token, p.vAddr)
+	return initBalance, newBalance, nil
+}
+
+func getBalanceERC20(token *erc20.Erc20, addr common.Address) *big.Int {
+	bal, err := token.BalanceOf(nil, addr)
+	if err != nil {
+		return big.NewInt(-1)
+	}
+	return bal
+}
+
 func (p *Platform) getBalance(addr common.Address) *big.Int {
 	bal, _ := p.sim.BalanceAt(context.Background(), addr, nil)
 	return bal
@@ -156,17 +220,17 @@ func setup(
 	sim := backends.NewSimulatedBackend(alloc, 8000000)
 	p := &Platform{sim: sim, contracts: &contracts{}}
 
-	// MulSigP256
 	var err error
 	var tx *types.Transaction
 	_ = tx
-	// p.sigAddr, tx, p.sig, err = ecdsa_sig.DeployECDSA(auth, sim)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to deploy mulsig contract: %v", err)
-	// }
-	// sim.Commit()
-	// fmt.Printf("deployed sig, addr: %x\n", p.sigAddr)
-	// printReceipt(sim, tx)
+
+	// ERC20: always deploy first so its address is fixed
+	p.tokenAddr, tx, p.token, err = erc20.DeployErc20(auth, sim, "MyErc20", "ERC", big.NewInt(0), big.NewInt(int64(1e18)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to deploy ERC20 contract: %v", err)
+	}
+	fmt.Printf("token addr: %s\n", p.tokenAddr.Hex())
+	sim.Commit()
 
 	// IncognitoProxy
 	p.incAddr, tx, p.inc, err = bridge.DeployIncognitoProxy(auth, sim, beaconComm, bridgeComm)
