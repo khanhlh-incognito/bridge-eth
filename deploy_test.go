@@ -18,6 +18,34 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestSwapBeacon(t *testing.T) {
+	// Get proof
+	proof := getFixedSwapBeaconProof()
+
+	// Connect to ETH
+	privKey, client, err := connect()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	// Get contract instance
+	incAddr := common.HexToAddress(IncognitoProxyAddress)
+	c, err := bridge.NewIncognitoProxy(incAddr, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Swap
+	auth := bind.NewKeyedTransactor(privKey)
+	tx, err := SwapBeacon(c, auth, proof)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txHash := tx.Hash()
+	fmt.Printf("swapped, txHash: %x\n", txHash[:])
+}
+
 func TestMassSend(t *testing.T) {
 	addrs := []string{
 		"0xDF1A9BE4dA9Ed6CDC28bea3c23E81B8a3e4480Ae",
