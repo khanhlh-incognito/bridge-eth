@@ -76,10 +76,8 @@ func transfer(
 }
 
 func TestBurn(t *testing.T) {
-	txID := ""
-
 	// Get proof
-	proof, err := getAndDecodeBurnProof(txID)
+	proof, err := getAndDecodeBurnProof("862480b4b444215e74bce6b68c01ec93de625496cb5a71155a6e80ebc9485d9a")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -40,7 +40,7 @@ func TestERC20Lock(t *testing.T) {
 	privKey, c := connectAndInstantiate(t)
 
 	// Approve
-	amount := int64(1e9)
+	amount := int64(1000)
 	err := approveERC20(privKey, c.vAddr, c.token, amount)
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +56,7 @@ func TestERC20Deposit(t *testing.T) {
 	privKey, c := connectAndInstantiate(t)
 
 	// Deposit
-	amount := int64(1e9)
+	amount := int64(1000)
 	if err := depositERC20(privKey, c.v, c.tokenAddr, amount); err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestERC20Approve(t *testing.T) {
 	privKey, c := connectAndInstantiate(t)
 
 	// Approve
-	amount := int64(1e9)
+	amount := int64(1000)
 	err := approveERC20(privKey, c.vAddr, c.token, amount)
 	if err != nil {
 		t.Fatal(err)
@@ -101,8 +101,8 @@ func TestERC20Deploy(t *testing.T) {
 
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
-	name := "Phuong"
-	symbol := "DE"
+	name := "Chicken"
+	symbol := "CKN"
 	decimals := big.NewInt(8)
 	supply := big.NewInt(1000000)
 	addr, _, _, err := erc20.DeployErc20(auth, client, name, symbol, decimals, supply)
@@ -110,7 +110,7 @@ func TestERC20Deploy(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println("deployed erc20")
-	fmt.Printf("addr: %x\n", addr[:])
+	fmt.Printf("addr: %s\n", addr.Hex())
 }
 
 func connectAndInstantiate(t *testing.T) (*ecdsa.PrivateKey, *contracts) {
