@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -228,6 +229,8 @@ func TestDeployProxyAndVault(t *testing.T) {
 	// incAddr := common.HexToAddress(IncognitoProxyAddress)
 	fmt.Println("deployed incognito_proxy")
 	fmt.Printf("addr: %s\n", incAddr.Hex())
+
+	time.Sleep(10 * time.Second)
 
 	// Deploy vault
 	// incAddr := common.HexToAddress("ca71f588362a320b2e004cf8b728001c5c91da45")
