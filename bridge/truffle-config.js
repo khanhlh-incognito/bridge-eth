@@ -70,7 +70,7 @@ module.exports = {
     // },
 
     kovan: {
-      provider: () => new HDWalletProvider(mnemonic, `https://kovan.infura.io/v3/`),
+      provider: () => new HDWalletProvider(mnemonic, `https://kovan.infura.io/v3/` + infuraKey),
       network_id: 42,       // Ropsten's id
       confirmations: 2,    // # of confs to wait between deployments. (default: 0)
       timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
