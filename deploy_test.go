@@ -218,6 +218,11 @@ func TestDeployProxyAndVault(t *testing.T) {
 	// 	t.Fatal(err)
 	// }
 	beaconComm, bridgeComm := getCommitteeHardcoded()
+	// beaconComm, bridgeComm, err := getCommittee("http://127.0.0.1:9334")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
 
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
