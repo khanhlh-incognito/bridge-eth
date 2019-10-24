@@ -211,14 +211,8 @@ func TestDeployProxyAndVault(t *testing.T) {
 	defer client.Close()
 
 	// Genesis committee
-	// url := "http://test-node.incognito.org:9334"
-	// url := "http://0.0.0.0:9334"
-	// numBeaconVals, beaconComm, numBridgeVals, bridgeComm, err := getCommittee(url)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
 	beaconComm, bridgeComm := getCommitteeHardcoded()
-	// beaconComm, bridgeComm, err := getCommittee("http://127.0.0.1:9334")
+	// beaconComm, bridgeComm, err := getCommittee("http://127.0.0.1:19334")
 	// if err != nil {
 	// 	fmt.Println(err)
 	// 	return
