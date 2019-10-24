@@ -306,7 +306,6 @@ func getCommitteeHardcoded() ([]common.Address, []common.Address) {
 		"0xb57165795D96cE1b1010623e24E9fB56c1ff1Ae9",
 		"0x6E6b5F936421E528048C034CFd80Fb4de94156A2",
 		"0x7030AAA1b347c35c60067221E127750746d61c7E",
-		"0x5Aa3F952E8B80f76697b7654ab427817909b36aa",
 	}
 	bridges := make([]common.Address, len(bridgeComm))
 	for i, p := range bridgeComm {

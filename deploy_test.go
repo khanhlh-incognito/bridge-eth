@@ -212,7 +212,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 
 	// Genesis committee
 	beaconComm, bridgeComm := getCommitteeHardcoded()
-	// beaconComm, bridgeComm, err := getCommittee("http://127.0.0.1:19334")
+	// beaconComm, bridgeComm, err := getCommittee("http://54.39.158.106:19032/")
 	// if err != nil {
 	// 	fmt.Println(err)
 	// 	return
