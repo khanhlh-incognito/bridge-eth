@@ -223,7 +223,8 @@ func setup(
 	sim.Commit()
 
 	// IncognitoProxy
-	p.incAddr, tx, p.inc, err = bridge.DeployIncognitoProxy(auth, sim, beaconComm, bridgeComm)
+	admin := auth.From
+	p.incAddr, tx, p.inc, err = bridge.DeployIncognitoProxy(auth, sim, admin, beaconComm, bridgeComm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy IncognitoProxy contract: %v", err)
 	}

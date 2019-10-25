@@ -12,7 +12,7 @@ burn: build
 erc20: build
 	go test -run=TestSimulatedErc20
 
-build: bridge/incognito_proxy.go bridge/vault.go bridge/pause.go
+build: bridge/incognito_proxy.go bridge/vault.go
 
 .PHONY: all beacon bridge burn erc20 build
 
@@ -24,6 +24,3 @@ bridge/incognito_proxy.go: bridge/contracts/incognito_proxy.sol
 
 bridge/vault.go: bridge/contracts/vault.sol
 	./gengo.sh bridge/contracts/vault.sol bridge
-
-bridge/pause.go: bridge/contracts/pause.sol
-	./gengo.sh bridge/contracts/pause.sol bridge

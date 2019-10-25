@@ -1,7 +1,9 @@
 pragma solidity >=0.5.0 <0.6.0;
 pragma experimental ABIEncoderV2;
 
-contract IncognitoProxy {
+import "./pause.sol";
+
+contract IncognitoProxy is AdminPausable {
     struct Committee {
         address[] pubkeys;
         uint startBlock;
@@ -15,7 +17,11 @@ contract IncognitoProxy {
     event LogBytes32(bytes32 val);
     event LogAddress(address val);
 
-    constructor(address[] memory beaconCommittee, address[] memory bridgeCommittee) public {
+    constructor(
+        address admin,
+        address[] memory beaconCommittee,
+        address[] memory bridgeCommittee
+    ) public AdminPausable(admin) {
         beaconCommittees.push(Committee({
             pubkeys: beaconCommittee,
             startBlock: 0
@@ -37,7 +43,7 @@ contract IncognitoProxy {
         uint8[][2] memory sigVs,
         bytes32[][2] memory sigRs,
         bytes32[][2] memory sigSs
-    ) public {
+    ) public isNotPaused {
         bytes32 instHash = keccak256(inst);
 
         // Verify instruction on beacon
@@ -94,7 +100,7 @@ contract IncognitoProxy {
         uint8[] memory sigV,
         bytes32[] memory sigR,
         bytes32[] memory sigS
-    ) public {
+    ) public isNotPaused {
         bytes32 instHash = keccak256(inst);
 
         // Verify instruction on beacon
