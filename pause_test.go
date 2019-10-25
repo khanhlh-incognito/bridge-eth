@@ -25,15 +25,21 @@ func TestFixedPauseExpired(t *testing.T) {
 }
 
 func TestFixedPauseTwice(t *testing.T) {
-	// testCases := []struct {
-	// 	desc string
-	// 	err  bool
-	// }{
-	// 	{
+	p, _ := setupPauseContract(genesisAcc.Address)
 
-	// 		desc: "Fail to pause twice",
-	// 	},
-	// }
+	// First pause, must success
+	_, err := p.c.Pause(auth)
+	if err != nil {
+		t.Fatal(errors.Errorf("expect error = nil, got %v", err))
+	}
+	p.sim.Commit()
+
+	// Second pause, must fail
+	_, err = p.c.Pause(auth)
+	if err == nil {
+		t.Fatal(errors.Errorf("expect error != nil, got %v", err))
+	}
+	p.sim.Commit()
 }
 
 func TestFixedPauseOnce(t *testing.T) {
