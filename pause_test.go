@@ -6,12 +6,115 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/incognitochain/bridge-eth/bridge"
 	"github.com/pkg/errors"
 )
+
+func TestFixedUnpauseExpired(t *testing.T) {
+	p, _ := setupPauseContract(genesisAcc.Address)
+
+	// Pause first
+	_, err := p.c.Pause(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Advance time till expired
+	err = p.sim.AdjustTime(366 * 24 * time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Unpause, must success
+	_, err = p.c.Unpause(auth)
+	if err != nil {
+		t.Fatal(errors.Errorf("expect error = nil, got %v", err))
+	}
+	p.sim.Commit()
+}
+
+func TestFixedUnpauseTwice(t *testing.T) {
+	p, _ := setupPauseContract(genesisAcc.Address)
+
+	// Pause first
+	_, err := p.c.Pause(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// First unpause, must success
+	_, err = p.c.Unpause(auth)
+	if err != nil {
+		t.Fatal(errors.Errorf("expect error = nil, got %v", err))
+	}
+	p.sim.Commit()
+
+	// Second unpause, must fail
+	_, err = p.c.Unpause(auth)
+	if err == nil {
+		t.Fatal(errors.Errorf("expect error != nil, got %v", err))
+	}
+	p.sim.Commit()
+}
+
+func TestFixedUnpauseBeforePause(t *testing.T) {
+	p, _ := setupPauseContract(genesisAcc.Address)
+
+	// Unpause, must fail
+	_, err := p.c.Unpause(auth)
+	if err == nil {
+		t.Fatal(errors.Errorf("expect error != nil, got %v", err))
+	}
+	p.sim.Commit()
+}
+
+func TestFixedUnpauseOnce(t *testing.T) {
+	acc := newAccount()
+	testCases := []struct {
+		desc  string
+		admin *account
+		err   bool
+	}{
+		{
+			desc:  "Admin unpauses",
+			admin: genesisAcc,
+		},
+		{
+
+			desc:  "Not admin, fail to unpause",
+			admin: acc,
+			err:   true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, _ := setupPauseContract(tc.admin.Address)
+
+			// Pause first
+			_, err := p.c.Pause(bind.NewKeyedTransactor(tc.admin.PrivateKey))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Unpause
+			_, err = p.c.Unpause(auth)
+
+			isErr := err != nil
+			if isErr != tc.err {
+				t.Fatal(errors.Errorf("expect error = %t, got %v", tc.err, err))
+			}
+			if tc.err {
+				return
+			}
+			p.sim.Commit()
+		})
+	}
+}
 
 func TestFixedPauseExpired(t *testing.T) {
 	p, _ := setupPauseContract(genesisAcc.Address)
@@ -88,6 +191,7 @@ func setupPauseContract(admin common.Address) (*PausePlatform, error) {
 	alloc := make(core.GenesisAlloc)
 	balance, _ := big.NewInt(1).SetString("100000000000000000000", 10) // 100 eth
 	alloc[auth.From] = core.GenesisAccount{Balance: balance}
+	alloc[admin] = core.GenesisAccount{Balance: balance}
 	sim := backends.NewSimulatedBackend(alloc, 8000000)
 
 	addr, _, c, err := bridge.DeployAdminPausable(auth, sim, admin)
