@@ -37,39 +37,29 @@ func init() {
 }
 
 func TestSimulatedSwapBridge(t *testing.T) {
-	body := getBridgeSwapProof(114)
-	if len(body) < 1 {
-		t.Fatal(fmt.Errorf("empty bridge swap proof"))
-	}
-
-	r := getProofResult{}
-	if err := json.Unmarshal([]byte(body), &r); err != nil {
-		t.Fatalf("%+v", err)
-	}
-	if len(r.Result.Instruction) == 0 {
-		t.Fatal("invalid swap proof")
-	}
-	proof, err := decodeProof(&r)
-	if err != nil {
-		t.Fatalf("%+v", err)
-	}
-	// a, _ := json.Marshal(proof)
-	// fmt.Println(string(a))
-
 	p, err := setupWithHardcodedCommittee()
 	// p, err := setupWithLocalCommittee()
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
 
-	auth.GasLimit = 7000000
-	fmt.Printf("inst len: %d\n", len(proof.Instruction))
-	tx, err := SwapBridge(p.inc, auth, proof)
-	if err != nil {
-		fmt.Println("err:", err)
+	blocks := []int{10, 20, 30}
+	for _, b := range blocks {
+		url := "http://54.39.158.106:19032"
+		proof, err := getAndDecodeBridgeSwapProof(url, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		auth.GasLimit = 7000000
+		fmt.Printf("inst len: %d\n", len(proof.Instruction))
+		tx, err := SwapBridge(p.inc, auth, proof)
+		if err != nil {
+			fmt.Println("err:", err)
+		}
+		p.sim.Commit()
+		printReceipt(p.sim, tx)
 	}
-	p.sim.Commit()
-	printReceipt(p.sim, tx)
 }
 
 func TestSimulatedSwapBeacon(t *testing.T) {
@@ -325,9 +315,26 @@ func printReceipt(sim *backends.SimulatedBackend, tx *types.Transaction) {
 	}
 }
 
-func getBridgeSwapProof(block int) string {
-	url := "http://127.0.0.1:9344"
+func getAndDecodeBridgeSwapProof(url string, block int) (*decodedProof, error) {
+	body := getBridgeSwapProof(url, block)
+	if len(body) < 1 {
+		return nil, fmt.Errorf("no bridge swap proof found")
+	}
+	r := getProofResult{}
+	if err := json.Unmarshal([]byte(body), &r); err != nil {
+		return nil, err
+	}
+	if len(r.Result.Instruction) == 0 {
+		return nil, fmt.Errorf("invalid swap proof")
+	}
+	proof, err := decodeProof(&r)
+	if err != nil {
+		return nil, err
+	}
+	return proof, nil
+}
 
+func getBridgeSwapProof(url string, block int) string {
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbridgeswapproof\",\n    \"params\": [\n    \t%d\n    ]\n}", block))
 
 	req, _ := http.NewRequest("POST", url, payload)

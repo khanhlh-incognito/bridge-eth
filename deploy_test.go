@@ -19,6 +19,39 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestSwapBridge(t *testing.T) {
+	// Get proof
+	url := "http://54.39.158.106:19032"
+	block := 54
+	proof, err := getAndDecodeBridgeSwapProof(url, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Connect to ETH
+	privKey, client, err := connect()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	// Get contract instance
+	incAddr := common.HexToAddress(IncognitoProxyAddress)
+	c, err := bridge.NewIncognitoProxy(incAddr, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Swap
+	auth := bind.NewKeyedTransactor(privKey)
+	tx, err := SwapBridge(c, auth, proof)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txHash := tx.Hash()
+	fmt.Printf("swapped, txHash: %x\n", txHash[:])
+}
+
 func TestSwapBeacon(t *testing.T) {
 	// Get proof
 	proof := getFixedSwapBeaconProof()
