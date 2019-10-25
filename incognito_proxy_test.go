@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func TestFindBeaconCommitteeFromHeight(t *testing.T) {
+func TestFixedFindBeaconCommitteeFromHeight(t *testing.T) {
 	testCases := []struct {
 		desc   string
 		length int
@@ -107,7 +107,7 @@ func repeatSwapBeacon(c *committees, startBlock, meta, shard int) *decodedProof 
 	}
 }
 
-func TestFindBridgeCommitteeFromHeight(t *testing.T) {
+func TestFixedFindBridgeCommitteeFromHeight(t *testing.T) {
 	testCases := []struct {
 		desc   string
 		length int
@@ -199,7 +199,7 @@ func repeatSwapBridge(c *committees, startBlock, meta, shard int) *decodedProof 
 	}
 }
 
-func TestSwapBridgeCommittee(t *testing.T) {
+func TestFixedSwapBridgeCommittee(t *testing.T) {
 	_, c, _ := setupFixedCommittee()
 
 	testCases := []struct {
@@ -291,7 +291,7 @@ func buildSwapBridgeTestcase(c *committees, startBlock, meta, shard int) *decode
 	}
 }
 
-func TestSwapBeaconCommittee(t *testing.T) {
+func TestFixedSwapBeaconCommittee(t *testing.T) {
 	_, c, _ := setupFixedCommittee()
 
 	testCases := []struct {
@@ -380,7 +380,7 @@ func buildSwapData(meta, shard, startBlock int, addrs []string) ([]byte, *merkle
 	return inst, mp, blkData, blkHash[:]
 }
 
-func TestInstructionApproved(t *testing.T) {
+func TestFixedInstructionApproved(t *testing.T) {
 	p, c, _ := setupFixedCommittee()
 
 	testCases := []struct {
