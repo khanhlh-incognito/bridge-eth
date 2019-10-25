@@ -2,6 +2,7 @@ pragma solidity >=0.5.0 <0.6.0;
 
 contract AdminPausable {
     address public admin;
+    address public successor;
     bool public paused;
     uint public expire;
 
@@ -14,6 +15,7 @@ contract AdminPausable {
     event Paused(address pauser);
     event Unpaused(address pauser);
     event Extend(uint ndays);
+    event Claim(address claimer);
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "not admin");
@@ -33,6 +35,16 @@ contract AdminPausable {
     modifier isNotExpired() {
         require(block.timestamp < expire, "expired");
         _;
+    }
+
+    function retire(address _successor) public onlyAdmin isNotExpired {
+        successor = _successor;
+    }
+
+    function claim() public isNotExpired {
+        require(msg.sender == successor, "unauthorized");
+        admin = successor;
+        emit Claim(admin);
     }
 
     function extend(uint n) public onlyAdmin isNotExpired {

@@ -14,6 +14,122 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestFixedClaimOnce(t *testing.T) {
+	acc := newAccount()
+	rand := newAccount()
+	testCases := []struct {
+		desc      string
+		admin     *account
+		successor common.Address
+		claimer   *account
+		err       bool
+	}{
+		{
+			desc:      "Successor claims",
+			admin:     acc,
+			successor: genesisAcc.Address,
+			claimer:   genesisAcc,
+		},
+		{
+
+			desc:      "Not successor, claim failed",
+			admin:     acc,
+			successor: rand.Address,
+			claimer:   genesisAcc, // deployed contract but has no right
+			err:       true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, _ := setupPauseContract(tc.admin.Address)
+
+			// Retire first
+			_, err := p.c.Retire(bind.NewKeyedTransactor(tc.admin.PrivateKey), tc.successor)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Claim
+			_, err = p.c.Claim(bind.NewKeyedTransactor(tc.claimer.PrivateKey))
+			isErr := err != nil
+			if isErr != tc.err {
+				t.Fatal(errors.Errorf("expect error = %t, got %v", tc.err, err))
+			}
+			if tc.err {
+				return
+			}
+			p.sim.Commit()
+
+			// Check admin after claiming
+			a, _ := p.c.Admin(nil)
+			if a != tc.successor {
+				t.Fatal(errors.Errorf("expect admin = %s, got %s ", tc.successor.Hex(), a.Hex()))
+			}
+		})
+	}
+}
+func TestFixedRetireExpired(t *testing.T) {
+	p, _ := setupPauseContract(genesisAcc.Address)
+
+	// Advance time till expired
+	err := p.sim.AdjustTime(366 * 24 * time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Retire, must fail
+	acc := newAccount()
+	_, err = p.c.Retire(auth, acc.Address)
+	if err == nil {
+		t.Fatal(errors.Errorf("expect error != nil, got %v", err))
+	}
+	p.sim.Commit()
+}
+
+func TestFixedRetireOnce(t *testing.T) {
+	acc := newAccount()
+	succ := newAccount()
+	testCases := []struct {
+		desc  string
+		admin common.Address
+		err   bool
+	}{
+		{
+			desc:  "Admin retires",
+			admin: genesisAcc.Address,
+		},
+		{
+
+			desc:  "Not admin, cannot retire",
+			admin: acc.Address,
+			err:   true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, _ := setupPauseContract(tc.admin)
+			_, err := p.c.Retire(auth, succ.Address)
+
+			isErr := err != nil
+			if isErr != tc.err {
+				t.Fatal(errors.Errorf("expect error = %t, got %v", tc.err, err))
+			}
+			if tc.err {
+				return
+			}
+			p.sim.Commit()
+
+			// Check successor after retiring
+			s, _ := p.c.Successor(nil)
+			if s != succ.Address {
+				t.Fatal(errors.Errorf("expect successor = %s, got %s ", succ.Address.Hex(), s.Hex()))
+			}
+		})
+	}
+}
+
 func TestFixedExtendExpired(t *testing.T) {
 	p, _ := setupPauseContract(genesisAcc.Address)
 
