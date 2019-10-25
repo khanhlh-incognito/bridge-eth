@@ -28,19 +28,20 @@ var (
 )
 
 // AdminPausableABI is the input ABI used to generate the binding from.
-const AdminPausableABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_admin\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"pauser\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"pauser\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"admin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"expire\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const AdminPausableABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_admin\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"ndays\",\"type\":\"uint256\"}],\"name\":\"Extend\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"pauser\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"pauser\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"admin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"expire\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"}],\"name\":\"extend\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // AdminPausableFuncSigs maps the 4-byte function signature to its string representation.
 var AdminPausableFuncSigs = map[string]string{
 	"f851a440": "admin()",
 	"79599f96": "expire()",
+	"9714378c": "extend(uint256)",
 	"8456cb59": "pause()",
 	"5c975abb": "paused()",
 	"3f4ba83a": "unpause()",
 }
 
 // AdminPausableBin is the compiled bytecode used for deploying new contracts.
-var AdminPausableBin = "0x608060405234801561001057600080fd5b5060405161039f38038061039f8339818101604052602081101561003357600080fd5b50516000805460ff60a01b196001600160a01b039093166001600160a01b0319909116179190911690556301e133804201600155610329806100766000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80633f4ba83a1461005c5780635c975abb1461006657806379599f96146100825780638456cb591461009c578063f851a440146100a4575b600080fd5b6100646100c8565b005b61006e6101aa565b604080519115158252519081900360200190f35b61008a6101ba565b60408051918252519081900360200190f35b6100646101c0565b6100ac6102e5565b604080516001600160a01b039092168252519081900360200190f35b6000546001600160a01b03163314610113576040805162461bcd60e51b81526020600482015260096024820152683737ba1030b236b4b760b91b604482015290519081900360640190fd5b600054600160a01b900460ff16610168576040805162461bcd60e51b81526020600482015260146024820152736e6f7420706175736564207269676874206e6f7760601b604482015290519081900360640190fd5b6000805460ff60a01b191690556040805133815290517f5db9ee0a495bf2e6ff9c91a7834c1ba4fdd244a5e8aa4e537bd38aeae4b073aa9181900360200190a1565b600054600160a01b900460ff1681565b60015481565b6000546001600160a01b0316331461020b576040805162461bcd60e51b81526020600482015260096024820152683737ba1030b236b4b760b91b604482015290519081900360640190fd5b600054600160a01b900460ff161561025d576040805162461bcd60e51b815260206004820152601060248201526f706175736564207269676874206e6f7760801b604482015290519081900360640190fd5b600154421061029d576040805162461bcd60e51b8152602060048201526007602482015266195e1c1a5c995960ca1b604482015290519081900360640190fd5b6000805460ff60a01b1916600160a01b1790556040805133815290517f62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a2589181900360200190a1565b6000546001600160a01b03168156fea265627a7a72315820066463aeee61b267e00655ebe350dd28fe1f3c19d1e4af1eefcc735e7e45974d64736f6c634300050c0032"
+var AdminPausableBin = "0x608060405234801561001057600080fd5b506040516104eb3803806104eb8339818101604052602081101561003357600080fd5b50516000805460ff60a01b196001600160a01b039093166001600160a01b0319909116179190911690556301e133804201600155610475806100766000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c80633f4ba83a146100675780635c975abb1461007157806379599f961461008d5780638456cb59146100a75780639714378c146100af578063f851a440146100cc575b600080fd5b61006f6100f0565b005b6100796101d2565b604080519115158252519081900360200190f35b6100956101e2565b60408051918252519081900360200190f35b61006f6101e8565b61006f600480360360208110156100c557600080fd5b503561030d565b6100d4610431565b604080516001600160a01b039092168252519081900360200190f35b6000546001600160a01b0316331461013b576040805162461bcd60e51b81526020600482015260096024820152683737ba1030b236b4b760b91b604482015290519081900360640190fd5b600054600160a01b900460ff16610190576040805162461bcd60e51b81526020600482015260146024820152736e6f7420706175736564207269676874206e6f7760601b604482015290519081900360640190fd5b6000805460ff60a01b191690556040805133815290517f5db9ee0a495bf2e6ff9c91a7834c1ba4fdd244a5e8aa4e537bd38aeae4b073aa9181900360200190a1565b600054600160a01b900460ff1681565b60015481565b6000546001600160a01b03163314610233576040805162461bcd60e51b81526020600482015260096024820152683737ba1030b236b4b760b91b604482015290519081900360640190fd5b600054600160a01b900460ff1615610285576040805162461bcd60e51b815260206004820152601060248201526f706175736564207269676874206e6f7760801b604482015290519081900360640190fd5b60015442106102c5576040805162461bcd60e51b8152602060048201526007602482015266195e1c1a5c995960ca1b604482015290519081900360640190fd5b6000805460ff60a01b1916600160a01b1790556040805133815290517f62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a2589181900360200190a1565b6000546001600160a01b03163314610358576040805162461bcd60e51b81526020600482015260096024820152683737ba1030b236b4b760b91b604482015290519081900360640190fd5b6001544210610398576040805162461bcd60e51b8152602060048201526007602482015266195e1c1a5c995960ca1b604482015290519081900360640190fd5b61016e81106103ee576040805162461bcd60e51b815260206004820152601a60248201527f63616e6e6f7420657874656e6420666f7220746f6f206c6f6e67000000000000604482015290519081900360640190fd5b600180546201518083020190556040805182815290517f02ef6561d311451dadc920679eb21192a61d96ee8ead94241b8ff073029ca6e89181900360200190a150565b6000546001600160a01b03168156fea265627a7a723158201bdb079265de6e7fa610ad41f365d798a8cf261dcc17bac356e9ec939942fb0164736f6c634300050c0032"
 
 // DeployAdminPausable deploys a new Ethereum contract, binding an instance of AdminPausable to it.
 func DeployAdminPausable(auth *bind.TransactOpts, backend bind.ContractBackend, _admin common.Address) (common.Address, *types.Transaction, *AdminPausable, error) {
@@ -276,6 +277,27 @@ func (_AdminPausable *AdminPausableCallerSession) Paused() (bool, error) {
 	return _AdminPausable.Contract.Paused(&_AdminPausable.CallOpts)
 }
 
+// Extend is a paid mutator transaction binding the contract method 0x9714378c.
+//
+// Solidity: function extend(uint256 n) returns()
+func (_AdminPausable *AdminPausableTransactor) Extend(opts *bind.TransactOpts, n *big.Int) (*types.Transaction, error) {
+	return _AdminPausable.contract.Transact(opts, "extend", n)
+}
+
+// Extend is a paid mutator transaction binding the contract method 0x9714378c.
+//
+// Solidity: function extend(uint256 n) returns()
+func (_AdminPausable *AdminPausableSession) Extend(n *big.Int) (*types.Transaction, error) {
+	return _AdminPausable.Contract.Extend(&_AdminPausable.TransactOpts, n)
+}
+
+// Extend is a paid mutator transaction binding the contract method 0x9714378c.
+//
+// Solidity: function extend(uint256 n) returns()
+func (_AdminPausable *AdminPausableTransactorSession) Extend(n *big.Int) (*types.Transaction, error) {
+	return _AdminPausable.Contract.Extend(&_AdminPausable.TransactOpts, n)
+}
+
 // Pause is a paid mutator transaction binding the contract method 0x8456cb59.
 //
 // Solidity: function pause() returns()
@@ -316,6 +338,139 @@ func (_AdminPausable *AdminPausableSession) Unpause() (*types.Transaction, error
 // Solidity: function unpause() returns()
 func (_AdminPausable *AdminPausableTransactorSession) Unpause() (*types.Transaction, error) {
 	return _AdminPausable.Contract.Unpause(&_AdminPausable.TransactOpts)
+}
+
+// AdminPausableExtendIterator is returned from FilterExtend and is used to iterate over the raw logs and unpacked data for Extend events raised by the AdminPausable contract.
+type AdminPausableExtendIterator struct {
+	Event *AdminPausableExtend // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AdminPausableExtendIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AdminPausableExtend)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AdminPausableExtend)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AdminPausableExtendIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AdminPausableExtendIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AdminPausableExtend represents a Extend event raised by the AdminPausable contract.
+type AdminPausableExtend struct {
+	Ndays *big.Int
+	Raw   types.Log // Blockchain specific contextual infos
+}
+
+// FilterExtend is a free log retrieval operation binding the contract event 0x02ef6561d311451dadc920679eb21192a61d96ee8ead94241b8ff073029ca6e8.
+//
+// Solidity: event Extend(uint256 ndays)
+func (_AdminPausable *AdminPausableFilterer) FilterExtend(opts *bind.FilterOpts) (*AdminPausableExtendIterator, error) {
+
+	logs, sub, err := _AdminPausable.contract.FilterLogs(opts, "Extend")
+	if err != nil {
+		return nil, err
+	}
+	return &AdminPausableExtendIterator{contract: _AdminPausable.contract, event: "Extend", logs: logs, sub: sub}, nil
+}
+
+// WatchExtend is a free log subscription operation binding the contract event 0x02ef6561d311451dadc920679eb21192a61d96ee8ead94241b8ff073029ca6e8.
+//
+// Solidity: event Extend(uint256 ndays)
+func (_AdminPausable *AdminPausableFilterer) WatchExtend(opts *bind.WatchOpts, sink chan<- *AdminPausableExtend) (event.Subscription, error) {
+
+	logs, sub, err := _AdminPausable.contract.WatchLogs(opts, "Extend")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AdminPausableExtend)
+				if err := _AdminPausable.contract.UnpackLog(event, "Extend", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseExtend is a log parse operation binding the contract event 0x02ef6561d311451dadc920679eb21192a61d96ee8ead94241b8ff073029ca6e8.
+//
+// Solidity: event Extend(uint256 ndays)
+func (_AdminPausable *AdminPausableFilterer) ParseExtend(log types.Log) (*AdminPausableExtend, error) {
+	event := new(AdminPausableExtend)
+	if err := _AdminPausable.contract.UnpackLog(event, "Extend", log); err != nil {
+		return nil, err
+	}
+	return event, nil
 }
 
 // AdminPausablePausedIterator is returned from FilterPaused and is used to iterate over the raw logs and unpacked data for Paused events raised by the AdminPausable contract.

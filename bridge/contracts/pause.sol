@@ -13,6 +13,7 @@ contract AdminPausable {
 
     event Paused(address pauser);
     event Unpaused(address pauser);
+    event Extend(uint ndays);
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "not admin");
@@ -32,6 +33,12 @@ contract AdminPausable {
     modifier isNotExpired() {
         require(block.timestamp < expire, "expired");
         _;
+    }
+
+    function extend(uint n) public onlyAdmin isNotExpired {
+        require(n < 366, "cannot extend for too long"); // To prevent overflow
+        expire = expire + n * 1 days;
+        emit Extend(n);
     }
 
     function pause() public onlyAdmin isNotPaused isNotExpired {

@@ -14,6 +14,70 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestFixedExtendExpired(t *testing.T) {
+	p, _ := setupPauseContract(genesisAcc.Address)
+
+	// Advance time till expired
+	err := p.sim.AdjustTime(366 * 24 * time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Extend, must fail
+	days := int64(10)
+	_, err = p.c.Extend(auth, big.NewInt(days))
+	if err == nil {
+		t.Fatal(errors.Errorf("expect error != nil, got %v", err))
+	}
+	p.sim.Commit()
+}
+
+func TestFixedExtendOnce(t *testing.T) {
+	acc := newAccount()
+	testCases := []struct {
+		desc  string
+		admin common.Address
+		err   bool
+	}{
+		{
+			desc:  "Admin extends",
+			admin: genesisAcc.Address,
+		},
+		{
+
+			desc:  "Not admin, fail to extend",
+			admin: acc.Address,
+			err:   true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, _ := setupPauseContract(tc.admin)
+			start, _ := p.c.Expire(nil) // Starting expiration time
+
+			days := int64(10)
+			_, err := p.c.Extend(auth, big.NewInt(days))
+
+			isErr := err != nil
+			if isErr != tc.err {
+				t.Fatal(errors.Errorf("expect error = %t, got %v", tc.err, err))
+			}
+			if tc.err {
+				return
+			}
+			p.sim.Commit()
+
+			// Check expiration time after extending
+			val, _ := p.c.Expire(nil)
+			exp := start.Add(start, big.NewInt(days*24*60*60))
+			if val.Cmp(exp) < 0 {
+				t.Fatal(errors.Errorf("expect expire >= %d, got %d ", exp, val))
+			}
+		})
+	}
+}
+
 func TestFixedUnpauseExpired(t *testing.T) {
 	p, _ := setupPauseContract(genesisAcc.Address)
 
