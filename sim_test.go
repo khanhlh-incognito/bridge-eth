@@ -32,7 +32,7 @@ type Platform struct {
 
 func init() {
 	fmt.Println("Initializing genesis account...")
-	genesisAcc = newAccount()
+	genesisAcc = loadAccount()
 	auth = bind.NewKeyedTransactor(genesisAcc.PrivateKey)
 }
 
@@ -262,10 +262,17 @@ type account struct {
 	Address    common.Address
 }
 
-func newAccount() *account {
-	// key, _ := crypto.GenerateKey()
-	// crypto.SaveECDSA("genesisKey.hex", key)
+func loadAccount() *account {
 	key, _ := crypto.LoadECDSA("genesisKey.hex")
+	return &account{
+		PrivateKey: key,
+		Address:    crypto.PubkeyToAddress(key.PublicKey),
+	}
+}
+
+func newAccount() *account {
+	key, _ := crypto.GenerateKey()
+	// crypto.SaveECDSA("genesisKey.hex", key)
 	return &account{
 		PrivateKey: key,
 		Address:    crypto.PubkeyToAddress(key.PublicKey),
