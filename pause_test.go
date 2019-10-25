@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -13,15 +14,20 @@ import (
 )
 
 func TestFixedPauseExpired(t *testing.T) {
-	// testCases := []struct {
-	// 	desc string
-	// 	err  bool
-	// }{
-	// 	{
+	p, _ := setupPauseContract(genesisAcc.Address)
 
-	// 		desc: "Expired, fail to pause",
-	// 	},
-	// }
+	// Advance time till expired
+	err := p.sim.AdjustTime(366 * 24 * time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Pause, must fail
+	_, err = p.c.Pause(auth)
+	if err == nil {
+		t.Fatal(errors.Errorf("expect error != nil, got %v", err))
+	}
+	p.sim.Commit()
 }
 
 func TestFixedPauseTwice(t *testing.T) {
