@@ -10,9 +10,58 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestFixedBurnAfterSwap(t *testing.T) {
+func TestFixedDepositETH(t *testing.T) {
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	assert.Nil(t, err)
+
+	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(5e18))), newBalance)
+}
+
+func TestFixedDepositETHPaused(t *testing.T) {
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	// Pause first
+	_, err = p.v.Pause(auth)
+	assert.Nil(t, err)
+
+	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	assert.NotNil(t, err)
+
+	assert.Equal(t, oldBalance, newBalance)
+}
+
+func TestFixedDepositERC20(t *testing.T) {
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	oldBalance, newBalance, err := lockSimERC20(p, int64(1e9))
+	assert.Nil(t, err)
+
+	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(1e9))), newBalance)
+}
+
+func TestFixedDepositERC20Paused(t *testing.T) {
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	// Pause first
+	_, err = p.v.Pause(auth)
+	assert.Nil(t, err)
+
+	oldBalance, newBalance, err := lockSimERC20(p, int64(1e9))
+	assert.Nil(t, err)
+
+	assert.Equal(t, oldBalance, newBalance)
+}
+
+func TestFixedWithdrawAfterSwap(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	if err != nil {
 		t.Error(err)
@@ -123,7 +172,7 @@ type burnInst struct {
 	amount *big.Int
 }
 
-func TestFixedVaultBurnETH(t *testing.T) {
+func TestFixedVaultWithdrawETH(t *testing.T) {
 	proof := getFixedBurnProofETH()
 
 	p, _, err := setupFixedCommittee()
@@ -154,7 +203,33 @@ func TestFixedVaultBurnETH(t *testing.T) {
 	}
 }
 
-func TestFixedVaultBurnERC20(t *testing.T) {
+func TestFixedVaultWithdrawPaused(t *testing.T) {
+	proof := getFixedBurnProofETH()
+
+	p, _, err := setupFixedCommittee()
+	if err != nil {
+		t.Error(err)
+	}
+
+	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("deposit to vault: %d -> %d\n", oldBalance, newBalance)
+
+	// Pause first
+	_, err = p.v.Pause(auth)
+	assert.Nil(t, err)
+
+	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+	_, err = Withdraw(p.v, auth, proof)
+	assert.NotNil(t, err)
+
+	bal := p.getBalance(withdrawer)
+	assert.Zero(t, bal.Int64())
+}
+
+func TestFixedVaultWithdrawERC20(t *testing.T) {
 	proof := getFixedBurnProofERC20()
 
 	p, _, err := setupFixedCommittee()

@@ -32,13 +32,13 @@ contract Vault is AdminPausable {
         incognito = Incognito(incognitoProxyAddress);
     }
 
-    function deposit(string memory incognitoAddress) public payable {
+    function deposit(string memory incognitoAddress) public payable isNotPaused {
         // require((msg.value + address(this).balance) <= 10 ** 27, "Balance of this contract has been reaching to its uint's maximum.");
         require(msg.value + address(this).balance <= 10 ** 27);
         emit Deposit(ETH_TOKEN, incognitoAddress, msg.value);
     }
 
-    function depositERC20(address token, uint amount, string memory incognitoAddress) public payable {
+    function depositERC20(address token, uint amount, string memory incognitoAddress) public payable isNotPaused {
         IERC20 erc20Interface = IERC20(token);
         uint tokenBalance = erc20Interface.balanceOf(address(this));
         require(amount + tokenBalance <= 10 ** 18);
@@ -122,7 +122,7 @@ contract Vault is AdminPausable {
         uint8[][2] memory sigVs,
         bytes32[][2] memory sigRs,
         bytes32[][2] memory sigSs
-    ) public payable {
+    ) public payable isNotPaused {
         (uint8 meta, uint8 shard, address token, address payable to, uint burned) = parseBurnInst(inst);
         require(meta == 72 && shard == 1); // Check instruction type
 
