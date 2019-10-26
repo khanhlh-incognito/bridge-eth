@@ -219,7 +219,7 @@ func setup(
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy ERC20 contract: %v", err)
 	}
-	fmt.Printf("token addr: %s\n", p.tokenAddr.Hex())
+	// fmt.Printf("token addr: %s\n", p.tokenAddr.Hex())
 	sim.Commit()
 
 	// IncognitoProxy

@@ -199,6 +199,34 @@ func repeatSwapBridge(c *committees, startBlock, meta, shard int) *decodedProof 
 	}
 }
 
+// TestFixedSwapBridgePaused makes sure swapping committee isn't allowed when contract is paused
+func TestFixedSwapBridgePaused(t *testing.T) {
+	p, c, _ := setupFixedCommittee()
+
+	in := buildSwapBeaconTestcase(c, 789, 70, 1)
+
+	// Pause first, must success
+	_, err := p.inc.Pause(auth)
+	if err != nil {
+		t.Fatalf("%+v", errors.Errorf("expect error == nil, got %v", err))
+	}
+
+	// Must fail
+	_, err = p.inc.SwapBridgeCommittee(auth, in.Instruction, in.InstPaths, in.InstPathIsLefts, in.InstRoots, in.BlkData, in.SigIdxs, in.SigVs, in.SigRs, in.SigSs)
+
+	// Check tx
+	if err == nil {
+		t.Fatalf("%+v", errors.Errorf("expect error != nil, got %v", err))
+	}
+	p.sim.Commit()
+
+	// New committee mustn't be inserted
+	_, err = p.inc.BridgeCommittees(nil, big.NewInt(1))
+	if err == nil {
+		t.Fatalf("%+v", errors.Errorf("expect error != nil, got %v", err))
+	}
+}
+
 func TestFixedSwapBridgeCommittee(t *testing.T) {
 	_, c, _ := setupFixedCommittee()
 
@@ -288,6 +316,34 @@ func buildSwapBridgeTestcase(c *committees, startBlock, meta, shard int) *decode
 		SigVs:           [2][]uint8{ipBeacon.sigV, ipBridge.sigV},
 		SigRs:           [2][][32]byte{ipBeacon.sigR, ipBridge.sigR},
 		SigSs:           [2][][32]byte{ipBeacon.sigS, ipBridge.sigS},
+	}
+}
+
+// TestFixedSwapBeaconPaused makes sure swapping committee isn't allowed when contract is paused
+func TestFixedSwapBeaconPaused(t *testing.T) {
+	p, c, _ := setupFixedCommittee()
+
+	in := buildSwapBeaconTestcase(c, 789, 70, 1)
+
+	// Pause first, must success
+	_, err := p.inc.Pause(auth)
+	if err != nil {
+		t.Fatalf("%+v", errors.Errorf("expect error == nil, got %v", err))
+	}
+
+	// Must fail
+	_, err = p.inc.SwapBeaconCommittee(auth, in.Instruction, in.InstPaths[0], in.InstPathIsLefts[0], in.InstRoots[0], in.BlkData[0], in.SigIdxs[0], in.SigVs[0], in.SigRs[0], in.SigSs[0])
+
+	// Check tx
+	if err == nil {
+		t.Fatalf("%+v", errors.Errorf("expect error != nil, got %v", err))
+	}
+	p.sim.Commit()
+
+	// New committee mustn't be inserted
+	_, err = p.inc.BeaconCommittees(nil, big.NewInt(1))
+	if err == nil {
+		t.Fatalf("%+v", errors.Errorf("expect error != nil, got %v", err))
 	}
 }
 
@@ -688,7 +744,8 @@ func DecodeValidationData(data string) (*ValidationData, error) {
 	return &valData, nil
 }
 
-func TestFixedSwapBridge(t *testing.T) {
+// TestFixedSwapBridgeFixedProof the same as the next test but for bridge
+func TestFixedSwapBridgeFixedProof(t *testing.T) {
 	proof := getFixedSwapBridgeProof()
 
 	// p, err := setupWithLocalCommittee()
@@ -705,7 +762,9 @@ func TestFixedSwapBridge(t *testing.T) {
 	printReceipt(p.sim, tx)
 }
 
-func TestFixedSwapBeacon(t *testing.T) {
+// TestFixedSwapBeaconFixedProof decodes a fixed proof and submit to make sure proof
+// format wasn't changed without updating bot
+func TestFixedSwapBeaconFixedProof(t *testing.T) {
 	proof := getFixedSwapBeaconProof()
 
 	p, _, err := setupFixedCommittee()
