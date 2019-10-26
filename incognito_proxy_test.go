@@ -721,7 +721,7 @@ func TestFixedSwapBeacon(t *testing.T) {
 	printReceipt(p.sim, tx)
 }
 
-func TestExtractMetaFromInstruction(t *testing.T) {
+func TestFixedExtractMetaFromInstruction(t *testing.T) {
 	p, _, _ := setupFixedCommittee()
 	addrs := []string{
 		"834f98e1b7324450b798359c9febba74fb1fd888",
@@ -787,7 +787,7 @@ func TestExtractMetaFromInstruction(t *testing.T) {
 	}
 }
 
-func TestExtractCommitteeFromInstruction(t *testing.T) {
+func TestFixedExtractCommitteeFromInstruction(t *testing.T) {
 	p, _, _ := setupFixedCommittee()
 	addrs := []string{
 		"834f98e1b7324450b798359c9febba74fb1fd888",
@@ -856,7 +856,7 @@ func TestExtractCommitteeFromInstruction(t *testing.T) {
 	}
 }
 
-func TestInstructionInMerkleTree(t *testing.T) {
+func TestFixedInstructionInMerkleTree(t *testing.T) {
 	p, _, _ := setupFixedCommittee()
 	testCases := []struct {
 		desc string
@@ -968,7 +968,7 @@ type merklePath struct {
 	left    []bool
 }
 
-func TestIncognitoProxyConstructor(t *testing.T) {
+func TestFixedIncognitoProxyConstructor(t *testing.T) {
 	p, _, _ := setupFixedCommittee()
 	beaconStart, err := p.inc.BeaconCommittees(nil, big.NewInt(0))
 	if err != nil {
