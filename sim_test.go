@@ -234,7 +234,7 @@ func setup(
 	// printReceipt(sim, tx)
 
 	// Vault
-	p.vAddr, tx, p.v, err = vault.DeployVault(auth, sim, p.incAddr)
+	p.vAddr, tx, p.v, err = vault.DeployVault(auth, sim, admin, p.incAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy Vault contract: %v", err)
 	}
