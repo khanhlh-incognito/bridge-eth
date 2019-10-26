@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/incognitochain/bridge-eth/bridge"
+	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -44,7 +44,7 @@ func (s *VaultTestSuite) SetupTest() {
 
 	// deploy vault contract
 	incognitoProxyAddress := common.Address{}
-	vaultAddr, deployedTx, _, e := bridge.DeployVault(s.auth, s.sim, incognitoProxyAddress)
+	vaultAddr, deployedTx, _, e := vault.DeployVault(s.auth, s.sim, incognitoProxyAddress)
 	fmt.Println("vault contract deployment gas: ", deployedTx.Gas())
 	s.vaultAddress = vaultAddr
 	s.Nil(e)
@@ -57,7 +57,7 @@ func (s *VaultTestSuite) SetupTest() {
 }
 
 func (s *VaultTestSuite) TestDeposit() {
-	vault, _ := bridge.NewVault(s.vaultAddress, s.sim)
+	vault, _ := vault.NewVault(s.vaultAddress, s.sim)
 	depositedAmt := big.NewInt(3000)
 	beforeDepositBal, _ := s.sim.BalanceAt(context.Background(), s.address, nil)
 	s.auth.Value = depositedAmt
@@ -96,9 +96,9 @@ func deployErc20(sim *backends.SimulatedBackend, auth *bind.TransactOpts) (*erc2
 
 func (s *VaultTestSuite) TestDepositERC20() {
 	depositedAmt := big.NewInt(5000)
-	vault, _ := bridge.NewVault(s.vaultAddress, s.sim)
+	vault, _ := vault.NewVault(s.vaultAddress, s.sim)
 	erc20Token, _ := erc20.NewErc20(s.erc20TokenAddr, s.sim)
-	
+
 	apprTx, apprErr := erc20Token.Approve(s.auth, s.vaultAddress, depositedAmt)
 	if apprErr != nil {
 		fmt.Println("Failed to approve erc20 deposit: ", apprErr)

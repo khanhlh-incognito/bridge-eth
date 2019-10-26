@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/incognitochain/bridge-eth/bridge"
+	"github.com/incognitochain/bridge-eth/bridge/pause"
 	"github.com/pkg/errors"
 )
 
@@ -374,7 +374,7 @@ func setupPauseContract(admin common.Address) (*PausePlatform, error) {
 	alloc[admin] = core.GenesisAccount{Balance: balance}
 	sim := backends.NewSimulatedBackend(alloc, 8000000)
 
-	addr, _, c, err := bridge.DeployAdminPausable(auth, sim, admin)
+	addr, _, c, err := pause.DeployAdminPausable(auth, sim, admin)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy AdminPausable contract: %v", err)
 	}
@@ -385,6 +385,6 @@ func setupPauseContract(admin common.Address) (*PausePlatform, error) {
 }
 
 type PausePlatform struct {
-	c   *bridge.AdminPausable
+	c   *pause.AdminPausable
 	sim *backends.SimulatedBackend
 }

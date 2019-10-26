@@ -15,7 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/incognitochain/bridge-eth/bridge"
+	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
+	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/pkg/errors"
 )
 
@@ -37,7 +38,7 @@ func TestSwapBridge(t *testing.T) {
 
 	// Get contract instance
 	incAddr := common.HexToAddress(IncognitoProxyAddress)
-	c, err := bridge.NewIncognitoProxy(incAddr, client)
+	c, err := incognito_proxy.NewIncognitoProxy(incAddr, client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +66,7 @@ func TestSwapBeacon(t *testing.T) {
 
 	// Get contract instance
 	incAddr := common.HexToAddress(IncognitoProxyAddress)
-	c, err := bridge.NewIncognitoProxy(incAddr, client)
+	c, err := incognito_proxy.NewIncognitoProxy(incAddr, client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +154,7 @@ func TestBurn(t *testing.T) {
 
 	// Get contract instance
 	vaultAddr := common.HexToAddress(VaultAddress)
-	c, err := bridge.NewVault(vaultAddr, client)
+	c, err := vault.NewVault(vaultAddr, client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +178,7 @@ func TestDeposit(t *testing.T) {
 
 	// Get contract instance
 	vaultAddr := common.HexToAddress(VaultAddress)
-	c, err := bridge.NewVault(vaultAddr, client)
+	c, err := vault.NewVault(vaultAddr, client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +258,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
 	auth.GasPrice = big.NewInt(20000000000)
-	incAddr, _, _, err := bridge.DeployIncognitoProxy(auth, client, admin, beaconComm, bridgeComm)
+	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, admin, beaconComm, bridgeComm)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,7 +270,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 
 	// Deploy vault
 	// incAddr := common.HexToAddress("ca71f588362a320b2e004cf8b728001c5c91da45")
-	vaultAddr, _, _, err := bridge.DeployVault(auth, client, incAddr)
+	vaultAddr, _, _, err := vault.DeployVault(auth, client, incAddr)
 	if err != nil {
 		t.Fatal(err)
 	}

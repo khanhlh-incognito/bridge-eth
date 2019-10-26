@@ -10,7 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/incognitochain/bridge-eth/bridge"
+	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
+	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
 )
 
@@ -129,7 +130,7 @@ func connectAndInstantiate(t *testing.T) (*ecdsa.PrivateKey, *contracts) {
 
 func depositERC20(
 	privKey *ecdsa.PrivateKey,
-	v *bridge.Vault,
+	v *vault.Vault,
 	tokenAddr common.Address,
 	amount int64,
 ) error {
@@ -169,14 +170,14 @@ func instantiate(client *ethclient.Client) (*contracts, error) {
 	var err error
 	c := &contracts{}
 	c.incAddr = common.HexToAddress(IncognitoProxyAddress)
-	c.inc, err = bridge.NewIncognitoProxy(c.incAddr, client)
+	c.inc, err = incognito_proxy.NewIncognitoProxy(c.incAddr, client)
 	if err != nil {
 		return nil, err
 	}
 
 	// Vault
 	c.vAddr = common.HexToAddress(VaultAddress)
-	c.v, err = bridge.NewVault(c.vAddr, client)
+	c.v, err = vault.NewVault(c.vAddr, client)
 	if err != nil {
 		return nil, err
 	}

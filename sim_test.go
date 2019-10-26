@@ -18,7 +18,8 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/incognitochain/bridge-eth/bridge"
+	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
+	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
 )
 
@@ -224,7 +225,7 @@ func setup(
 
 	// IncognitoProxy
 	admin := auth.From
-	p.incAddr, tx, p.inc, err = bridge.DeployIncognitoProxy(auth, sim, admin, beaconComm, bridgeComm)
+	p.incAddr, tx, p.inc, err = incognito_proxy.DeployIncognitoProxy(auth, sim, admin, beaconComm, bridgeComm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy IncognitoProxy contract: %v", err)
 	}
@@ -233,7 +234,7 @@ func setup(
 	// printReceipt(sim, tx)
 
 	// Vault
-	p.vAddr, tx, p.v, err = bridge.DeployVault(auth, sim, p.incAddr)
+	p.vAddr, tx, p.v, err = vault.DeployVault(auth, sim, p.incAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy Vault contract: %v", err)
 	}
