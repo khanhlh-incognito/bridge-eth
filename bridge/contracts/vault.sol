@@ -2,6 +2,7 @@ pragma solidity >=0.5.0 <0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "./IERC20.sol";
+import "./pause.sol";
 
 contract Incognito {
     function instructionApproved(
@@ -19,18 +20,15 @@ contract Incognito {
     ) public view returns (bool);
 }
 
-contract Vault {
+contract Vault is AdminPausable {
     address constant ETH_TOKEN = 0x0000000000000000000000000000000000000000;
-    address public owner;
     mapping(bytes32 => bool) public withdrawed;
     Incognito public incognito;
 
     event Deposit(address token, string incognitoAddress, uint amount);
     event Withdraw(address token, address to, uint amount);
 
-    constructor(address incognitoProxyAddress) public payable {
-        /* Set the owner to the creator of this contract */
-        owner = msg.sender;
+    constructor(address admin, address incognitoProxyAddress) public AdminPausable(admin) {
         incognito = Incognito(incognitoProxyAddress);
     }
 
