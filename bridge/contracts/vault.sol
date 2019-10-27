@@ -29,7 +29,7 @@ contract Vault is AdminPausable {
     event Deposit(address token, string incognitoAddress, uint amount);
     event Withdraw(address token, address to, uint amount);
     event Migrate(address newVault);
-    event Claim(address[] assets);
+    event MoveAssets(address[] assets);
 
     constructor(address admin, address incognitoProxyAddress) public AdminPausable(admin) {
         incognito = Incognito(incognitoProxyAddress);
@@ -164,7 +164,7 @@ contract Vault is AdminPausable {
         emit Migrate(_newVault);
     }
 
-    function claim(address[] memory assets) public onlyAdmin isPaused {
+    function moveAssets(address[] memory assets) public onlyAdmin isPaused {
         require(newVault != address(0));
         for (uint i = 0; i < assets.length; i++) {
             if (assets[i] == ETH_TOKEN) {
@@ -176,6 +176,6 @@ contract Vault is AdminPausable {
                 }
             }
         }
-        emit Claim(assets);
+        emit MoveAssets(assets);
     }
 }

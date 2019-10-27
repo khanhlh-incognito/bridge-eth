@@ -14,6 +14,87 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestFixedMoveETH(t *testing.T) {
+	acc := newAccount()
+	newVault := newAccount()
+	testCases := []struct {
+		desc     string
+		mover    *account
+		paused   bool
+		newVault common.Address
+		err      bool
+	}{
+		{
+			desc:     "Success",
+			mover:    genesisAcc,
+			paused:   true,
+			newVault: newVault.Address,
+		},
+		{
+			desc:     "Not admin",
+			mover:    acc,
+			paused:   true,
+			newVault: newVault.Address,
+			err:      true,
+		},
+		{
+
+			desc:     "Not paused",
+			mover:    genesisAcc,
+			paused:   false,
+			newVault: newVault.Address,
+			err:      true,
+		},
+		{
+
+			desc:   "Not migrated", // newVault = 0x0
+			mover:  genesisAcc,
+			paused: true,
+			err:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, _, err := setupFixedCommittee(tc.mover.Address)
+			assert.Nil(t, err)
+
+			// Deposit to make sure there's ETH to move
+			oldBalance, newBalance, err := deposit(p, int64(1000))
+			assert.Nil(t, err)
+			assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(1000)), newBalance)
+
+			// Pause and migrate
+			_, err = p.v.Pause(auth)
+			assert.Nil(t, err)
+			p.sim.Commit()
+			_, err = p.v.Migrate(auth, tc.newVault)
+			assert.Nil(t, err)
+			p.sim.Commit()
+
+			if !tc.paused {
+				_, err = p.v.Unpause(auth)
+				assert.Nil(t, err)
+				p.sim.Commit()
+			}
+
+			// Move
+			_, err = p.v.MoveAssets(
+				bind.NewKeyedTransactor(tc.mover.PrivateKey),
+				[]common.Address{common.Address{}},
+			)
+			p.sim.Commit()
+
+			if tc.err {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, newBalance, p.getBalance(tc.newVault))
+			}
+		})
+	}
+}
+
 func TestFixedMigrate(t *testing.T) {
 	acc := newAccount()
 	testCases := []struct {
@@ -28,7 +109,6 @@ func TestFixedMigrate(t *testing.T) {
 			paused:   true,
 		},
 		{
-
 			desc:     "Not admin",
 			migrator: acc,
 			paused:   true,
@@ -51,10 +131,12 @@ func TestFixedMigrate(t *testing.T) {
 			if tc.paused {
 				_, err = p.v.Pause(auth)
 				assert.Nil(t, err)
+				p.sim.Commit()
 			}
 
 			// Migrate
 			_, err = p.v.Migrate(bind.NewKeyedTransactor(tc.migrator.PrivateKey), genesisAcc.Address)
+			p.sim.Commit()
 
 			if tc.err {
 				assert.NotNil(t, err)
@@ -82,6 +164,7 @@ func TestFixedDepositETHPaused(t *testing.T) {
 	// Pause first
 	_, err = p.v.Pause(auth)
 	assert.Nil(t, err)
+	p.sim.Commit()
 
 	oldBalance, newBalance, err := deposit(p, int64(5e18))
 	assert.NotNil(t, err)
@@ -106,6 +189,7 @@ func TestFixedDepositERC20Paused(t *testing.T) {
 	// Pause first
 	_, err = p.v.Pause(auth)
 	assert.Nil(t, err)
+	p.sim.Commit()
 
 	oldBalance, newBalance, err := lockSimERC20(p, int64(1e9))
 	assert.Nil(t, err)
