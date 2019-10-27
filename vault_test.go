@@ -8,10 +8,62 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestFixedMigrate(t *testing.T) {
+	acc := newAccount()
+	testCases := []struct {
+		desc     string
+		migrator *account
+		paused   bool
+		err      bool
+	}{
+		{
+			desc:     "Success",
+			migrator: genesisAcc,
+			paused:   true,
+		},
+		{
+
+			desc:     "Not admin",
+			migrator: acc,
+			paused:   true,
+			err:      true,
+		},
+		{
+
+			desc:     "Not paused",
+			migrator: genesisAcc,
+			paused:   false,
+			err:      true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, _, err := setupFixedCommittee(tc.migrator.Address)
+			assert.Nil(t, err)
+
+			if tc.paused {
+				_, err = p.v.Pause(auth)
+				assert.Nil(t, err)
+			}
+
+			// Migrate
+			_, err = p.v.Migrate(bind.NewKeyedTransactor(tc.migrator.PrivateKey), genesisAcc.Address)
+
+			if tc.err {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+}
 
 func TestFixedDepositETH(t *testing.T) {
 	p, _, err := setupFixedCommittee()
@@ -261,9 +313,9 @@ func TestFixedVaultWithdrawERC20(t *testing.T) {
 	}
 }
 
-func setupFixedCommittee() (*Platform, *committees, error) {
+func setupFixedCommittee(accs ...common.Address) (*Platform, *committees, error) {
 	c := getFixedCommittee()
-	p, err := setup(c.beacons, c.bridges)
+	p, err := setup(c.beacons, c.bridges, accs...)
 	return p, c, err
 }
 
