@@ -24,12 +24,16 @@ contract Vault is AdminPausable {
     address constant ETH_TOKEN = 0x0000000000000000000000000000000000000000;
     mapping(bytes32 => bool) public withdrawed;
     Incognito public incognito;
+    address payable newVault;
 
     event Deposit(address token, string incognitoAddress, uint amount);
     event Withdraw(address token, address to, uint amount);
+    event Migrate(address newVault);
+    event Claim(address[] assets);
 
     constructor(address admin, address incognitoProxyAddress) public AdminPausable(admin) {
         incognito = Incognito(incognitoProxyAddress);
+        newVault = address(0);
     }
 
     function deposit(string memory incognitoAddress) public payable isNotPaused {
@@ -153,5 +157,25 @@ contract Vault is AdminPausable {
             require(IERC20(token).transfer(to, burned));
         }
         emit Withdraw(token, to, burned);
+    }
+
+    function migrate(address payable _newVault) public onlyAdmin isPaused {
+        newVault = _newVault;
+        emit Migrate(_newVault);
+    }
+
+    function claim(address[] memory assets) public onlyAdmin isPaused {
+        require(newVault != address(0));
+        for (uint i = 0; i < assets.length; i++) {
+            if (assets[i] == ETH_TOKEN) {
+                newVault.transfer(address(this).balance);
+            } else {
+                uint bal = IERC20(assets[i]).balanceOf(address(this));
+                if (bal > 0) {
+                    require(IERC20(assets[i]).transfer(newVault, bal));
+                }
+            }
+        }
+        emit Claim(assets);
     }
 }
