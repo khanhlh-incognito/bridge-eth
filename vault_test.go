@@ -10,9 +10,83 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestFixedMoveERC20(t *testing.T) {
+	p, _, _ := setupFixedCommittee() // New SimulatedBackend each time => ERC20 address is fixed
+	erc20Addr := p.tokenAddr
+	newVault := newAccount()
+
+	type initAsset struct {
+		addr  common.Address
+		value int64
+	}
+
+	testCases := []struct {
+		desc     string
+		newVault common.Address
+		assets   []initAsset
+		err      bool
+	}{
+		{
+			desc:     "Success",
+			newVault: newVault.Address,
+			assets:   []initAsset{initAsset{erc20Addr, 1000}},
+		},
+		{
+			desc:     "One asset failed",
+			newVault: newVault.Address,
+			assets:   []initAsset{initAsset{erc20Addr, 1000}, initAsset{newVault.Address, 0}}, // Dummy address as erc20
+			err:      true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, _, err := setupFixedCommittee()
+			assert.Nil(t, err)
+
+			// Deposit to make sure there's ERC20 to move
+			assets := []common.Address{}
+			for _, a := range tc.assets {
+				assets = append(assets, a.addr)
+				if a.value == 0 {
+					continue
+				}
+				token, _ := erc20.NewErc20(a.addr, p.sim)
+				oldBalance, newBalance, err := lockSimERC20(p, token, a.addr, a.value)
+				assert.Nil(t, err)
+				assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(a.value)), newBalance)
+			}
+
+			// Pause and migrate
+			_, err = p.v.Pause(auth)
+			assert.Nil(t, err)
+			p.sim.Commit()
+			_, err = p.v.Migrate(auth, tc.newVault)
+			assert.Nil(t, err)
+			p.sim.Commit()
+
+			// Move
+			_, err = p.v.MoveAssets(auth, assets)
+			p.sim.Commit()
+
+			if tc.err {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				for _, a := range tc.assets {
+					token, err := erc20.NewErc20(a.addr, p.sim)
+					assert.Nil(t, err)
+					assert.Equal(t, big.NewInt(a.value), getBalanceERC20(token, tc.newVault))
+				}
+			}
+		})
+	}
+}
 
 func TestFixedMoveETH(t *testing.T) {
 	acc := newAccount()
@@ -38,7 +112,6 @@ func TestFixedMoveETH(t *testing.T) {
 			err:      true,
 		},
 		{
-
 			desc:     "Not paused",
 			mover:    genesisAcc,
 			paused:   false,
@@ -115,7 +188,6 @@ func TestFixedMigrate(t *testing.T) {
 			err:      true,
 		},
 		{
-
 			desc:     "Not paused",
 			migrator: genesisAcc,
 			paused:   false,
@@ -176,7 +248,7 @@ func TestFixedDepositERC20(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
-	oldBalance, newBalance, err := lockSimERC20(p, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
 	assert.Nil(t, err)
 
 	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(1e9))), newBalance)
@@ -191,7 +263,7 @@ func TestFixedDepositERC20Paused(t *testing.T) {
 	assert.Nil(t, err)
 	p.sim.Commit()
 
-	oldBalance, newBalance, err := lockSimERC20(p, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
 	assert.Nil(t, err)
 
 	assert.Equal(t, oldBalance, newBalance)
@@ -373,7 +445,7 @@ func TestFixedVaultWithdrawERC20(t *testing.T) {
 		t.Error(err)
 	}
 
-	oldBalance, newBalance, err := lockSimERC20(p, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
 	if err != nil {
 		t.Fatal(err)
 	}

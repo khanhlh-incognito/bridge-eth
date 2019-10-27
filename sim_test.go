@@ -147,7 +147,7 @@ func TestSimulatedBurnERC20(t *testing.T) {
 		t.Fatalf("%+v", err)
 	}
 
-	oldBalance, newBalance, err := lockSimERC20(p, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,22 +169,24 @@ func TestSimulatedBurnERC20(t *testing.T) {
 
 func lockSimERC20(
 	p *Platform,
+	token *erc20.Erc20,
+	tokenAddr common.Address,
 	amount int64,
 ) (*big.Int, *big.Int, error) {
-	initBalance := getBalanceERC20(p.token, p.vAddr)
-	fmt.Printf("bal: %d\n", getBalanceERC20(p.token, genesisAcc.Address))
-	err := approveERC20(genesisAcc.PrivateKey, p.vAddr, p.token, amount)
+	initBalance := getBalanceERC20(token, p.vAddr)
+	fmt.Printf("bal: %d\n", getBalanceERC20(token, genesisAcc.Address))
+	err := approveERC20(genesisAcc.PrivateKey, p.vAddr, token, amount)
 	if err != nil {
 		return nil, nil, err
 	}
 	p.sim.Commit()
 
-	err = depositERC20(genesisAcc.PrivateKey, p.v, p.tokenAddr, amount)
+	err = depositERC20(genesisAcc.PrivateKey, p.v, tokenAddr, amount)
 	if err != nil {
 		return nil, nil, err
 	}
 	p.sim.Commit()
-	newBalance := getBalanceERC20(p.token, p.vAddr)
+	newBalance := getBalanceERC20(token, p.vAddr)
 	return initBalance, newBalance, nil
 }
 
