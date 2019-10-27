@@ -204,10 +204,14 @@ func (p *Platform) getBalance(addr common.Address) *big.Int {
 func setup(
 	beaconComm []common.Address,
 	bridgeComm []common.Address,
+	accs ...common.Address,
 ) (*Platform, error) {
 	alloc := make(core.GenesisAlloc)
 	balance, _ := big.NewInt(1).SetString("100000000000000000000", 10) // 100 eth
 	alloc[auth.From] = core.GenesisAccount{Balance: balance}
+	for _, acc := range accs {
+		alloc[acc] = core.GenesisAccount{Balance: balance}
+	}
 	sim := backends.NewSimulatedBackend(alloc, 8000000)
 	p := &Platform{sim: sim, contracts: &contracts{}}
 
