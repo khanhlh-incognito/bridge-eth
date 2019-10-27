@@ -240,7 +240,8 @@ func setup(
 	// printReceipt(sim, tx)
 
 	// Vault
-	p.vAddr, tx, p.v, err = vault.DeployVault(auth, sim, admin, p.incAddr)
+	prevVault := common.Address{}
+	p.vAddr, tx, p.v, err = vault.DeployVault(auth, sim, admin, p.incAddr, prevVault)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy Vault contract: %v", err)
 	}

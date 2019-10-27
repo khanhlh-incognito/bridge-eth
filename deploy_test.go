@@ -270,7 +270,8 @@ func TestDeployProxyAndVault(t *testing.T) {
 
 	// Deploy vault
 	// incAddr := common.HexToAddress("ca71f588362a320b2e004cf8b728001c5c91da45")
-	vaultAddr, _, _, err := vault.DeployVault(auth, client, admin, incAddr)
+	prevVault := common.Address{}
+	vaultAddr, _, _, err := vault.DeployVault(auth, client, admin, incAddr, prevVault)
 	if err != nil {
 		t.Fatal(err)
 	}

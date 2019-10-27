@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO(@0xbunyip): test isWithdrawed() and allow admin to change IncognitoProxy address
+
 func TestFixedMoveERC20(t *testing.T) {
 	p, _, _ := setupFixedCommittee() // New SimulatedBackend each time => ERC20 address is fixed
 	erc20Addr := p.tokenAddr

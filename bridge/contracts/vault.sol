@@ -20,10 +20,15 @@ contract Incognito {
     ) public view returns (bool);
 }
 
+contract Withdrawable {
+    function isWithdrawed(bytes32) public view returns (bool);
+}
+
 contract Vault is AdminPausable {
     address constant ETH_TOKEN = 0x0000000000000000000000000000000000000000;
     mapping(bytes32 => bool) public withdrawed;
     Incognito public incognito;
+    Withdrawable public prevVault;
     address payable newVault;
 
     event Deposit(address token, string incognitoAddress, uint amount);
@@ -31,8 +36,9 @@ contract Vault is AdminPausable {
     event Migrate(address newVault);
     event MoveAssets(address[] assets);
 
-    constructor(address admin, address incognitoProxyAddress) public AdminPausable(admin) {
+    constructor(address admin, address incognitoProxyAddress, address _prevVault) public AdminPausable(admin) {
         incognito = Incognito(incognitoProxyAddress);
+        prevVault = Withdrawable(_prevVault);
         newVault = address(0);
     }
 
@@ -48,6 +54,15 @@ contract Vault is AdminPausable {
         require(amount + tokenBalance <= 10 ** 18);
         require(erc20Interface.transferFrom(msg.sender, address(this), amount));
         emit Deposit(token, incognitoAddress, amount);
+    }
+
+    function isWithdrawed(bytes32 hash) public view returns(bool) {
+        if (withdrawed[hash]) {
+            return true;
+        } else if (address(prevVault) == address(0)) {
+            return false;
+        }
+        return prevVault.isWithdrawed(hash);
     }
 
     function parseBurnInst(bytes memory inst) public pure returns (uint8, uint8, address, address payable, uint) {
@@ -81,7 +96,7 @@ contract Vault is AdminPausable {
         bytes32 instHash = keccak256(inst);
         bytes32 beaconInstHash = keccak256(abi.encodePacked(inst, heights[0]));
         bytes32 bridgeInstHash = keccak256(abi.encodePacked(inst, heights[1]));
-        require(withdrawed[instHash] == false);
+        require(!isWithdrawed(instHash));
 
         // Verify instruction on beacon
         require(incognito.instructionApproved(
