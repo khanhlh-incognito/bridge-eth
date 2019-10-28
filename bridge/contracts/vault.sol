@@ -25,7 +25,7 @@ contract Withdrawable {
 }
 
 contract Vault is AdminPausable {
-    address constant ETH_TOKEN = 0x0000000000000000000000000000000000000000;
+    address constant public ETH_TOKEN = 0x0000000000000000000000000000000000000000;
     mapping(bytes32 => bool) public withdrawed;
     Incognito public incognito;
     Withdrawable public prevVault;
