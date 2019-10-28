@@ -12,10 +12,8 @@ contract IncognitoProxy is AdminPausable {
     Committee[] public beaconCommittees;
     Committee[] public bridgeCommittees;
 
-    event LogUint(uint val);
-    event LogString(string val);
-    event LogBytes32(bytes32 val);
-    event LogAddress(address val);
+    event BeaconCommitteeSwapped(uint id, uint startHeight);
+    event BridgeCommitteeSwapped(uint id, uint startHeight);
 
     constructor(
         address admin,
@@ -94,8 +92,8 @@ contract IncognitoProxy is AdminPausable {
             pubkeys: pubkeys,
             startBlock: startHeight
         }));
-        emit LogUint(startHeight);
-        emit LogString("Done");
+
+        emit BridgeCommitteeSwapped(bridgeCommittees.length, startHeight);
     }
 
     function swapBeaconCommittee(
@@ -136,8 +134,8 @@ contract IncognitoProxy is AdminPausable {
             pubkeys: pubkeys,
             startBlock: startHeight
         }));
-        emit LogUint(startHeight);
-        emit LogString("Done");
+
+        emit BeaconCommitteeSwapped(beaconCommittees.length, startHeight);
     }
 
     function instructionApproved(
