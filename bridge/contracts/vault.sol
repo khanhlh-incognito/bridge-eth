@@ -29,7 +29,7 @@ contract Vault is AdminPausable {
     mapping(bytes32 => bool) public withdrawed;
     Incognito public incognito;
     Withdrawable public prevVault;
-    address payable newVault;
+    address payable public newVault;
 
     event Deposit(address token, string incognitoAddress, uint amount);
     event Withdraw(address token, address to, uint amount);
