@@ -33,6 +33,14 @@ contract IncognitoProxy is AdminPausable {
         }));
     }
 
+    function getBeaconCommittee(uint i) public view returns(Committee memory) {
+        return beaconCommittees[i];
+    }
+
+    function getBridgeCommittee(uint i) public view returns(Committee memory) {
+        return bridgeCommittees[i];
+    }
+
     function swapBridgeCommittee(
         bytes memory inst,
         bytes32[][2] memory instPaths,
