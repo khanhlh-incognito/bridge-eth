@@ -86,6 +86,9 @@ contract IncognitoProxy is AdminPausable {
         (uint8 meta, uint8 shard, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
         require(meta == 71 && shard == 1);
 
+        // Make sure 1 instruction can't be used twice (using startHeight)
+        require(startHeight > bridgeCommittees[bridgeCommittees.length-1].startBlock, "cannot change old committee");
+
         // Swap committee
         address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
         bridgeCommittees.push(Committee({
@@ -127,6 +130,9 @@ contract IncognitoProxy is AdminPausable {
         // Parse instruction and check metadata and shardID
         (uint8 meta, uint8 shard, uint startHeight, uint numVals) = extractMetaFromInstruction(inst);
         require(meta == 70 && shard == 1);
+
+        // Make sure 1 instruction can't be used twice (using startHeight)
+        require(startHeight > beaconCommittees[beaconCommittees.length-1].startBlock, "cannot change old committee");
 
         // Swap committee
         address[] memory pubkeys = extractCommitteeFromInstruction(inst, numVals);
@@ -291,4 +297,20 @@ contract IncognitoProxy is AdminPausable {
         }
         return true;
     }
+
+    // function fixCommittee(
+    //     bool isBeacon,
+    //     uint i,
+    //     bytes32[] memory pubkeys,
+    //     uint startBlock,
+    // ) public onlyAdmin isPaused {
+    //     if isBeacon {
+    //         require(i < beaconCommittees.length, "committee doesn't exist");
+    //         beaconCommittees[i] = Committee({pubkeys: pubkeys, startBlock: startBlock});
+    //     } else {
+    //         require(i < bridgeCommittees.length, "committee doesn't exist");
+    //         bridgeCommittees[i] = Committee({pubkeys: pubkeys, startBlock: startBlock});
+    //     }
+    //     emit CommitteeFixed(isBeacon, i, startBlock);
+    // }
 }

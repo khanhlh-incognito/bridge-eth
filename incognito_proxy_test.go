@@ -14,6 +14,7 @@ import (
 	"github.com/incognitochain/bridge-eth/common"
 	"github.com/incognitochain/bridge-eth/consensus/signatureschemes/bridgesig"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFixedFindBeaconCommitteeFromHeight(t *testing.T) {
@@ -760,6 +761,24 @@ func TestFixedSwapBridgeFixedProof(t *testing.T) {
 	}
 	p.sim.Commit()
 	printReceipt(p.sim, tx)
+}
+
+// TestFixedSwapBeaconTwice submits a swap proof twice to make sure it isn't reusable
+func TestFixedSwapBeaconTwice(t *testing.T) {
+	p, c, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	// Proof: swap with the same members
+	proof := repeatSwapBeacon(c, 10, 70, 1)
+
+	// First submission
+	_, err = SwapBeacon(p.inc, auth, proof)
+	assert.Nil(t, err)
+	p.sim.Commit()
+
+	// Second
+	_, err = SwapBeacon(p.inc, auth, proof)
+	assert.NotNil(t, err)
 }
 
 // TestFixedSwapBeaconFixedProof decodes a fixed proof and submit to make sure proof
