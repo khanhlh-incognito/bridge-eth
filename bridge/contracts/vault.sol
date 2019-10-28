@@ -35,6 +35,7 @@ contract Vault is AdminPausable {
     event Withdraw(address token, address to, uint amount);
     event Migrate(address newVault);
     event MoveAssets(address[] assets);
+    event UpdateIncognitoProxy(address newIncognitoProxy);
 
     constructor(address admin, address incognitoProxyAddress, address _prevVault) public AdminPausable(admin) {
         incognito = Incognito(incognitoProxyAddress);
@@ -192,5 +193,11 @@ contract Vault is AdminPausable {
             }
         }
         emit MoveAssets(assets);
+    }
+
+    function updateIncognitoProxy(address newIncognitoProxy) public onlyAdmin isPaused {
+        require(newIncognitoProxy != address(0));
+        incognito = Incognito(newIncognitoProxy);
+        emit UpdateIncognitoProxy(newIncognitoProxy);
     }
 }

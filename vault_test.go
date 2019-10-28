@@ -16,7 +16,62 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO(@0xbunyip): allow admin to change IncognitoProxy address
+func TestFixedUpdateIncognitoProxy(t *testing.T) {
+	acc := newAccount()
+	testCases := []struct {
+		desc   string
+		caller *account
+		paused bool
+		err    bool
+	}{
+		{
+			desc:   "Success",
+			caller: genesisAcc,
+			paused: true,
+		},
+		{
+			desc:   "Not admin",
+			caller: acc,
+			paused: true,
+			err:    true,
+		},
+		{
+			desc:   "Not paused",
+			caller: genesisAcc,
+			paused: false,
+			err:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, _, err := setupFixedCommittee(tc.caller.Address)
+			assert.Nil(t, err)
+
+			if tc.paused {
+				_, err = p.v.Pause(auth)
+				assert.Nil(t, err)
+				p.sim.Commit()
+			}
+
+			// Update
+			_, err = p.v.UpdateIncognitoProxy(bind.NewKeyedTransactor(tc.caller.PrivateKey), acc.Address)
+			p.sim.Commit()
+
+			if tc.err {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+
+				// Check new incognito proxy address
+				inc, err := p.v.Incognito(nil)
+				assert.Nil(t, err)
+				assert.Equal(t, inc, acc.Address)
+			}
+		})
+	}
+}
+
 func TestFixedIsWithdrawedTrue(t *testing.T) {
 	proof := getFixedBurnProofETH()
 
