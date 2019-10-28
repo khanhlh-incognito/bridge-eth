@@ -10,12 +10,85 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO(@0xbunyip): test isWithdrawed() and allow admin to change IncognitoProxy address
+// TODO(@0xbunyip): allow admin to change IncognitoProxy address
+func TestFixedIsWithdrawedTrue(t *testing.T) {
+	proof := getFixedBurnProofETH()
+
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	_, _, err = deposit(p, int64(5e18))
+	assert.Nil(t, err)
+
+	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+
+	// First withdraw, must success
+	_, err = Withdraw(p.v, auth, proof)
+	assert.Nil(t, err)
+	p.sim.Commit()
+	bal := p.getBalance(withdrawer)
+	assert.Equal(t, bal, big.NewInt(1000000000000))
+
+	// Deploy new Vault
+	prevVault := p.vAddr
+	p.vAddr, _, p.v, err = vault.DeployVault(auth, p.sim, auth.From, p.incAddr, prevVault)
+	assert.Nil(t, err)
+	p.sim.Commit()
+
+	// Deposit to new vault
+	proof = getFixedBurnProofERC20()
+
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
+	assert.Nil(t, err)
+	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(1e9))), newBalance)
+
+	// New withdraw, must success
+	_, err = Withdraw(p.v, auth, proof)
+	assert.Nil(t, err)
+	p.sim.Commit()
+
+	assert.Equal(t, big.NewInt(2000), getBalanceERC20(p.token, withdrawer))
+}
+
+func TestFixedIsWithdrawedFalse(t *testing.T) {
+	proof := getFixedBurnProofETH()
+
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	_, _, err = deposit(p, int64(5e18))
+	assert.Nil(t, err)
+
+	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+
+	// First withdraw, must success
+	_, err = Withdraw(p.v, auth, proof)
+	assert.Nil(t, err)
+	p.sim.Commit()
+	bal := p.getBalance(withdrawer)
+	assert.Equal(t, bal, big.NewInt(1000000000000))
+
+	// Deploy new Vault
+	prevVault := p.vAddr
+	p.vAddr, _, p.v, err = vault.DeployVault(auth, p.sim, auth.From, p.incAddr, prevVault)
+	assert.Nil(t, err)
+	p.sim.Commit()
+
+	// Deposit to new vault
+	_, _, err = deposit(p, int64(5e18))
+	assert.Nil(t, err)
+
+	// Withdraw with old proof, must fail
+	_, err = Withdraw(p.v, auth, proof)
+	assert.NotNil(t, err)
+	assert.Equal(t, p.getBalance(withdrawer), big.NewInt(1000000000000))
+}
 
 func TestFixedMoveERC20(t *testing.T) {
 	p, _, _ := setupFixedCommittee() // New SimulatedBackend each time => ERC20 address is fixed
@@ -380,6 +453,29 @@ type burnInst struct {
 	token  common.Address
 	to     common.Address
 	amount *big.Int
+}
+
+func TestFixedWithdrawTwice(t *testing.T) {
+	proof := getFixedBurnProofETH()
+
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	_, _, err = deposit(p, int64(5e18))
+	assert.Nil(t, err)
+
+	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+
+	// First withdraw, must success
+	_, err = Withdraw(p.v, auth, proof)
+	assert.Nil(t, err)
+	p.sim.Commit()
+	bal := p.getBalance(withdrawer)
+	assert.Equal(t, bal, big.NewInt(1000000000000))
+
+	// Second withdraw, must fail
+	_, err = Withdraw(p.v, auth, proof)
+	assert.NotNil(t, err)
 }
 
 func TestFixedVaultWithdrawETH(t *testing.T) {
