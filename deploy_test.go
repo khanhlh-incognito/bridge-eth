@@ -15,9 +15,43 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/incognitochain/bridge-eth/bridge"
+	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
+	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/pkg/errors"
 )
+
+func TestSwapBridge(t *testing.T) {
+	// Get proof
+	url := "http://54.39.158.106:19032"
+	block := 54
+	proof, err := getAndDecodeBridgeSwapProof(url, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Connect to ETH
+	privKey, client, err := connect()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	// Get contract instance
+	incAddr := common.HexToAddress(IncognitoProxyAddress)
+	c, err := incognito_proxy.NewIncognitoProxy(incAddr, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Swap
+	auth := bind.NewKeyedTransactor(privKey)
+	tx, err := SwapBridge(c, auth, proof)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txHash := tx.Hash()
+	fmt.Printf("swapped, txHash: %x\n", txHash[:])
+}
 
 func TestSwapBeacon(t *testing.T) {
 	// Get proof
@@ -32,7 +66,7 @@ func TestSwapBeacon(t *testing.T) {
 
 	// Get contract instance
 	incAddr := common.HexToAddress(IncognitoProxyAddress)
-	c, err := bridge.NewIncognitoProxy(incAddr, client)
+	c, err := incognito_proxy.NewIncognitoProxy(incAddr, client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +154,7 @@ func TestBurn(t *testing.T) {
 
 	// Get contract instance
 	vaultAddr := common.HexToAddress(VaultAddress)
-	c, err := bridge.NewVault(vaultAddr, client)
+	c, err := vault.NewVault(vaultAddr, client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +178,7 @@ func TestDeposit(t *testing.T) {
 
 	// Get contract instance
 	vaultAddr := common.HexToAddress(VaultAddress)
-	c, err := bridge.NewVault(vaultAddr, client)
+	c, err := vault.NewVault(vaultAddr, client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,19 +244,21 @@ func TestDeployProxyAndVault(t *testing.T) {
 	}
 	defer client.Close()
 
+	admin := common.HexToAddress(Admin)
+	fmt.Println("Admin address:", admin.Hex())
+
 	// Genesis committee
-	// url := "http://test-node.incognito.org:9334"
-	// url := "http://0.0.0.0:9334"
-	// numBeaconVals, beaconComm, numBridgeVals, bridgeComm, err := getCommittee(url)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
 	beaconComm, bridgeComm := getCommitteeHardcoded()
+	// beaconComm, bridgeComm, err := getCommittee("http://54.39.158.106:19032/")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
 
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
 	auth.GasPrice = big.NewInt(20000000000)
-	incAddr, _, _, err := bridge.DeployIncognitoProxy(auth, client, beaconComm, bridgeComm)
+	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, admin, beaconComm, bridgeComm)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,8 +269,8 @@ func TestDeployProxyAndVault(t *testing.T) {
 	time.Sleep(10 * time.Second)
 
 	// Deploy vault
-	// incAddr := common.HexToAddress("ca71f588362a320b2e004cf8b728001c5c91da45")
-	vaultAddr, _, _, err := bridge.DeployVault(auth, client, incAddr)
+	prevVault := common.Address{}
+	vaultAddr, _, _, err := vault.DeployVault(auth, client, admin, incAddr, prevVault)
 	if err != nil {
 		t.Fatal(err)
 	}

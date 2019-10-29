@@ -18,7 +18,8 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/incognitochain/bridge-eth/bridge"
+	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
+	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
 )
 
@@ -32,44 +33,34 @@ type Platform struct {
 
 func init() {
 	fmt.Println("Initializing genesis account...")
-	genesisAcc = newAccount()
+	genesisAcc = loadAccount()
 	auth = bind.NewKeyedTransactor(genesisAcc.PrivateKey)
 }
 
 func TestSimulatedSwapBridge(t *testing.T) {
-	body := getBridgeSwapProof(114)
-	if len(body) < 1 {
-		t.Fatal(fmt.Errorf("empty bridge swap proof"))
-	}
-
-	r := getProofResult{}
-	if err := json.Unmarshal([]byte(body), &r); err != nil {
-		t.Fatalf("%+v", err)
-	}
-	if len(r.Result.Instruction) == 0 {
-		t.Fatal("invalid swap proof")
-	}
-	proof, err := decodeProof(&r)
-	if err != nil {
-		t.Fatalf("%+v", err)
-	}
-	// a, _ := json.Marshal(proof)
-	// fmt.Println(string(a))
-
 	p, err := setupWithHardcodedCommittee()
 	// p, err := setupWithLocalCommittee()
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
 
-	auth.GasLimit = 7000000
-	fmt.Printf("inst len: %d\n", len(proof.Instruction))
-	tx, err := SwapBridge(p.inc, auth, proof)
-	if err != nil {
-		fmt.Println("err:", err)
+	blocks := []int{10, 20, 30}
+	for _, b := range blocks {
+		url := "http://54.39.158.106:19032"
+		proof, err := getAndDecodeBridgeSwapProof(url, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		auth.GasLimit = 7000000
+		fmt.Printf("inst len: %d\n", len(proof.Instruction))
+		tx, err := SwapBridge(p.inc, auth, proof)
+		if err != nil {
+			fmt.Println("err:", err)
+		}
+		p.sim.Commit()
+		printReceipt(p.sim, tx)
 	}
-	p.sim.Commit()
-	printReceipt(p.sim, tx)
 }
 
 func TestSimulatedSwapBeacon(t *testing.T) {
@@ -156,7 +147,7 @@ func TestSimulatedBurnERC20(t *testing.T) {
 		t.Fatalf("%+v", err)
 	}
 
-	oldBalance, newBalance, err := lockSimERC20(p, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,22 +169,24 @@ func TestSimulatedBurnERC20(t *testing.T) {
 
 func lockSimERC20(
 	p *Platform,
+	token *erc20.Erc20,
+	tokenAddr common.Address,
 	amount int64,
 ) (*big.Int, *big.Int, error) {
-	initBalance := getBalanceERC20(p.token, p.vAddr)
-	fmt.Printf("bal: %d\n", getBalanceERC20(p.token, genesisAcc.Address))
-	err := approveERC20(genesisAcc.PrivateKey, p.vAddr, p.token, amount)
+	initBalance := getBalanceERC20(token, p.vAddr)
+	fmt.Printf("bal: %d\n", getBalanceERC20(token, genesisAcc.Address))
+	err := approveERC20(genesisAcc.PrivateKey, p.vAddr, token, amount)
 	if err != nil {
 		return nil, nil, err
 	}
 	p.sim.Commit()
 
-	err = depositERC20(genesisAcc.PrivateKey, p.v, p.tokenAddr, amount)
+	err = depositERC20(genesisAcc.PrivateKey, p.v, tokenAddr, amount)
 	if err != nil {
 		return nil, nil, err
 	}
 	p.sim.Commit()
-	newBalance := getBalanceERC20(p.token, p.vAddr)
+	newBalance := getBalanceERC20(token, p.vAddr)
 	return initBalance, newBalance, nil
 }
 
@@ -213,10 +206,14 @@ func (p *Platform) getBalance(addr common.Address) *big.Int {
 func setup(
 	beaconComm []common.Address,
 	bridgeComm []common.Address,
+	accs ...common.Address,
 ) (*Platform, error) {
 	alloc := make(core.GenesisAlloc)
 	balance, _ := big.NewInt(1).SetString("100000000000000000000", 10) // 100 eth
 	alloc[auth.From] = core.GenesisAccount{Balance: balance}
+	for _, acc := range accs {
+		alloc[acc] = core.GenesisAccount{Balance: balance}
+	}
 	sim := backends.NewSimulatedBackend(alloc, 8000000)
 	p := &Platform{sim: sim, contracts: &contracts{}}
 
@@ -229,11 +226,12 @@ func setup(
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy ERC20 contract: %v", err)
 	}
-	fmt.Printf("token addr: %s\n", p.tokenAddr.Hex())
+	// fmt.Printf("token addr: %s\n", p.tokenAddr.Hex())
 	sim.Commit()
 
 	// IncognitoProxy
-	p.incAddr, tx, p.inc, err = bridge.DeployIncognitoProxy(auth, sim, beaconComm, bridgeComm)
+	admin := auth.From
+	p.incAddr, tx, p.inc, err = incognito_proxy.DeployIncognitoProxy(auth, sim, admin, beaconComm, bridgeComm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy IncognitoProxy contract: %v", err)
 	}
@@ -242,7 +240,8 @@ func setup(
 	// printReceipt(sim, tx)
 
 	// Vault
-	p.vAddr, tx, p.v, err = bridge.DeployVault(auth, sim, p.incAddr)
+	prevVault := common.Address{}
+	p.vAddr, tx, p.v, err = vault.DeployVault(auth, sim, admin, p.incAddr, prevVault)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy Vault contract: %v", err)
 	}
@@ -272,10 +271,17 @@ type account struct {
 	Address    common.Address
 }
 
-func newAccount() *account {
-	// key, _ := crypto.GenerateKey()
-	// crypto.SaveECDSA("genesisKey.hex", key)
+func loadAccount() *account {
 	key, _ := crypto.LoadECDSA("genesisKey.hex")
+	return &account{
+		PrivateKey: key,
+		Address:    crypto.PubkeyToAddress(key.PublicKey),
+	}
+}
+
+func newAccount() *account {
+	key, _ := crypto.GenerateKey()
+	// crypto.SaveECDSA("genesisKey.hex", key)
 	return &account{
 		PrivateKey: key,
 		Address:    crypto.PubkeyToAddress(key.PublicKey),
@@ -325,9 +331,26 @@ func printReceipt(sim *backends.SimulatedBackend, tx *types.Transaction) {
 	}
 }
 
-func getBridgeSwapProof(block int) string {
-	url := "http://127.0.0.1:9344"
+func getAndDecodeBridgeSwapProof(url string, block int) (*decodedProof, error) {
+	body := getBridgeSwapProof(url, block)
+	if len(body) < 1 {
+		return nil, fmt.Errorf("no bridge swap proof found")
+	}
+	r := getProofResult{}
+	if err := json.Unmarshal([]byte(body), &r); err != nil {
+		return nil, err
+	}
+	if len(r.Result.Instruction) == 0 {
+		return nil, fmt.Errorf("invalid swap proof")
+	}
+	proof, err := decodeProof(&r)
+	if err != nil {
+		return nil, err
+	}
+	return proof, nil
+}
 
+func getBridgeSwapProof(url string, block int) string {
 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbridgeswapproof\",\n    \"params\": [\n    \t%d\n    ]\n}", block))
 
 	req, _ := http.NewRequest("POST", url, payload)

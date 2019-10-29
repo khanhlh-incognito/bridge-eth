@@ -1,5 +1,6 @@
 *.abi
 *.bin
 export.sh
+genesisKey.hex
 */build/contracts/*
 */node_modules/
