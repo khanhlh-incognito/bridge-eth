@@ -257,7 +257,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
-	auth.GasPrice = big.NewInt(20000000000)
+	auth.GasPrice = big.NewInt(10000000000)
 	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, admin, beaconComm, bridgeComm)
 	if err != nil {
 		t.Fatal(err)
@@ -266,7 +266,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 	fmt.Println("deployed incognito_proxy")
 	fmt.Printf("addr: %s\n", incAddr.Hex())
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(60 * time.Second)
 
 	// Deploy vault
 	prevVault := common.Address{}
@@ -285,7 +285,7 @@ func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
 		return nil, nil, err
 	}
 
-	client, err := ethclient.Dial("https://kovan.infura.io/v3/29fead42346b4bfa88dd5fd7e56b6406")
+	client, err := ethclient.Dial("https://mainnet.infura.io/v3/29fead42346b4bfa88dd5fd7e56b6406")
 	if err != nil {
 		return nil, nil, err
 	}
