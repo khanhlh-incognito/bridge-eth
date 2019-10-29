@@ -39,7 +39,7 @@ func init() {
 
 func TestSimulatedSwapBridge(t *testing.T) {
 	p, err := setupWithHardcodedCommittee()
-	// p, err := setupWithLocalCommittee()
+	// _, err := setupWithLocalCommittee()
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
