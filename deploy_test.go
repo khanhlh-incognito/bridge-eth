@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -258,7 +259,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
 	auth.GasPrice = big.NewInt(10000000000)
-	incAddr, _, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, admin, beaconComm, bridgeComm)
+	incAddr, tx, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, admin, beaconComm, bridgeComm)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +267,19 @@ func TestDeployProxyAndVault(t *testing.T) {
 	fmt.Println("deployed incognito_proxy")
 	fmt.Printf("addr: %s\n", incAddr.Hex())
 
-	time.Sleep(60 * time.Second)
+	// Wait until tx is confirmed
+	ctx := context.Background()
+	for range time.Tick(10 * time.Second) {
+		rec, err := client.TransactionReceipt(ctx, tx.Hash())
+		if err == nil {
+			break
+		} else if err == ethereum.NotFound {
+			continue
+		} else {
+			t.Fatal(err)
+			return
+		}
+	}
 
 	// Deploy vault
 	prevVault := common.Address{}
