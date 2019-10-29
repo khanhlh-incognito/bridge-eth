@@ -270,7 +270,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 	// Wait until tx is confirmed
 	ctx := context.Background()
 	for range time.Tick(10 * time.Second) {
-		rec, err := client.TransactionReceipt(ctx, tx.Hash())
+		_, err := client.TransactionReceipt(ctx, tx.Hash())
 		if err == nil {
 			break
 		} else if err == ethereum.NotFound {
