@@ -3,6 +3,11 @@ pragma experimental ABIEncoderV2;
 
 import "./pause.sol";
 
+/**
+ * @dev Stores beacon and bridge committee members of Incognito Chain. Other
+ * contracts can query this contract to check if an instruction is confimed on
+ * Incognito
+ */
 contract IncognitoProxy is AdminPausable {
     struct Committee {
         address[] pubkeys; // ETH address of all members
