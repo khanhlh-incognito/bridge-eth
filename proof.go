@@ -27,6 +27,13 @@ type contracts struct {
 	incAddr   common.Address
 	token     *erc20.Erc20
 	tokenAddr common.Address
+
+	tokens map[int]tokenInfo
+}
+
+type tokenInfo struct {
+	c    *erc20.Erc20
+	addr common.Address
 }
 
 type getProofResult struct {

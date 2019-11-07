@@ -384,6 +384,18 @@ func TestFixedDepositERC20(t *testing.T) {
 	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(1e9))), newBalance)
 }
 
+func TestFixedDeposit108ERC20(t *testing.T) {
+	decimals := []int{18}
+	p, _, err := setupFixedERC20s(decimals)
+	assert.Nil(t, err)
+
+	tinfo := p.tokens[18]
+	oldBalance, newBalance, err := lockSimERC20(p, tinfo.c, tinfo.addr, int64(2e18))
+	assert.Nil(t, err)
+
+	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(2e18))), newBalance)
+}
+
 func TestFixedDepositERC20Paused(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
@@ -624,7 +636,13 @@ func TestFixedVaultWithdrawERC20(t *testing.T) {
 
 func setupFixedCommittee(accs ...common.Address) (*Platform, *committees, error) {
 	c := getFixedCommittee()
-	p, err := setup(c.beacons, c.bridges, accs...)
+	p, err := setup(c.beacons, c.bridges, []int{}, accs...)
+	return p, c, err
+}
+
+func setupFixedERC20s(decimals []int) (*Platform, *committees, error) {
+	c := getFixedCommittee()
+	p, err := setup(c.beacons, c.bridges, decimals)
 	return p, c, err
 }
 

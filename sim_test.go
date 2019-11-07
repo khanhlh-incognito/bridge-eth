@@ -206,6 +206,7 @@ func (p *Platform) getBalance(addr common.Address) *big.Int {
 func setup(
 	beaconComm []common.Address,
 	bridgeComm []common.Address,
+	decimals []int,
 	accs ...common.Address,
 ) (*Platform, error) {
 	alloc := make(core.GenesisAlloc)
@@ -215,7 +216,7 @@ func setup(
 		alloc[acc] = core.GenesisAccount{Balance: balance}
 	}
 	sim := backends.NewSimulatedBackend(alloc, 8000000)
-	p := &Platform{sim: sim, contracts: &contracts{}}
+	p := &Platform{sim: sim, contracts: &contracts{tokens: map[int]tokenInfo{}}}
 
 	var err error
 	var tx *types.Transaction
@@ -227,6 +228,19 @@ func setup(
 		return nil, fmt.Errorf("failed to deploy ERC20 contract: %v", err)
 	}
 	// fmt.Printf("token addr: %s\n", p.tokenAddr.Hex())
+	sim.Commit()
+
+	// Deploy erc20s with different decimals to test
+	ercBal := big.NewInt(20)
+	ercBal = ercBal.Mul(ercBal, big.NewInt(int64(1e18)))
+	ercBal = ercBal.Mul(ercBal, big.NewInt(int64(1e18)))
+	for _, d := range decimals {
+		tokenAddr, _, token, err := erc20.DeployErc20(auth, sim, "MyErc20", "ERC", big.NewInt(int64(d)), ercBal)
+		if err != nil {
+			return nil, fmt.Errorf("failed to deploy ERC20 contract: %v", err)
+		}
+		p.tokens[d] = tokenInfo{c: token, addr: tokenAddr}
+	}
 	sim.Commit()
 
 	// IncognitoProxy
@@ -258,12 +272,12 @@ func setupWithLocalCommittee() (*Platform, error) {
 	if err != nil {
 		return nil, err
 	}
-	return setup(beaconOld, bridgeOld)
+	return setup(beaconOld, bridgeOld, []int{})
 }
 
 func setupWithHardcodedCommittee() (*Platform, error) {
 	beaconOld, bridgeOld := getCommitteeHardcoded()
-	return setup(beaconOld, bridgeOld)
+	return setup(beaconOld, bridgeOld, []int{})
 }
 
 type account struct {
