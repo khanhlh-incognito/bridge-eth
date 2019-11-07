@@ -384,16 +384,16 @@ func TestFixedDepositERC20(t *testing.T) {
 	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(1e9))), newBalance)
 }
 
-func TestFixedDeposit108ERC20(t *testing.T) {
+func TestFixedDeposit2E18ERC20(t *testing.T) {
 	decimals := []int{18}
 	p, _, err := setupFixedERC20s(decimals)
 	assert.Nil(t, err)
 
 	tinfo := p.tokens[18]
 	oldBalance, newBalance, err := lockSimERC20(p, tinfo.c, tinfo.addr, int64(2e18))
-	assert.Nil(t, err)
-
-	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(2e18))), newBalance)
+	if assert.Nil(t, err) {
+		assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(2e18))), newBalance)
+	}
 }
 
 func TestFixedDepositERC20Paused(t *testing.T) {

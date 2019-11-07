@@ -136,7 +136,7 @@ func depositERC20(
 ) error {
 	auth := bind.NewKeyedTransactor(privKey)
 	auth.GasPrice = big.NewInt(20000000000)
-	auth.GasLimit = 1000000
+	// auth.GasLimit = 1000000
 	tx, err := v.DepositERC20(auth, tokenAddr, big.NewInt(amount), IncPaymentAddr)
 	if err != nil {
 		return err
@@ -154,7 +154,7 @@ func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token *erc2
 
 	// Approve
 	auth := bind.NewKeyedTransactor(privKey)
-	auth.GasPrice = big.NewInt(20000000000)
+	// auth.GasPrice = big.NewInt(20000000000)
 	auth.GasLimit = 1000000
 	tx, err := token.Approve(auth, spender, big.NewInt(amount))
 	if err != nil {
