@@ -88,7 +88,7 @@ contract Vault is AdminPausable {
     function depositERC20(address token, uint amount, string memory incognitoAddress) public payable isNotPaused {
         IERC20 erc20Interface = IERC20(token);
         uint tokenBalance = erc20Interface.balanceOf(address(this));
-        require(amount + tokenBalance <= 10 ** 18);
+        require(amount <= 10 ** 18 && tokenBalance <= 10 ** 18 && amount + tokenBalance <= 10 ** 18);
         require(erc20Interface.transferFrom(msg.sender, address(this), amount));
         emit Deposit(token, incognitoAddress, amount);
     }
