@@ -406,7 +406,7 @@ func TestFixedDepositERC20Paused(t *testing.T) {
 	p.sim.Commit()
 
 	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 
 	assert.Equal(t, oldBalance, newBalance)
 }
