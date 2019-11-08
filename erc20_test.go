@@ -43,13 +43,13 @@ func TestERC20Lock(t *testing.T) {
 
 	// Approve
 	amount := int64(1000)
-	err := approveERC20(privKey, c.vAddr, c.token, amount)
+	err := approveERC20(privKey, c.vAddr, c.token, big.NewInt(amount))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Deposit
-	if err := depositERC20(privKey, c.v, c.tokenAddr, amount); err != nil {
+	if err := depositERC20(privKey, c.v, c.tokenAddr, big.NewInt(amount)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -58,7 +58,7 @@ func TestERC20Deposit(t *testing.T) {
 	privKey, c := connectAndInstantiate(t)
 
 	// Deposit
-	amount := int64(1000)
+	amount := big.NewInt(int64(1000))
 	if err := depositERC20(privKey, c.v, c.tokenAddr, amount); err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestERC20Approve(t *testing.T) {
 	privKey, c := connectAndInstantiate(t)
 
 	// Approve
-	amount := int64(1000)
+	amount := big.NewInt(int64(1000))
 	err := approveERC20(privKey, c.vAddr, c.token, amount)
 	if err != nil {
 		t.Fatal(err)
@@ -133,12 +133,12 @@ func depositERC20(
 	privKey *ecdsa.PrivateKey,
 	v *vault.Vault,
 	tokenAddr common.Address,
-	amount int64,
+	amount *big.Int,
 ) error {
 	auth := bind.NewKeyedTransactor(privKey)
 	auth.GasPrice = big.NewInt(20000000000)
 	// auth.GasLimit = 1000000
-	tx, err := v.DepositERC20(auth, tokenAddr, big.NewInt(amount), IncPaymentAddr)
+	tx, err := v.DepositERC20(auth, tokenAddr, amount, IncPaymentAddr)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -147,7 +147,7 @@ func depositERC20(
 	return nil
 }
 
-func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token *erc20.Erc20, amount int64) error {
+func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token *erc20.Erc20, amount *big.Int) error {
 	// Check balance
 	userAddr := crypto.PubkeyToAddress(privKey.PublicKey)
 	bal, _ := token.BalanceOf(nil, userAddr)
@@ -156,8 +156,8 @@ func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token *erc2
 	// Approve
 	auth := bind.NewKeyedTransactor(privKey)
 	// auth.GasPrice = big.NewInt(20000000000)
-	auth.GasLimit = 1000000
-	tx, err := token.Approve(auth, spender, big.NewInt(amount))
+	// auth.GasLimit = 1000000
+	tx, err := token.Approve(auth, spender, amount)
 	if err != nil {
 		return errors.WithStack(err)
 	}

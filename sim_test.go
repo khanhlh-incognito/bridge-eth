@@ -148,7 +148,7 @@ func TestSimulatedBurnERC20(t *testing.T) {
 		t.Fatalf("%+v", err)
 	}
 
-	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, big.NewInt(int64(1e9)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func lockSimERC20(
 	p *Platform,
 	token *erc20.Erc20,
 	tokenAddr common.Address,
-	amount int64,
+	amount *big.Int,
 ) (*big.Int, *big.Int, error) {
 	initBalance := getBalanceERC20(token, p.vAddr)
 	fmt.Printf("bal: %d\n", getBalanceERC20(token, genesisAcc.Address))

@@ -99,7 +99,7 @@ func TestFixedIsWithdrawedTrue(t *testing.T) {
 	// Deposit to new vault
 	proof = getFixedBurnProofERC20()
 
-	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, big.NewInt(int64(1e9)))
 	assert.Nil(t, err)
 	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(1e9))), newBalance)
 
@@ -187,7 +187,7 @@ func TestFixedMoveERC20(t *testing.T) {
 					continue
 				}
 				token, _ := erc20.NewErc20(a.addr, p.sim)
-				oldBalance, newBalance, err := lockSimERC20(p, token, a.addr, a.value)
+				oldBalance, newBalance, err := lockSimERC20(p, token, a.addr, big.NewInt(a.value))
 				assert.Nil(t, err)
 				assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(a.value)), newBalance)
 			}
@@ -396,21 +396,72 @@ func TestFixedDepositERC20(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
-	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, big.NewInt(int64(1e9)))
 	assert.Nil(t, err)
 
 	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(1e9))), newBalance)
 }
 
 func TestFixedDepositERC20Decimals(t *testing.T) {
-	decimals := []int{18}
-	p, _, err := setupFixedERC20s(decimals)
-	assert.Nil(t, err)
+	b2e27, _ := big.NewInt(1).SetString("2000000000000000000000000000", 10)
+	testCases := []struct {
+		desc    string
+		decimal int
+		value   *big.Int
+		emit    *big.Int
+		err     bool
+	}{
+		{
+			desc:    "DAI (d=18)",
+			decimal: 18,
+			value:   big.NewInt(int64(5e18)),
+			emit:    big.NewInt(int64(5e9)),
+		},
+		{
+			desc:    "ZIL (d=12)",
+			decimal: 12,
+			value:   big.NewInt(int64(3e12)),
+			emit:    big.NewInt(int64(3e9)),
+		},
+		{
+			desc:    "ABC (d=27)",
+			decimal: 27,
+			value:   b2e27,
+			emit:    big.NewInt(int64(2e9)),
+		},
+		{
+			desc:    "XYZ (d=9)",
+			decimal: 9,
+			value:   big.NewInt(int64(4e9)),
+			emit:    big.NewInt(int64(4e9)),
+		},
+		{
+			desc:    "USDT (d=6)",
+			decimal: 6,
+			value:   big.NewInt(int64(8e6)),
+			emit:    big.NewInt(int64(8e6)),
+		},
+		{
+			desc:    "IJK (d=0)",
+			decimal: 0,
+			value:   big.NewInt(9),
+			emit:    big.NewInt(9),
+		},
+	}
 
-	tinfo := p.tokens[18]
-	oldBalance, newBalance, err := lockSimERC20(p, tinfo.c, tinfo.addr, int64(2e18))
-	if assert.Nil(t, err) {
-		assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(2e18))), newBalance)
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			decimals := []int{tc.decimal}
+			p, _, err := setupFixedERC20s(decimals)
+			assert.Nil(t, err)
+
+			tinfo := p.tokens[tc.decimal]
+			oldBalance, newBalance, err := lockSimERC20(p, tinfo.c, tinfo.addr, tc.value)
+			if assert.Nil(t, err) {
+				assert.Equal(t, oldBalance.Add(oldBalance, tc.value), newBalance)
+				// TODo(@0xbunyip): check event
+			}
+		})
 	}
 }
 
@@ -420,13 +471,13 @@ func TestFixedDepositOverbalanceERC20(t *testing.T) {
 
 	// First deposit, success
 	amount := int64(1e18)
-	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, amount)
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, big.NewInt(amount))
 	if assert.Nil(t, err) {
 		assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(amount)), newBalance)
 	}
 
 	// Second deposit, overbalance, fail
-	oldBalance, newBalance, err = lockSimERC20(p, p.token, p.tokenAddr, 1)
+	oldBalance, newBalance, err = lockSimERC20(p, p.token, p.tokenAddr, big.NewInt(1))
 	if assert.NotNil(t, err) {
 		assert.Equal(t, oldBalance, newBalance)
 	}
@@ -441,7 +492,7 @@ func TestFixedDepositERC20Paused(t *testing.T) {
 	assert.Nil(t, err)
 	p.sim.Commit()
 
-	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, big.NewInt(int64(1e9)))
 	assert.NotNil(t, err)
 
 	assert.Equal(t, oldBalance, newBalance)
@@ -646,7 +697,7 @@ func TestFixedVaultWithdrawERC20(t *testing.T) {
 		t.Error(err)
 	}
 
-	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, big.NewInt(int64(1e9)))
 	if err != nil {
 		t.Fatal(err)
 	}
