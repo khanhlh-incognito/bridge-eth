@@ -632,7 +632,7 @@ func TestFixedWithdrawTwice(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestFixedVaultWithdrawETH(t *testing.T) {
+func TestFixedWithdrawETH(t *testing.T) {
 	proof := getFixedBurnProofETH()
 
 	p, _, err := setupFixedCommittee()
@@ -663,7 +663,7 @@ func TestFixedVaultWithdrawETH(t *testing.T) {
 	}
 }
 
-func TestFixedVaultWithdrawPaused(t *testing.T) {
+func TestFixedWithdrawPaused(t *testing.T) {
 	proof := getFixedBurnProofETH()
 
 	p, _, err := setupFixedCommittee()
@@ -689,7 +689,7 @@ func TestFixedVaultWithdrawPaused(t *testing.T) {
 	assert.Zero(t, bal.Int64())
 }
 
-func TestFixedVaultWithdrawERC20(t *testing.T) {
+func TestFixedWithdrawERC20(t *testing.T) {
 	proof := getFixedBurnProofERC20()
 
 	p, _, err := setupFixedCommittee()
