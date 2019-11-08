@@ -6,15 +6,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+var DepositERC20Topic = "0x2d4b597935f3cd67fb2eebf1db4debc934cee5c7baa7153f980fdbeb2e74084e"
 
 func TestFixedUpdateIncognitoProxy(t *testing.T) {
 	acc := newAccount()
@@ -456,13 +462,46 @@ func TestFixedDepositERC20Decimals(t *testing.T) {
 			assert.Nil(t, err)
 
 			tinfo := p.tokens[tc.decimal]
-			oldBalance, newBalance, err := lockSimERC20WithBalance(p, tinfo.c, tinfo.addr, tc.value)
+			oldBalance := getBalanceERC20(tinfo.c, p.vAddr)
+			_, tx, err := lockSimERC20WithTxs(p, tinfo.c, tinfo.addr, tc.value)
 			if assert.Nil(t, err) {
+				newBalance := getBalanceERC20(tinfo.c, p.vAddr)
 				assert.Equal(t, oldBalance.Add(oldBalance, tc.value), newBalance)
-				// TODo(@0xbunyip): check event
+
+				emitted, err := extractAmountInDepositERC20Event(p.sim, tx)
+				if assert.Nil(t, err) {
+					assert.Equal(t, tc.emit, emitted)
+				}
 			}
 		})
 	}
+}
+
+func extractAmountInDepositERC20Event(sim *backends.SimulatedBackend, tx *types.Transaction) (*big.Int, error) {
+	_, events, err := retrieveEvents(sim, tx)
+	if err != nil {
+		return nil, err
+	}
+	data, ok := events[DepositERC20Topic]
+	if !ok {
+		return nil, errors.Errorf("no erc20 deposit event found in tx %v", tx.Hash().Hex())
+	}
+	cAbi, err := abi.JSON(strings.NewReader(vault.VaultABI))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	e := struct {
+		Token            common.Address
+		IncognitoAddress string
+		Amount           *big.Int
+	}{}
+	fmt.Printf("%+v\n", cAbi.Events["Deposit"])
+	err = cAbi.Unpack(&e, "Deposit", data)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return e.Amount, nil
 }
 
 func TestFixedDepositOverbalanceERC20(t *testing.T) {

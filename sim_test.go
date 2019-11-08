@@ -315,46 +315,59 @@ func newAccount() *account {
 	}
 }
 
-func printReceipt(sim *backends.SimulatedBackend, tx *types.Transaction) {
+func retrieveEvents(sim *backends.SimulatedBackend, tx *types.Transaction) (*types.Receipt, map[string][]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
 	receipt, err := sim.TransactionReceipt(ctx, tx.Hash())
 	if err != nil {
-		fmt.Println("receipt err:", err)
+		return nil, nil, errors.WithStack(err)
 	}
-	fmt.Printf("tx gas used: %v\n", receipt.CumulativeGasUsed)
 
 	if len(receipt.Logs) == 0 {
 		fmt.Println("empty log")
+		return nil, nil, nil
+	}
+
+	events := map[string][]byte{}
+	for _, log := range receipt.Logs {
+		events[log.Topics[0].Hex()] = log.Data
+	}
+	return receipt, events, nil
+}
+
+func printReceipt(sim *backends.SimulatedBackend, tx *types.Transaction) {
+	receipt, events, err := retrieveEvents(sim, tx)
+	if err != nil {
+		fmt.Printf("receipt err: %+v", err)
 		return
 	}
 
-	for i, log := range receipt.Logs {
-		var data interface{}
-		data = log.Data
+	fmt.Printf("tx gas used: %v\n", receipt.CumulativeGasUsed)
+
+	for topic, data := range events {
+		var d interface{}
+		d = data
 
 		format := "%+v"
-		switch log.Topics[0].Hex() {
+		switch topic {
 		case "0x8b1126c8e4087477c3efd9e3785935b29c778491c70e249de774345f7ca9b7f9", "0xa95e6e2a182411e7a6f9ed114a85c3761d87f9b8f453d842c71235aa64fff99f": // bytes32
 			format = "%s"
 		case "0xb42152598f9b870207037767fd41b627a327c9434c796b2ee501d68acec68d1b", "0x009fd52f05c0ded31d6fb0ee580b923f85e99cf1a5a1da342f25e73c45829c83":
 			format = "%x"
 		case "0x6c8f06ff564112a969115be5f33d4a0f87ba918c9c9bc3090fe631968e818be4": // bool
 			format = "%t"
-			data = log.Data[len(log.Data)-1] > 0
+			d = data[len(data)-1] > 0
 		case "0x8e2fc7b10a4f77a18c553db9a8f8c24d9e379da2557cb61ad4cc513a2f992cbd", "0x0ac68d08c5119b8cdb4058edbf0d4168f208ec3935d26a8f1f0d92eb9d4de8bf": // uint
 			format = "%s"
-			data = big.NewInt(int64(0)).SetBytes(log.Data)
+			d = big.NewInt(int64(0)).SetBytes(data)
 		case "0x0ac6e167e94338a282ec23bdd86f338fc787bd67f48b3ade098144aac3fcd86e", "0xb123f68b8ba02b447d91a6629e121111b7dd6061ff418a60139c8bf00522a284": // address
 			format = "%x"
-			data = log.Data[12:]
+			d = data[12:]
 		}
 
-		fmt.Printf(fmt.Sprintf("logs[%%d]: %s\n", format), i, data)
-		// for _, topic := range log.Topics {
-		// 	fmt.Printf("topic: %x\n", topic)
-		// }
+		fmt.Printf(fmt.Sprintf("logs: %s\n", format), d)
+		// fmt.Println(topic)
 	}
 }
 
