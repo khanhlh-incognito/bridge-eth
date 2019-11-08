@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
@@ -43,13 +44,13 @@ func TestERC20Lock(t *testing.T) {
 
 	// Approve
 	amount := int64(1000)
-	err := approveERC20(privKey, c.vAddr, c.token, big.NewInt(amount))
+	_, err := approveERC20(privKey, c.vAddr, c.token, big.NewInt(amount))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Deposit
-	if err := depositERC20(privKey, c.v, c.tokenAddr, big.NewInt(amount)); err != nil {
+	if _, err := depositERC20(privKey, c.v, c.tokenAddr, big.NewInt(amount)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -59,7 +60,7 @@ func TestERC20Deposit(t *testing.T) {
 
 	// Deposit
 	amount := big.NewInt(int64(1000))
-	if err := depositERC20(privKey, c.v, c.tokenAddr, amount); err != nil {
+	if _, err := depositERC20(privKey, c.v, c.tokenAddr, amount); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -70,7 +71,7 @@ func TestERC20Approve(t *testing.T) {
 
 	// Approve
 	amount := big.NewInt(int64(1000))
-	err := approveERC20(privKey, c.vAddr, c.token, amount)
+	_, err := approveERC20(privKey, c.vAddr, c.token, amount)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,20 +135,20 @@ func depositERC20(
 	v *vault.Vault,
 	tokenAddr common.Address,
 	amount *big.Int,
-) error {
+) (*types.Transaction, error) {
 	auth := bind.NewKeyedTransactor(privKey)
 	auth.GasPrice = big.NewInt(20000000000)
 	// auth.GasLimit = 1000000
 	tx, err := v.DepositERC20(auth, tokenAddr, amount, IncPaymentAddr)
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	txHash := tx.Hash()
 	fmt.Printf("erc20 deposited, txHash: %x\n", txHash[:])
-	return nil
+	return tx, nil
 }
 
-func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token *erc20.Erc20, amount *big.Int) error {
+func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token *erc20.Erc20, amount *big.Int) (*types.Transaction, error) {
 	// Check balance
 	userAddr := crypto.PubkeyToAddress(privKey.PublicKey)
 	bal, _ := token.BalanceOf(nil, userAddr)
@@ -159,11 +160,11 @@ func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token *erc2
 	// auth.GasLimit = 1000000
 	tx, err := token.Approve(auth, spender, amount)
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	txHash := tx.Hash()
 	fmt.Printf("erc20 approved, txHash: %x\n", txHash[:])
-	return nil
+	return tx, nil
 }
 
 func instantiate(client *ethclient.Client) (*contracts, error) {
