@@ -78,7 +78,7 @@ func TestFixedIsWithdrawedTrue(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
-	_, _, err = deposit(p, int64(5e18))
+	_, _, err = deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
 	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
@@ -117,7 +117,7 @@ func TestFixedIsWithdrawedFalse(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
-	_, _, err = deposit(p, int64(5e18))
+	_, _, err = deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
 	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
@@ -136,7 +136,7 @@ func TestFixedIsWithdrawedFalse(t *testing.T) {
 	p.sim.Commit()
 
 	// Deposit to new vault
-	_, _, err = deposit(p, int64(5e18))
+	_, _, err = deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
 	// Withdraw with old proof, must fail
@@ -263,7 +263,7 @@ func TestFixedMoveETH(t *testing.T) {
 			assert.Nil(t, err)
 
 			// Deposit to make sure there's ETH to move
-			oldBalance, newBalance, err := deposit(p, int64(1000))
+			oldBalance, newBalance, err := deposit(p, big.NewInt(int64(1000)))
 			assert.Nil(t, err)
 			assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(1000)), newBalance)
 
@@ -353,10 +353,28 @@ func TestFixedDepositETH(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
 	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(5e18))), newBalance)
+}
+
+func TestFixedDepositOverbalanceETH(t *testing.T) {
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	// First deposit, success
+	amount := big.NewInt(1).Exp(big.NewInt(10), big.NewInt(27), nil)
+	oldBalance, newBalance, err := deposit(p, amount)
+	if assert.Nil(t, err) {
+		assert.Equal(t, oldBalance.Add(oldBalance, amount), newBalance)
+	}
+
+	// Second deposit, overbalance, fail
+	oldBalance, newBalance, err = deposit(p, big.NewInt(1))
+	if assert.NotNil(t, err) {
+		assert.Equal(t, oldBalance, newBalance)
+	}
 }
 
 func TestFixedDepositETHPaused(t *testing.T) {
@@ -368,7 +386,7 @@ func TestFixedDepositETHPaused(t *testing.T) {
 	assert.Nil(t, err)
 	p.sim.Commit()
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	assert.NotNil(t, err)
 
 	assert.Equal(t, oldBalance, newBalance)
@@ -384,7 +402,7 @@ func TestFixedDepositERC20(t *testing.T) {
 	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(1e9))), newBalance)
 }
 
-func TestFixedDeposit2E18ERC20(t *testing.T) {
+func TestFixedDepositERC20Decimals(t *testing.T) {
 	decimals := []int{18}
 	p, _, err := setupFixedERC20s(decimals)
 	assert.Nil(t, err)
@@ -393,6 +411,24 @@ func TestFixedDeposit2E18ERC20(t *testing.T) {
 	oldBalance, newBalance, err := lockSimERC20(p, tinfo.c, tinfo.addr, int64(2e18))
 	if assert.Nil(t, err) {
 		assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(2e18))), newBalance)
+	}
+}
+
+func TestFixedDepositOverbalanceERC20(t *testing.T) {
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	// First deposit, success
+	amount := int64(1e18)
+	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, amount)
+	if assert.Nil(t, err) {
+		assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(amount)), newBalance)
+	}
+
+	// Second deposit, overbalance, fail
+	oldBalance, newBalance, err = lockSimERC20(p, p.token, p.tokenAddr, 1)
+	if assert.NotNil(t, err) {
+		assert.Equal(t, oldBalance, newBalance)
 	}
 }
 
@@ -420,7 +456,7 @@ func TestFixedWithdrawAfterSwap(t *testing.T) {
 	burnProofs := getFixedBurnProofAfterSwap()
 	swapProofs := getFixedSwapProofsToBurn()
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -528,7 +564,7 @@ func TestFixedWithdrawTwice(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
-	_, _, err = deposit(p, int64(5e18))
+	_, _, err = deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
 	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
@@ -553,7 +589,7 @@ func TestFixedVaultWithdrawETH(t *testing.T) {
 		t.Error(err)
 	}
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -584,7 +620,7 @@ func TestFixedVaultWithdrawPaused(t *testing.T) {
 		t.Error(err)
 	}
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	if err != nil {
 		t.Error(err)
 	}

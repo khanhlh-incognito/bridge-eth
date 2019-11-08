@@ -21,6 +21,7 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
+	"github.com/pkg/errors"
 )
 
 var auth *bind.TransactOpts
@@ -113,7 +114,7 @@ func TestSimulatedBurnETH(t *testing.T) {
 		t.Fatalf("%+v", err)
 	}
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -210,7 +211,7 @@ func setup(
 	accs ...common.Address,
 ) (*Platform, error) {
 	alloc := make(core.GenesisAlloc)
-	balance, _ := big.NewInt(1).SetString("100000000000000000000", 10) // 100 eth
+	balance, _ := big.NewInt(1).SetString("1000000000000000000000000000000", 10) // 1E30 wei
 	alloc[auth.From] = core.GenesisAccount{Balance: balance}
 	for _, acc := range accs {
 		alloc[acc] = core.GenesisAccount{Balance: balance}
@@ -418,13 +419,14 @@ func getBeaconSwapProof(block int) string {
 	return string(body)
 }
 
-func deposit(p *Platform, amount int64) (*big.Int, *big.Int, error) {
+func deposit(p *Platform, amount *big.Int) (*big.Int, *big.Int, error) {
 	initBalance := p.getBalance(p.vAddr)
 	auth := bind.NewKeyedTransactor(genesisAcc.PrivateKey)
-	auth.Value = big.NewInt(amount)
+	auth.GasLimit = 0
+	auth.Value = amount
 	_, err := p.v.Deposit(auth, "")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithStack(err)
 	}
 	p.sim.Commit()
 	newBalance := p.getBalance(p.vAddr)

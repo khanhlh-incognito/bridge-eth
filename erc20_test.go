@@ -13,6 +13,7 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
+	"github.com/pkg/errors"
 )
 
 func TestERC20Burn(t *testing.T) {
@@ -139,7 +140,7 @@ func depositERC20(
 	// auth.GasLimit = 1000000
 	tx, err := v.DepositERC20(auth, tokenAddr, big.NewInt(amount), IncPaymentAddr)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	txHash := tx.Hash()
 	fmt.Printf("erc20 deposited, txHash: %x\n", txHash[:])
@@ -158,7 +159,7 @@ func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token *erc2
 	auth.GasLimit = 1000000
 	tx, err := token.Approve(auth, spender, big.NewInt(amount))
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	txHash := tx.Hash()
 	fmt.Printf("erc20 approved, txHash: %x\n", txHash[:])
