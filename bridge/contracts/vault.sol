@@ -71,7 +71,7 @@ contract Vault is AdminPausable {
      */
     function deposit(string memory incognitoAddress) public payable isNotPaused {
         // require((msg.value + address(this).balance) <= 10 ** 27, "Balance of this contract has been reaching to its uint's maximum.");
-        require(msg.value + address(this).balance <= 10 ** 27);
+        require(address(this).balance <= 10 ** 27);
         emit Deposit(ETH_TOKEN, incognitoAddress, msg.value);
     }
 
@@ -87,10 +87,17 @@ contract Vault is AdminPausable {
      */
     function depositERC20(address token, uint amount, string memory incognitoAddress) public payable isNotPaused {
         IERC20 erc20Interface = IERC20(token);
+        uint8 decimals = erc20Interface.decimals(); // TODO(@0xbunyip): fallback when decimals() doesn't exist
         uint tokenBalance = erc20Interface.balanceOf(address(this));
-        require(amount + tokenBalance <= 10 ** 18);
+        uint emitAmount = amount;
+        if (decimals > 9) {
+            emitAmount = emitAmount / (10 ** (uint(decimals) - 9));
+            tokenBalance = tokenBalance / (10 ** (uint(decimals) - 9));
+        }
+        require(emitAmount <= 10 ** 18 && tokenBalance <= 10 ** 18 && emitAmount + tokenBalance <= 10 ** 18);
+
         require(erc20Interface.transferFrom(msg.sender, address(this), amount));
-        emit Deposit(token, incognitoAddress, amount);
+        emit Deposit(token, incognitoAddress, emitAmount);
     }
 
     /**

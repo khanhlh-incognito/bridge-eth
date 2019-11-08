@@ -21,6 +21,7 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
+	"github.com/pkg/errors"
 )
 
 var auth *bind.TransactOpts
@@ -39,7 +40,7 @@ func init() {
 
 func TestSimulatedSwapBridge(t *testing.T) {
 	p, err := setupWithHardcodedCommittee()
-	// p, err := setupWithLocalCommittee()
+	// _, err := setupWithLocalCommittee()
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
@@ -113,7 +114,7 @@ func TestSimulatedBurnETH(t *testing.T) {
 		t.Fatalf("%+v", err)
 	}
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -147,7 +148,7 @@ func TestSimulatedBurnERC20(t *testing.T) {
 		t.Fatalf("%+v", err)
 	}
 
-	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20WithBalance(p, p.token, p.tokenAddr, big.NewInt(int64(1e9)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,25 +168,37 @@ func TestSimulatedBurnERC20(t *testing.T) {
 	fmt.Printf("withdrawer new balance: %d\n", getBalanceERC20(p.token, withdrawer))
 }
 
-func lockSimERC20(
+func lockSimERC20WithTxs(
 	p *Platform,
 	token *erc20.Erc20,
 	tokenAddr common.Address,
-	amount int64,
-) (*big.Int, *big.Int, error) {
-	initBalance := getBalanceERC20(token, p.vAddr)
-	fmt.Printf("bal: %d\n", getBalanceERC20(token, genesisAcc.Address))
-	err := approveERC20(genesisAcc.PrivateKey, p.vAddr, token, amount)
+	amount *big.Int,
+) (*types.Transaction, *types.Transaction, error) {
+	txApprove, err := approveERC20(genesisAcc.PrivateKey, p.vAddr, token, amount)
 	if err != nil {
 		return nil, nil, err
 	}
 	p.sim.Commit()
 
-	err = depositERC20(genesisAcc.PrivateKey, p.v, tokenAddr, amount)
+	txDeposit, err := depositERC20(genesisAcc.PrivateKey, p.v, tokenAddr, amount)
 	if err != nil {
-		return nil, nil, err
+		return txApprove, nil, err
 	}
 	p.sim.Commit()
+	return txApprove, txDeposit, nil
+}
+
+func lockSimERC20WithBalance(
+	p *Platform,
+	token *erc20.Erc20,
+	tokenAddr common.Address,
+	amount *big.Int,
+) (*big.Int, *big.Int, error) {
+	initBalance := getBalanceERC20(token, p.vAddr)
+	fmt.Printf("bal: %d\n", getBalanceERC20(token, genesisAcc.Address))
+	if _, _, err := lockSimERC20WithTxs(p, token, tokenAddr, amount); err != nil {
+		return nil, nil, err
+	}
 	newBalance := getBalanceERC20(token, p.vAddr)
 	return initBalance, newBalance, nil
 }
@@ -206,16 +219,17 @@ func (p *Platform) getBalance(addr common.Address) *big.Int {
 func setup(
 	beaconComm []common.Address,
 	bridgeComm []common.Address,
+	decimals []int,
 	accs ...common.Address,
 ) (*Platform, error) {
 	alloc := make(core.GenesisAlloc)
-	balance, _ := big.NewInt(1).SetString("100000000000000000000", 10) // 100 eth
+	balance, _ := big.NewInt(1).SetString("1000000000000000000000000000000", 10) // 1E30 wei
 	alloc[auth.From] = core.GenesisAccount{Balance: balance}
 	for _, acc := range accs {
 		alloc[acc] = core.GenesisAccount{Balance: balance}
 	}
 	sim := backends.NewSimulatedBackend(alloc, 8000000)
-	p := &Platform{sim: sim, contracts: &contracts{}}
+	p := &Platform{sim: sim, contracts: &contracts{tokens: map[int]tokenInfo{}}}
 
 	var err error
 	var tx *types.Transaction
@@ -227,6 +241,19 @@ func setup(
 		return nil, fmt.Errorf("failed to deploy ERC20 contract: %v", err)
 	}
 	// fmt.Printf("token addr: %s\n", p.tokenAddr.Hex())
+	sim.Commit()
+
+	// Deploy erc20s with different decimals to test
+	ercBal := big.NewInt(20)
+	ercBal = ercBal.Mul(ercBal, big.NewInt(int64(1e18)))
+	ercBal = ercBal.Mul(ercBal, big.NewInt(int64(1e18)))
+	for _, d := range decimals {
+		tokenAddr, _, token, err := erc20.DeployErc20(auth, sim, "MyErc20", "ERC", big.NewInt(int64(d)), ercBal)
+		if err != nil {
+			return nil, fmt.Errorf("failed to deploy ERC20 contract: %v", err)
+		}
+		p.tokens[d] = tokenInfo{c: token, addr: tokenAddr}
+	}
 	sim.Commit()
 
 	// IncognitoProxy
@@ -258,12 +285,12 @@ func setupWithLocalCommittee() (*Platform, error) {
 	if err != nil {
 		return nil, err
 	}
-	return setup(beaconOld, bridgeOld)
+	return setup(beaconOld, bridgeOld, []int{})
 }
 
 func setupWithHardcodedCommittee() (*Platform, error) {
 	beaconOld, bridgeOld := getCommitteeHardcoded()
-	return setup(beaconOld, bridgeOld)
+	return setup(beaconOld, bridgeOld, []int{})
 }
 
 type account struct {
@@ -404,13 +431,14 @@ func getBeaconSwapProof(block int) string {
 	return string(body)
 }
 
-func deposit(p *Platform, amount int64) (*big.Int, *big.Int, error) {
+func deposit(p *Platform, amount *big.Int) (*big.Int, *big.Int, error) {
 	initBalance := p.getBalance(p.vAddr)
 	auth := bind.NewKeyedTransactor(genesisAcc.PrivateKey)
-	auth.Value = big.NewInt(amount)
+	auth.GasLimit = 0
+	auth.Value = amount
 	_, err := p.v.Deposit(auth, "")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithStack(err)
 	}
 	p.sim.Commit()
 	newBalance := p.getBalance(p.vAddr)

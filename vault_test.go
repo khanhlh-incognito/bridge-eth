@@ -78,7 +78,7 @@ func TestFixedIsWithdrawedTrue(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
-	_, _, err = deposit(p, int64(5e18))
+	_, _, err = deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
 	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
@@ -99,7 +99,7 @@ func TestFixedIsWithdrawedTrue(t *testing.T) {
 	// Deposit to new vault
 	proof = getFixedBurnProofERC20()
 
-	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20WithBalance(p, p.token, p.tokenAddr, big.NewInt(int64(1e9)))
 	assert.Nil(t, err)
 	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(1e9))), newBalance)
 
@@ -117,7 +117,7 @@ func TestFixedIsWithdrawedFalse(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
-	_, _, err = deposit(p, int64(5e18))
+	_, _, err = deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
 	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
@@ -136,7 +136,7 @@ func TestFixedIsWithdrawedFalse(t *testing.T) {
 	p.sim.Commit()
 
 	// Deposit to new vault
-	_, _, err = deposit(p, int64(5e18))
+	_, _, err = deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
 	// Withdraw with old proof, must fail
@@ -187,7 +187,7 @@ func TestFixedMoveERC20(t *testing.T) {
 					continue
 				}
 				token, _ := erc20.NewErc20(a.addr, p.sim)
-				oldBalance, newBalance, err := lockSimERC20(p, token, a.addr, a.value)
+				oldBalance, newBalance, err := lockSimERC20WithBalance(p, token, a.addr, big.NewInt(a.value))
 				assert.Nil(t, err)
 				assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(a.value)), newBalance)
 			}
@@ -263,7 +263,7 @@ func TestFixedMoveETH(t *testing.T) {
 			assert.Nil(t, err)
 
 			// Deposit to make sure there's ETH to move
-			oldBalance, newBalance, err := deposit(p, int64(1000))
+			oldBalance, newBalance, err := deposit(p, big.NewInt(int64(1000)))
 			assert.Nil(t, err)
 			assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(1000)), newBalance)
 
@@ -353,10 +353,28 @@ func TestFixedDepositETH(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
 	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(5e18))), newBalance)
+}
+
+func TestFixedDepositOverbalanceETH(t *testing.T) {
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	// First deposit, success
+	amount := big.NewInt(1).Exp(big.NewInt(10), big.NewInt(27), nil)
+	oldBalance, newBalance, err := deposit(p, amount)
+	if assert.Nil(t, err) {
+		assert.Equal(t, oldBalance.Add(oldBalance, amount), newBalance)
+	}
+
+	// Second deposit, overbalance, fail
+	oldBalance, newBalance, err = deposit(p, big.NewInt(1))
+	if assert.NotNil(t, err) {
+		assert.Equal(t, oldBalance, newBalance)
+	}
 }
 
 func TestFixedDepositETHPaused(t *testing.T) {
@@ -368,7 +386,7 @@ func TestFixedDepositETHPaused(t *testing.T) {
 	assert.Nil(t, err)
 	p.sim.Commit()
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	assert.NotNil(t, err)
 
 	assert.Equal(t, oldBalance, newBalance)
@@ -378,10 +396,91 @@ func TestFixedDepositERC20(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
-	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20WithBalance(p, p.token, p.tokenAddr, big.NewInt(int64(1e9)))
 	assert.Nil(t, err)
 
 	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(1e9))), newBalance)
+}
+
+func TestFixedDepositERC20Decimals(t *testing.T) {
+	b2e27, _ := big.NewInt(1).SetString("2000000000000000000000000000", 10)
+	testCases := []struct {
+		desc    string
+		decimal int
+		value   *big.Int
+		emit    *big.Int
+		err     bool
+	}{
+		{
+			desc:    "DAI (d=18)",
+			decimal: 18,
+			value:   big.NewInt(int64(5e18)),
+			emit:    big.NewInt(int64(5e9)),
+		},
+		{
+			desc:    "ZIL (d=12)",
+			decimal: 12,
+			value:   big.NewInt(int64(3e12)),
+			emit:    big.NewInt(int64(3e9)),
+		},
+		{
+			desc:    "ABC (d=27)",
+			decimal: 27,
+			value:   b2e27,
+			emit:    big.NewInt(int64(2e9)),
+		},
+		{
+			desc:    "XYZ (d=9)",
+			decimal: 9,
+			value:   big.NewInt(int64(4e9)),
+			emit:    big.NewInt(int64(4e9)),
+		},
+		{
+			desc:    "USDT (d=6)",
+			decimal: 6,
+			value:   big.NewInt(int64(8e6)),
+			emit:    big.NewInt(int64(8e6)),
+		},
+		{
+			desc:    "IJK (d=0)",
+			decimal: 0,
+			value:   big.NewInt(9),
+			emit:    big.NewInt(9),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			decimals := []int{tc.decimal}
+			p, _, err := setupFixedERC20s(decimals)
+			assert.Nil(t, err)
+
+			tinfo := p.tokens[tc.decimal]
+			oldBalance, newBalance, err := lockSimERC20WithBalance(p, tinfo.c, tinfo.addr, tc.value)
+			if assert.Nil(t, err) {
+				assert.Equal(t, oldBalance.Add(oldBalance, tc.value), newBalance)
+				// TODo(@0xbunyip): check event
+			}
+		})
+	}
+}
+
+func TestFixedDepositOverbalanceERC20(t *testing.T) {
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	// First deposit, success
+	amount := int64(1e18)
+	oldBalance, newBalance, err := lockSimERC20WithBalance(p, p.token, p.tokenAddr, big.NewInt(amount))
+	if assert.Nil(t, err) {
+		assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(amount)), newBalance)
+	}
+
+	// Second deposit, overbalance, fail
+	oldBalance, newBalance, err = lockSimERC20WithBalance(p, p.token, p.tokenAddr, big.NewInt(1))
+	if assert.NotNil(t, err) {
+		assert.Equal(t, oldBalance, newBalance)
+	}
 }
 
 func TestFixedDepositERC20Paused(t *testing.T) {
@@ -393,8 +492,8 @@ func TestFixedDepositERC20Paused(t *testing.T) {
 	assert.Nil(t, err)
 	p.sim.Commit()
 
-	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
-	assert.Nil(t, err)
+	oldBalance, newBalance, err := lockSimERC20WithBalance(p, p.token, p.tokenAddr, big.NewInt(int64(1e9)))
+	assert.NotNil(t, err)
 
 	assert.Equal(t, oldBalance, newBalance)
 }
@@ -408,7 +507,7 @@ func TestFixedWithdrawAfterSwap(t *testing.T) {
 	burnProofs := getFixedBurnProofAfterSwap()
 	swapProofs := getFixedSwapProofsToBurn()
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -516,7 +615,7 @@ func TestFixedWithdrawTwice(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
-	_, _, err = deposit(p, int64(5e18))
+	_, _, err = deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
 	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
@@ -541,7 +640,7 @@ func TestFixedVaultWithdrawETH(t *testing.T) {
 		t.Error(err)
 	}
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -572,7 +671,7 @@ func TestFixedVaultWithdrawPaused(t *testing.T) {
 		t.Error(err)
 	}
 
-	oldBalance, newBalance, err := deposit(p, int64(5e18))
+	oldBalance, newBalance, err := deposit(p, big.NewInt(int64(5e18)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -598,7 +697,7 @@ func TestFixedVaultWithdrawERC20(t *testing.T) {
 		t.Error(err)
 	}
 
-	oldBalance, newBalance, err := lockSimERC20(p, p.token, p.tokenAddr, int64(1e9))
+	oldBalance, newBalance, err := lockSimERC20WithBalance(p, p.token, p.tokenAddr, big.NewInt(int64(1e9)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -624,7 +723,13 @@ func TestFixedVaultWithdrawERC20(t *testing.T) {
 
 func setupFixedCommittee(accs ...common.Address) (*Platform, *committees, error) {
 	c := getFixedCommittee()
-	p, err := setup(c.beacons, c.bridges, accs...)
+	p, err := setup(c.beacons, c.bridges, []int{}, accs...)
+	return p, c, err
+}
+
+func setupFixedERC20s(decimals []int) (*Platform, *committees, error) {
+	c := getFixedCommittee()
+	p, err := setup(c.beacons, c.bridges, decimals)
 	return p, c, err
 }
 
