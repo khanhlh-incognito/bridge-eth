@@ -736,43 +736,50 @@ func TestFixedWithdrawERC20Decimals(t *testing.T) {
 		decimal  int
 		deposit  *big.Int
 		withdraw *big.Int
+		remain   *big.Int
 		err      bool
 	}{
 		{
 			desc:     "DAI (d=18)",
 			decimal:  18,
 			deposit:  big.NewInt(int64(5e18)),
-			withdraw: big.NewInt(int64(5e9)),
+			withdraw: big.NewInt(int64(4e9)),
+			remain:   big.NewInt(int64(1e18)),
 		},
 		{
 			desc:     "ZIL (d=12)",
 			decimal:  12,
 			deposit:  big.NewInt(int64(3e12)),
-			withdraw: big.NewInt(int64(3e9)),
+			withdraw: big.NewInt(int64(3e8)),
+			remain:   big.NewInt(int64(2.7e12)),
 		},
 		{
 			desc:     "ABC (d=27)",
 			decimal:  27,
 			deposit:  b2e27,
 			withdraw: big.NewInt(int64(2e9)),
+			remain:   big.NewInt(int64(0)),
 		},
 		{
 			desc:     "XYZ (d=9)",
 			decimal:  9,
 			deposit:  big.NewInt(int64(4e9)),
-			withdraw: big.NewInt(int64(4e9)),
+			withdraw: big.NewInt(int64(1)),
+			remain:   big.NewInt(int64(4e9 - 1)),
 		},
 		{
 			desc:     "USDT (d=6)",
 			decimal:  6,
 			deposit:  big.NewInt(int64(8e6)),
-			withdraw: big.NewInt(int64(8e6)),
+			withdraw: big.NewInt(int64(7e6)),
+			remain:   big.NewInt(int64(1e6)),
 		},
 		{
 			desc:     "IJK (d=0)",
 			decimal:  0,
 			deposit:  big.NewInt(9),
-			withdraw: big.NewInt(9),
+			withdraw: big.NewInt(2),
+			remain:   big.NewInt(7),
 		},
 	}
 
@@ -792,10 +799,13 @@ func TestFixedWithdrawERC20Decimals(t *testing.T) {
 			proof := buildWithdrawTestcase(c, meta, shardID, tinfo.addr, tc.withdraw)
 
 			_, err = Withdraw(p.v, auth, proof)
-			assert.Nil(t, err)
-			p.sim.Commit()
+			if assert.Nil(t, err) {
+				p.sim.Commit()
 
-			// TODO(@0xbunyip): check balance
+				// Check balance
+				bal := getBalanceERC20(tinfo.c, p.vAddr)
+				assert.Zero(t, tc.remain.Cmp(bal))
+			}
 		})
 	}
 
