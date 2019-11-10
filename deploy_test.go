@@ -299,8 +299,11 @@ func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	fmt.Printf("Sign Txs with address: %s\n", crypto.PubkeyToAddress(privKey.PublicKey).Hex())
 
-	client, err := ethclient.Dial("https://kovan.infura.io/v3/29fead42346b4bfa88dd5fd7e56b6406")
+	network := "kovan"
+	fmt.Printf("Connecting to network %s\n", network)
+	client, err := ethclient.Dial(fmt.Sprintf("https://%s.infura.io/v3/29fead42346b4bfa88dd5fd7e56b6406", network))
 	if err != nil {
 		return nil, nil, err
 	}
