@@ -22,6 +22,20 @@ import (
 
 var DepositERC20Topic = "0x2d4b597935f3cd67fb2eebf1db4debc934cee5c7baa7153f980fdbeb2e74084e"
 
+func TestFixedFallback(t *testing.T) {
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	vr := vault.VaultRaw{p.v}
+	auth.Value = big.NewInt(1000)
+	_, err = vr.Transfer(auth)
+	if assert.Nil(t, err) {
+		p.sim.Commit()
+		assert.Equal(t, big.NewInt(1000), p.getBalance(p.vAddr))
+	}
+	auth.Value = nil
+}
+
 func TestFixedUpdateIncognitoProxy(t *testing.T) {
 	acc := newAccount()
 	testCases := []struct {
