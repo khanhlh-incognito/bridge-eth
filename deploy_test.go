@@ -186,8 +186,8 @@ func TestDeposit(t *testing.T) {
 
 	// Deposit
 	auth := bind.NewKeyedTransactor(privKey)
-	auth.GasPrice = big.NewInt(20000000000)
-	auth.Value = big.NewInt(0.01 * params.Ether)
+	// auth.GasPrice = big.NewInt(20000000000)
+	auth.Value = big.NewInt(0.123 * params.Ether)
 	tx, err := c.Deposit(auth, IncPaymentAddr)
 	if err != nil {
 		t.Fatal(err)

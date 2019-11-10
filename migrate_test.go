@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
+	"github.com/pkg/errors"
 )
 
 func TestPauseVault(t *testing.T) {
@@ -24,6 +25,10 @@ func TestMigrateVault(t *testing.T) {
 	privKey, c := getVault(t)
 
 	// Migrate vault
+	newAddr := ""
+	if len(newAddr) != 42 {
+		t.Fatal(errors.New("invalid new vault's address"))
+	}
 	newVault := common.HexToAddress("")
 	auth := bind.NewKeyedTransactor(privKey)
 	_, err := c.Migrate(auth, newVault)
