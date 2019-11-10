@@ -1,9 +1,9 @@
 package main
 
 const (
-	IncognitoProxyAddress = "0x8276043e1B426E10D2BA8B2773C074c60560840d" // v3-dev - kovan, test migrate, with fallback
-	VaultAddress          = "0xB2e10F9a0CD87151540D36a4fac7f0FA23CAB9E4" // v4-dev - kovan, test migrate, with fallback, point to prev vault v3-dev
+	IncognitoProxyAddress = "0xE34ebFf7aF293dcdDf0443818442BB5d558662Dd" // v37 - mainnet, for branch master-temp-B, with admin, 7+22 validators
+	VaultAddress          = "0xd8f7cac14156eb1d1EA1a28cd04D23cE0f142602" // v37 - mainnet, for branch master-temp-B, with admin, 7+22 validators
 	TokenAddress          = "0x1d59ee76304338fac3a0ea9ae06e618c760d6042" // v7 - kovan token Chicken
 	IncPaymentAddr        = "1Uv46Pu4pqBvxCcPw7MXhHfiAD5Rmi2xgEE7XB6eQurFAt4vSYvfyGn3uMMB1xnXDq9nRTPeiAZv5gRFCBDroRNsXJF1sxPSjNQtivuHk"
-	Admin                 = "0x65033F315F214834BD6A65Dce687Bcb0f32b0a5A"
+	Admin                 = "0x037ac7fFfC1C52Cf6351e33A77eDBdd14CE35040"
 )
