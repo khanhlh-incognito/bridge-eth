@@ -270,17 +270,8 @@ func TestDeployProxyAndVault(t *testing.T) {
 	fmt.Printf("addr: %s\n", incAddr.Hex())
 
 	// Wait until tx is confirmed
-	ctx := context.Background()
-	for range time.Tick(10 * time.Second) {
-		_, err := client.TransactionReceipt(ctx, tx.Hash())
-		if err == nil {
-			break
-		} else if err == ethereum.NotFound {
-			continue
-		} else {
-			t.Fatal(err)
-			return
-		}
+	if err := wait(client, tx.Hash()); err != nil {
+		t.Fatal(err)
 	}
 
 	// Deploy vault
@@ -291,6 +282,21 @@ func TestDeployProxyAndVault(t *testing.T) {
 	}
 	fmt.Println("deployed vault")
 	fmt.Printf("addr: %s\n", vaultAddr.Hex())
+}
+
+func wait(client *ethclient.Client, tx common.Hash) error {
+	ctx := context.Background()
+	for range time.Tick(10 * time.Second) {
+		_, err := client.TransactionReceipt(ctx, tx)
+		if err == nil {
+			break
+		} else if err == ethereum.NotFound {
+			continue
+		} else {
+			return err
+		}
+	}
+	return nil
 }
 
 func connect() (*ecdsa.PrivateKey, *ethclient.Client, error) {
