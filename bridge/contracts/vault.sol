@@ -311,4 +311,6 @@ contract Vault is AdminPausable {
         incognito = Incognito(newIncognitoProxy);
         emit UpdateIncognitoProxy(newIncognitoProxy);
     }
+
+    function () external  payable {}
 }
