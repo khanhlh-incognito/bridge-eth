@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -9,6 +10,30 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/pkg/errors"
 )
+
+func TestDeployNewVaultToMigrate(t *testing.T) {
+	privKey, client, err := connect()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	admin := common.HexToAddress(Admin)
+	incAddr := common.HexToAddress(IncognitoProxyAddress)
+	prevVaultAddr := common.HexToAddress(VaultAddress)
+	fmt.Println("Admin address:", admin.Hex())
+	fmt.Println("IncognitoProxy address:", incAddr.Hex())
+	fmt.Println("PrevVault address:", prevVaultAddr.Hex())
+
+	// Deploy vault
+	auth := bind.NewKeyedTransactor(privKey)
+	vaultAddr, _, _, err := vault.DeployVault(auth, client, admin, incAddr, prevVaultAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("deployed vault")
+	fmt.Printf("addr: %s\n", vaultAddr.Hex())
+}
 
 func TestPauseVault(t *testing.T) {
 	privKey, c := getVault(t)
