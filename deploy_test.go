@@ -249,7 +249,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 	fmt.Println("Admin address:", admin.Hex())
 
 	// Genesis committee
-	beaconComm, bridgeComm := getCommitteeHardcoded()
+	cmtee := getCommitteeHardcoded()
 	// beaconComm, bridgeComm, err := getCommittee("http://54.39.158.106:19032/")
 	// if err != nil {
 	// 	fmt.Println(err)
@@ -261,7 +261,7 @@ func TestDeployProxyAndVault(t *testing.T) {
 	auth.Value = big.NewInt(0)
 	auth.GasPrice = big.NewInt(10000000000)
 	auth.GasLimit = 4000000
-	incAddr, tx, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, admin, beaconComm, bridgeComm)
+	incAddr, tx, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, admin, cmtee.beacons, cmtee.bridges)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -289,8 +289,8 @@ func setupWithLocalCommittee() (*Platform, error) {
 }
 
 func setupWithHardcodedCommittee() (*Platform, error) {
-	beaconOld, bridgeOld := getCommitteeHardcoded()
-	return setup(beaconOld, bridgeOld, []int{})
+	cmtee := getCommitteeHardcoded()
+	return setup(cmtee.beacons, cmtee.bridges, []int{})
 }
 
 type account struct {

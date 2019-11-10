@@ -279,31 +279,6 @@ func keccak256(b ...[]byte) [32]byte {
 	return r
 }
 
-func getCommitteeHardcoded() ([]common.Address, []common.Address) {
-	beaconComm := []string{
-		"0x3cD69B1A595B7A9589391538d29ee7663326e4d3",
-		"0xc687470342f4E80ECEf6bBd25e276266d40b8429",
-		"0x2A40c96b41AdEc5641F28eF923e270B73e29bb53",
-		"0x131B772A9ADe1793F000024eAb23b77bEd3BFe64",
-	}
-	beacons := make([]common.Address, len(beaconComm))
-	for i, p := range beaconComm {
-		beacons[i] = common.HexToAddress(p)
-	}
-
-	bridgeComm := []string{
-		"0x28655822DAf6c4B32303B06e875F92dC6e242cE4",
-		"0xD2902ab2F5dF2b17C5A5aa380f511F04a2542E10",
-		"0xB67376ad63EAdC22f05efE428e93f09D4f13B4fD",
-		"0x40bAA64EAFbD355f5427d127979f377cfA48cc10",
-	}
-	bridges := make([]common.Address, len(bridgeComm))
-	for i, p := range bridgeComm {
-		bridges[i] = common.HexToAddress(p)
-	}
-	return beacons, bridges
-}
-
 func convertPubkeyToAddress(cKey CommitteePublicKey) (common.Address, error) {
 	pk, err := crypto.DecompressPubkey(cKey.MiningPubKey[BRI_CONSENSUS])
 	if err != nil {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -853,55 +852,6 @@ func setupFixedERC20s(decimals []int) (*Platform, *committees, error) {
 	c := getFixedCommittee()
 	p, err := setup(c.beacons, c.bridges, decimals)
 	return p, c, err
-}
-
-func getFixedCommittee() *committees {
-	beaconCommPrivs := []string{
-		"5a417f54357fff96fe4c2a9cafd322ed72b52bf046beb69a9730a26181088489",
-		"b9cd32581922f447acb1cfd148069fc40cbbce1e8badb84c4b509486e6f713ce",
-		"22e23970b853407e16ccb174443f27c37dbbea05729aba546ee649e0aef2d9cb",
-		"4d16dadc89656fbda140e2fe467631ddac3ed9cc326cef3a8f1b1bd5f3cfd155",
-	}
-	beaconComm := []string{
-		"0xA5301a0d25103967bf0e29db1576cba3408fD9bB",
-		"0x9BC0faE7BB432828759B6e391e0cC99995057791",
-		"0x6cbc2937FEe477bbda360A842EeEbF92c2FAb613",
-		"0xcabF3DB93eB48a61d41486AcC9281B6240411403",
-	}
-	beacons := make([]ec.Address, len(beaconComm))
-	beaconPrivs := make([][]byte, len(beaconCommPrivs))
-	for i, p := range beaconComm {
-		beacons[i] = ec.HexToAddress(p)
-		priv, _ := hex.DecodeString(beaconCommPrivs[i])
-		beaconPrivs[i] = priv
-	}
-
-	bridgeComm := []string{
-		"0x3c78124783E8e39D1E084FdDD0E097334ba2D945",
-		"0x76E34d8a527961286E55532620Af5b84F3C6538F",
-		"0x68686dB6874588D2404155D00A73F82a50FDd190",
-		"0x1533ac4d2922C150551f2F5dc2b0c1eDE382b890",
-	}
-	bridgeCommPrivs := []string{
-		"3560e649ce326a2eb9fbb59fba4b29e10fb064627f61487aecc8b92afbb127dd",
-		"b71af1a7e2ca74400187cbf2333ab1f20e9b39517347fb655ffa309d1b51b2b0",
-		"07f91f98513c203103f8d44683ce47920d1aea0eaf1cb86a373be835374d1490",
-		"7412e24d4ac1796866c44a0d5b966f8db1c3022bba8afd370a09dc49a14efeb4",
-	}
-
-	bridges := make([]ec.Address, len(bridgeComm))
-	bridgePrivs := make([][]byte, len(bridgeCommPrivs))
-	for i, p := range bridgeComm {
-		bridges[i] = ec.HexToAddress(p)
-		priv, _ := hex.DecodeString(bridgeCommPrivs[i])
-		bridgePrivs[i] = priv
-	}
-	return &committees{
-		beacons:     beacons,
-		beaconPrivs: beaconPrivs,
-		bridges:     bridges,
-		bridgePrivs: bridgePrivs,
-	}
 }
 
 func buildWithdrawTestcase(c *committees, meta, shard int, tokenID ec.Address, amount *big.Int) *decodedProof {
