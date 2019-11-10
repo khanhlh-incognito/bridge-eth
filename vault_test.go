@@ -22,6 +22,20 @@ import (
 
 var DepositERC20Topic = "0x2d4b597935f3cd67fb2eebf1db4debc934cee5c7baa7153f980fdbeb2e74084e"
 
+func TestFixedFallback(t *testing.T) {
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	vr := vault.VaultRaw{p.v}
+	auth.Value = big.NewInt(1000)
+	_, err = vr.Transfer(auth)
+	if assert.Nil(t, err) {
+		p.sim.Commit()
+		assert.Equal(t, big.NewInt(1000), p.getBalance(p.vAddr))
+	}
+	auth.Value = nil
+}
+
 func TestFixedUpdateIncognitoProxy(t *testing.T) {
 	acc := newAccount()
 	testCases := []struct {
@@ -255,7 +269,6 @@ func TestFixedMoveETH(t *testing.T) {
 			err:      true,
 		},
 		{
-
 			desc:   "Not migrated", // newVault = 0x0
 			mover:  genesisAcc,
 			paused: true,
@@ -277,9 +290,11 @@ func TestFixedMoveETH(t *testing.T) {
 			_, err = p.v.Pause(auth)
 			assert.Nil(t, err)
 			p.sim.Commit()
-			_, err = p.v.Migrate(auth, tc.newVault)
-			assert.Nil(t, err)
-			p.sim.Commit()
+			if !bytes.Equal(tc.newVault.Bytes(), make([]byte, 20)) {
+				_, err = p.v.Migrate(auth, tc.newVault)
+				assert.Nil(t, err)
+				p.sim.Commit()
+			}
 
 			if !tc.paused {
 				_, err = p.v.Unpause(auth)
@@ -308,25 +323,35 @@ func TestFixedMigrate(t *testing.T) {
 	acc := newAccount()
 	testCases := []struct {
 		desc     string
+		newVault ec.Address
 		migrator *account
 		paused   bool
 		err      bool
 	}{
 		{
 			desc:     "Success",
+			newVault: genesisAcc.Address,
 			migrator: genesisAcc,
 			paused:   true,
 		},
 		{
 			desc:     "Not admin",
+			newVault: genesisAcc.Address,
 			migrator: acc,
 			paused:   true,
 			err:      true,
 		},
 		{
 			desc:     "Not paused",
+			newVault: genesisAcc.Address,
 			migrator: genesisAcc,
 			paused:   false,
+			err:      true,
+		},
+		{
+			desc:     "Migrate to zero",
+			migrator: genesisAcc,
+			paused:   true,
 			err:      true,
 		},
 	}
@@ -343,7 +368,7 @@ func TestFixedMigrate(t *testing.T) {
 			}
 
 			// Migrate
-			_, err = p.v.Migrate(bind.NewKeyedTransactor(tc.migrator.PrivateKey), genesisAcc.Address)
+			_, err = p.v.Migrate(bind.NewKeyedTransactor(tc.migrator.PrivateKey), tc.newVault)
 			p.sim.Commit()
 
 			if tc.err {
