@@ -6,15 +6,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	ec "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
+	"github.com/incognitochain/bridge-eth/common"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+var DepositERC20Topic = "0x2d4b597935f3cd67fb2eebf1db4debc934cee5c7baa7153f980fdbeb2e74084e"
 
 func TestFixedUpdateIncognitoProxy(t *testing.T) {
 	acc := newAccount()
@@ -81,7 +88,7 @@ func TestFixedIsWithdrawedTrue(t *testing.T) {
 	_, _, err = deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
-	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+	withdrawer := ec.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
 
 	// First withdraw, must success
 	_, err = Withdraw(p.v, auth, proof)
@@ -120,7 +127,7 @@ func TestFixedIsWithdrawedFalse(t *testing.T) {
 	_, _, err = deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
-	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+	withdrawer := ec.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
 
 	// First withdraw, must success
 	_, err = Withdraw(p.v, auth, proof)
@@ -151,13 +158,13 @@ func TestFixedMoveERC20(t *testing.T) {
 	newVault := newAccount()
 
 	type initAsset struct {
-		addr  common.Address
+		addr  ec.Address
 		value int64
 	}
 
 	testCases := []struct {
 		desc     string
-		newVault common.Address
+		newVault ec.Address
 		assets   []initAsset
 		err      bool
 	}{
@@ -180,7 +187,7 @@ func TestFixedMoveERC20(t *testing.T) {
 			assert.Nil(t, err)
 
 			// Deposit to make sure there's ERC20 to move
-			assets := []common.Address{}
+			assets := []ec.Address{}
 			for _, a := range tc.assets {
 				assets = append(assets, a.addr)
 				if a.value == 0 {
@@ -225,7 +232,7 @@ func TestFixedMoveETH(t *testing.T) {
 		desc     string
 		mover    *account
 		paused   bool
-		newVault common.Address
+		newVault ec.Address
 		err      bool
 	}{
 		{
@@ -284,7 +291,7 @@ func TestFixedMoveETH(t *testing.T) {
 			// Move
 			_, err = p.v.MoveAssets(
 				bind.NewKeyedTransactor(tc.mover.PrivateKey),
-				[]common.Address{common.Address{}},
+				[]ec.Address{ec.Address{}},
 			)
 			p.sim.Commit()
 
@@ -456,13 +463,46 @@ func TestFixedDepositERC20Decimals(t *testing.T) {
 			assert.Nil(t, err)
 
 			tinfo := p.tokens[tc.decimal]
-			oldBalance, newBalance, err := lockSimERC20WithBalance(p, tinfo.c, tinfo.addr, tc.value)
+			oldBalance := getBalanceERC20(tinfo.c, p.vAddr)
+			_, tx, err := lockSimERC20WithTxs(p, tinfo.c, tinfo.addr, tc.value)
 			if assert.Nil(t, err) {
+				newBalance := getBalanceERC20(tinfo.c, p.vAddr)
 				assert.Equal(t, oldBalance.Add(oldBalance, tc.value), newBalance)
-				// TODo(@0xbunyip): check event
+
+				emitted, err := extractAmountInDepositERC20Event(p.sim, tx)
+				if assert.Nil(t, err) {
+					assert.Equal(t, tc.emit, emitted)
+				}
 			}
 		})
 	}
+}
+
+func extractAmountInDepositERC20Event(sim *backends.SimulatedBackend, tx *types.Transaction) (*big.Int, error) {
+	_, events, err := retrieveEvents(sim, tx)
+	if err != nil {
+		return nil, err
+	}
+	data, ok := events[DepositERC20Topic]
+	if !ok {
+		return nil, errors.Errorf("no erc20 deposit event found in tx %v", tx.Hash().Hex())
+	}
+	cAbi, err := abi.JSON(strings.NewReader(vault.VaultABI))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	e := struct {
+		Token            ec.Address
+		IncognitoAddress string
+		Amount           *big.Int
+	}{}
+	fmt.Printf("%+v\n", cAbi.Events["Deposit"])
+	err = cAbi.Unpack(&e, "Deposit", data)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return e.Amount, nil
 }
 
 func TestFixedDepositOverbalanceERC20(t *testing.T) {
@@ -535,7 +575,7 @@ func swapOnce(t *testing.T, p *Platform, swapProof *decodedProof) {
 }
 
 func withdrawOnce(t *testing.T, p *Platform, burnProof *decodedProof) *big.Int {
-	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+	withdrawer := ec.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
 	fmt.Printf("withdrawer init balance: %d\n", p.getBalance(withdrawer))
 
 	tx, err := Withdraw(p.v, auth, burnProof)
@@ -556,8 +596,8 @@ func TestFixedParseBurnInst(t *testing.T) {
 	in := &burnInst{
 		meta:   72,
 		shard:  1,
-		token:  common.BytesToAddress(token),
-		to:     common.BytesToAddress(to),
+		token:  ec.BytesToAddress(token),
+		to:     ec.BytesToAddress(to),
 		amount: big.NewInt(0).SetBytes(amount),
 	}
 	data := []byte{in.meta, in.shard}
@@ -604,8 +644,8 @@ func checkBurnInst(t *testing.T, in, out *burnInst) {
 type burnInst struct {
 	meta   uint8
 	shard  uint8
-	token  common.Address
-	to     common.Address
+	token  ec.Address
+	to     ec.Address
 	amount *big.Int
 }
 
@@ -618,7 +658,7 @@ func TestFixedWithdrawTwice(t *testing.T) {
 	_, _, err = deposit(p, big.NewInt(int64(5e18)))
 	assert.Nil(t, err)
 
-	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+	withdrawer := ec.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
 
 	// First withdraw, must success
 	_, err = Withdraw(p.v, auth, proof)
@@ -632,7 +672,7 @@ func TestFixedWithdrawTwice(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestFixedVaultWithdrawETH(t *testing.T) {
+func TestFixedWithdrawETH(t *testing.T) {
 	proof := getFixedBurnProofETH()
 
 	p, _, err := setupFixedCommittee()
@@ -646,7 +686,7 @@ func TestFixedVaultWithdrawETH(t *testing.T) {
 	}
 	fmt.Printf("deposit to vault: %d -> %d\n", oldBalance, newBalance)
 
-	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+	withdrawer := ec.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
 	fmt.Printf("withdrawer init balance: %d\n", p.getBalance(withdrawer))
 
 	tx, err := Withdraw(p.v, auth, proof)
@@ -663,7 +703,7 @@ func TestFixedVaultWithdrawETH(t *testing.T) {
 	}
 }
 
-func TestFixedVaultWithdrawPaused(t *testing.T) {
+func TestFixedWithdrawPaused(t *testing.T) {
 	proof := getFixedBurnProofETH()
 
 	p, _, err := setupFixedCommittee()
@@ -681,7 +721,7 @@ func TestFixedVaultWithdrawPaused(t *testing.T) {
 	_, err = p.v.Pause(auth)
 	assert.Nil(t, err)
 
-	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+	withdrawer := ec.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
 	_, err = Withdraw(p.v, auth, proof)
 	assert.NotNil(t, err)
 
@@ -689,7 +729,89 @@ func TestFixedVaultWithdrawPaused(t *testing.T) {
 	assert.Zero(t, bal.Int64())
 }
 
-func TestFixedVaultWithdrawERC20(t *testing.T) {
+func TestFixedWithdrawERC20Decimals(t *testing.T) {
+	b2e27, _ := big.NewInt(1).SetString("2000000000000000000000000000", 10)
+	testCases := []struct {
+		desc     string
+		decimal  int
+		deposit  *big.Int
+		withdraw *big.Int
+		remain   *big.Int
+		err      bool
+	}{
+		{
+			desc:     "DAI (d=18)",
+			decimal:  18,
+			deposit:  big.NewInt(int64(5e18)),
+			withdraw: big.NewInt(int64(4e9)),
+			remain:   big.NewInt(int64(1e18)),
+		},
+		{
+			desc:     "ZIL (d=12)",
+			decimal:  12,
+			deposit:  big.NewInt(int64(3e12)),
+			withdraw: big.NewInt(int64(3e8)),
+			remain:   big.NewInt(int64(2.7e12)),
+		},
+		{
+			desc:     "ABC (d=27)",
+			decimal:  27,
+			deposit:  b2e27,
+			withdraw: big.NewInt(int64(2e9)),
+			remain:   big.NewInt(int64(0)),
+		},
+		{
+			desc:     "XYZ (d=9)",
+			decimal:  9,
+			deposit:  big.NewInt(int64(4e9)),
+			withdraw: big.NewInt(int64(1)),
+			remain:   big.NewInt(int64(4e9 - 1)),
+		},
+		{
+			desc:     "USDT (d=6)",
+			decimal:  6,
+			deposit:  big.NewInt(int64(8e6)),
+			withdraw: big.NewInt(int64(7e6)),
+			remain:   big.NewInt(int64(1e6)),
+		},
+		{
+			desc:     "IJK (d=0)",
+			decimal:  0,
+			deposit:  big.NewInt(9),
+			withdraw: big.NewInt(2),
+			remain:   big.NewInt(7),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			decimals := []int{tc.decimal}
+			p, c, err := setupFixedERC20s(decimals)
+			assert.Nil(t, err)
+			tinfo := p.tokens[tc.decimal]
+
+			// Deposit, must success
+			_, _, err = lockSimERC20WithTxs(p, tinfo.c, tinfo.addr, tc.deposit)
+			assert.Nil(t, err)
+
+			meta := 72
+			shardID := 1
+			proof := buildWithdrawTestcase(c, meta, shardID, tinfo.addr, tc.withdraw)
+
+			_, err = Withdraw(p.v, auth, proof)
+			if assert.Nil(t, err) {
+				p.sim.Commit()
+
+				// Check balance
+				bal := getBalanceERC20(tinfo.c, p.vAddr)
+				assert.Zero(t, tc.remain.Cmp(bal))
+			}
+		})
+	}
+
+}
+
+func TestFixedWithdrawERC20(t *testing.T) {
 	proof := getFixedBurnProofERC20()
 
 	p, _, err := setupFixedCommittee()
@@ -703,7 +825,7 @@ func TestFixedVaultWithdrawERC20(t *testing.T) {
 	}
 	fmt.Printf("deposit erc20 to vault: %d -> %d\n", oldBalance, newBalance)
 
-	withdrawer := common.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+	withdrawer := ec.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
 	fmt.Printf("withdrawer init balance: %d\n", getBalanceERC20(p.token, withdrawer))
 
 	auth.GasLimit = 8000000
@@ -721,7 +843,7 @@ func TestFixedVaultWithdrawERC20(t *testing.T) {
 	}
 }
 
-func setupFixedCommittee(accs ...common.Address) (*Platform, *committees, error) {
+func setupFixedCommittee(accs ...ec.Address) (*Platform, *committees, error) {
 	c := getFixedCommittee()
 	p, err := setup(c.beacons, c.bridges, []int{}, accs...)
 	return p, c, err
@@ -746,10 +868,10 @@ func getFixedCommittee() *committees {
 		"0x6cbc2937FEe477bbda360A842EeEbF92c2FAb613",
 		"0xcabF3DB93eB48a61d41486AcC9281B6240411403",
 	}
-	beacons := make([]common.Address, len(beaconComm))
+	beacons := make([]ec.Address, len(beaconComm))
 	beaconPrivs := make([][]byte, len(beaconCommPrivs))
 	for i, p := range beaconComm {
-		beacons[i] = common.HexToAddress(p)
+		beacons[i] = ec.HexToAddress(p)
 		priv, _ := hex.DecodeString(beaconCommPrivs[i])
 		beaconPrivs[i] = priv
 	}
@@ -767,10 +889,10 @@ func getFixedCommittee() *committees {
 		"7412e24d4ac1796866c44a0d5b966f8db1c3022bba8afd370a09dc49a14efeb4",
 	}
 
-	bridges := make([]common.Address, len(bridgeComm))
+	bridges := make([]ec.Address, len(bridgeComm))
 	bridgePrivs := make([][]byte, len(bridgeCommPrivs))
 	for i, p := range bridgeComm {
-		bridges[i] = common.HexToAddress(p)
+		bridges[i] = ec.HexToAddress(p)
 		priv, _ := hex.DecodeString(bridgeCommPrivs[i])
 		bridgePrivs[i] = priv
 	}
@@ -782,9 +904,58 @@ func getFixedCommittee() *committees {
 	}
 }
 
+func buildWithdrawTestcase(c *committees, meta, shard int, tokenID ec.Address, amount *big.Int) *decodedProof {
+	inst, mp, blkData, blkHash := buildWithdrawData(meta, shard, tokenID, amount)
+	ipBeacon := signAndReturnInstProof(c.beaconPrivs, true, mp, blkData, blkHash[:])
+	ipBridge := signAndReturnInstProof(c.bridgePrivs, false, mp, blkData, blkHash[:])
+	return &decodedProof{
+		Instruction: inst,
+		Heights:     [2]*big.Int{big.NewInt(1), big.NewInt(1)},
+
+		InstPaths:       [2][][32]byte{ipBeacon.instPath, ipBridge.instPath},
+		InstPathIsLefts: [2][]bool{ipBeacon.instPathIsLeft, ipBridge.instPathIsLeft},
+		InstRoots:       [2][32]byte{ipBeacon.instRoot, ipBridge.instRoot},
+		BlkData:         [2][32]byte{ipBeacon.blkData, ipBridge.blkData},
+		SigIdxs:         [2][]*big.Int{ipBeacon.sigIdx, ipBridge.sigIdx},
+		SigVs:           [2][]uint8{ipBeacon.sigV, ipBridge.sigV},
+		SigRs:           [2][][32]byte{ipBeacon.sigR, ipBridge.sigR},
+		SigSs:           [2][][32]byte{ipBeacon.sigS, ipBridge.sigS},
+	}
+}
+
+func buildWithdrawData(meta, shard int, tokenID ec.Address, amount *big.Int) ([]byte, *merklePath, []byte, []byte) {
+	// Build instruction merkle tree
+	numInst := 10
+	startNodeID := 7
+	height := big.NewInt(1)
+	withdrawer := ec.HexToAddress("0xe722D8b71DCC0152D47D2438556a45D3357d631f")
+	inst := buildDecodedWithdrawInst(meta, shard, tokenID, withdrawer, amount)
+	instWithHeight := append(inst, toBytes32BigEndian(height.Bytes())...)
+	data := randomMerkleHashes(numInst)
+	data[startNodeID] = instWithHeight
+	mp := buildInstructionMerklePath(data, numInst, startNodeID)
+
+	// Generate random blkHash
+	h := randomMerkleHashes(1)
+	blkData := h[0]
+	blkHash := common.Keccak256(blkData, mp.root[:])
+	return inst, mp, blkData, blkHash[:]
+}
+
+func buildDecodedWithdrawInst(meta, shard int, tokenID, withdrawer ec.Address, amount *big.Int) []byte {
+	decoded := []byte{byte(meta)}
+	decoded = append(decoded, byte(shard))
+	decoded = append(decoded, toBytes32BigEndian(tokenID[:])...)
+	decoded = append(decoded, toBytes32BigEndian(withdrawer[:])...)
+	decoded = append(decoded, toBytes32BigEndian(amount.Bytes())...)
+	decoded = append(decoded, toBytes32BigEndian(make([]byte, 32))...) // txID
+	decoded = append(decoded, make([]byte, 16)...)                     // incTokenID, variable length
+	return decoded
+}
+
 type committees struct {
-	beacons     []common.Address
-	bridges     []common.Address
+	beacons     []ec.Address
+	bridges     []ec.Address
 	beaconPrivs [][]byte
 	bridgePrivs [][]byte
 }
