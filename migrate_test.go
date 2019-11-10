@@ -29,7 +29,7 @@ func TestMigrateVault(t *testing.T) {
 	if len(newAddr) != 42 {
 		t.Fatal(errors.New("invalid new vault's address"))
 	}
-	newVault := common.HexToAddress("")
+	newVault := common.HexToAddress(newAddr)
 	auth := bind.NewKeyedTransactor(privKey)
 	_, err := c.Migrate(auth, newVault)
 	if err != nil {

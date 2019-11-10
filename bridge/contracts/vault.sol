@@ -273,6 +273,7 @@ contract Vault is AdminPausable {
      * @param _newVault: address to save
      */
     function migrate(address payable _newVault) public onlyAdmin isPaused {
+        require(_newVault != address(0));
         newVault = _newVault;
         emit Migrate(_newVault);
     }
@@ -312,5 +313,8 @@ contract Vault is AdminPausable {
         emit UpdateIncognitoProxy(newIncognitoProxy);
     }
 
-    function () external  payable {}
+    /**
+     * @dev Payable Fallback function to receive Ether from oldVault when migrating
+     */
+    function () external payable {}
 }
