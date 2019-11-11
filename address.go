@@ -6,4 +6,5 @@ const (
 	TokenAddress          = "0x1d59ee76304338fac3a0ea9ae06e618c760d6042" // v7 - kovan token Chicken
 	IncPaymentAddr        = "1Uv46Pu4pqBvxCcPw7MXhHfiAD5Rmi2xgEE7XB6eQurFAt4vSYvfyGn3uMMB1xnXDq9nRTPeiAZv5gRFCBDroRNsXJF1sxPSjNQtivuHk"
 	Admin                 = "0x037ac7fFfC1C52Cf6351e33A77eDBdd14CE35040"
+	Successor             = "0x50c9483C8F69B8b6d5FB406DbAf2aE38573E59b6"
 )
