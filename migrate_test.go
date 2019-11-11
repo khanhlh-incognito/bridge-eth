@@ -11,6 +11,28 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestRetireVaultAdmin(t *testing.T) {
+	privKey, c := getVault(t)
+
+	successor := common.HexToAddress(Successor)
+	fmt.Println("Successor address:", successor.Hex())
+
+	auth := bind.NewKeyedTransactor(privKey)
+	_, err := c.Retire(auth, successor)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestClaimVaultAdmin(t *testing.T) {
+	privKey, c := getVault(t)
+	auth := bind.NewKeyedTransactor(privKey)
+	_, err := c.Claim(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestDeployNewVaultToMigrate(t *testing.T) {
 	privKey, client, err := connect()
 	if err != nil {
@@ -41,6 +63,17 @@ func TestPauseVault(t *testing.T) {
 	// Pause vault
 	auth := bind.NewKeyedTransactor(privKey)
 	_, err := c.Pause(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUnpauseVault(t *testing.T) {
+	privKey, c := getVault(t)
+
+	// Pause vault
+	auth := bind.NewKeyedTransactor(privKey)
+	_, err := c.Unpause(auth)
 	if err != nil {
 		t.Fatal(err)
 	}
