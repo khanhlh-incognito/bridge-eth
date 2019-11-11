@@ -59,7 +59,7 @@ func TestERC20Deposit(t *testing.T) {
 	privKey, c := connectAndInstantiate(t)
 
 	// Deposit
-	amount := big.NewInt(int64(1000))
+	amount := big.NewInt(int64(100))
 	if _, err := depositERC20(privKey, c.v, c.tokenAddr, amount); err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestERC20Approve(t *testing.T) {
 	privKey, c := connectAndInstantiate(t)
 
 	// Approve
-	amount := big.NewInt(int64(1000))
+	amount := big.NewInt(int64(100))
 	_, err := approveERC20(privKey, c.vAddr, c.token, amount)
 	if err != nil {
 		t.Fatal(err)
@@ -104,9 +104,9 @@ func TestERC20Deploy(t *testing.T) {
 
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
-	name := "Chicken"
-	symbol := "CKN"
-	decimals := big.NewInt(8)
+	name := "GUITAR"
+	symbol := "GUI"
+	decimals := big.NewInt(30)
 	supply := big.NewInt(1000000)
 	addr, _, _, err := erc20.DeployErc20(auth, client, name, symbol, decimals, supply)
 	if err != nil {
