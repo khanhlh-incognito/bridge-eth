@@ -141,7 +141,7 @@ func transfer(
 
 func TestBurn(t *testing.T) {
 	// Get proof
-	proof, err := getAndDecodeBurnProof("e505f6578162f62b736f3275af291cc13c5a1cba7246832f771e2387895f4968")
+	proof, err := getAndDecodeBurnProof("59333c998a206e99621faf150f46588bbdfeb6279538266de893cc309e7cf4c5")
 	if err != nil {
 		t.Fatal(err)
 	}
