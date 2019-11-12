@@ -34,8 +34,8 @@ type Platform struct {
 
 func init() {
 	fmt.Println("Initializing genesis account...")
-	// genesisAcc = loadAccount()
-	// auth = bind.NewKeyedTransactor(genesisAcc.PrivateKey)
+	genesisAcc = loadAccount()
+	auth = bind.NewKeyedTransactor(genesisAcc.PrivateKey)
 }
 
 func TestSimulatedSwapBridge(t *testing.T) {
@@ -299,7 +299,10 @@ type account struct {
 }
 
 func loadAccount() *account {
-	key, _ := crypto.LoadECDSA("genesisKey.hex")
+	key, err := crypto.LoadECDSA("genesisKey.hex")
+	if err != nil {
+		return newAccount()
+	}
 	return &account{
 		PrivateKey: key,
 		Address:    crypto.PubkeyToAddress(key.PublicKey),
