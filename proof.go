@@ -134,6 +134,7 @@ func getCommittee(url string) ([]common.Address, []common.Address, error) {
 func getBurnProof(txID string) string {
 	url := "http://127.0.0.1:9344"
 	// url := "https://dev-test-node.incognito.org/"
+	// url := "https://mainnet.incognito.org/fullnode"
 
 	if len(txID) == 0 {
 		txID = "87c89c1c19cec3061eff9cfefdcc531d9456ac48de568b3974c5b0a88d5f3834"
@@ -158,6 +159,7 @@ func getBurnProof(txID string) string {
 func decodeProof(r *getProofResult) (*decodedProof, error) {
 	inst := decode(r.Result.Instruction)
 	fmt.Printf("inst: %d %x\n", len(inst), inst)
+	fmt.Printf("instHash (isWithdrawed, without height): %x\n", keccak256(inst))
 
 	// Block heights
 	beaconHeight := big.NewInt(0).SetBytes(decode(r.Result.BeaconHeight))
