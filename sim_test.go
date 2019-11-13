@@ -385,7 +385,7 @@ func retrieveEvents(sim *backends.SimulatedBackend, tx *types.Transaction) (*typ
 
 	if len(receipt.Logs) == 0 {
 		fmt.Println("empty log")
-		return nil, nil, nil
+		return receipt, nil, nil
 	}
 
 	events := map[string][]byte{}
