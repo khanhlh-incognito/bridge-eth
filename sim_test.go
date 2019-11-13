@@ -22,6 +22,7 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/incognitochain/bridge-eth/erc20/bnb"
+	"github.com/incognitochain/bridge-eth/erc20/dless"
 	"github.com/incognitochain/bridge-eth/erc20/fail"
 	"github.com/incognitochain/bridge-eth/erc20/usdt"
 	"github.com/pkg/errors"
@@ -321,6 +322,16 @@ func setupCustomTokens(p *Platform) error {
 	}
 	p.sim.Commit()
 	p.contracts.customErc20s["FAIL"] = &TokenerInfo{addr: addr, c: fail}
+
+	// Deploy DLESS token
+	bal, _ = big.NewInt(1).SetString("1000000000000000000", 10)
+	addr, _, dless, err := dless.DeployDLESS(auth, p.sim, bal, "DLESS", "DLESS")
+	if err != nil {
+		return errors.Errorf("failed to deploy DLESS contract: %v", err)
+	}
+	p.sim.Commit()
+	p.contracts.customErc20s["DLESS"] = &TokenerInfo{addr: addr, c: dless}
+
 	return nil
 }
 

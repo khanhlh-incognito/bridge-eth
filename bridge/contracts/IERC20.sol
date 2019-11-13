@@ -72,7 +72,7 @@ interface IERC20 {
      * no way affects any of the arithmetic of the contract, including
      * {IERC20-balanceOf} and {IERC20-transfer}.
      */
-    function decimals() external view returns (uint8);
+    function decimals() external view;
 
     /**
      * @dev Emitted when `value` tokens are moved from one account (`from`) to

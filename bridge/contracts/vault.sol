@@ -87,7 +87,7 @@ contract Vault is AdminPausable {
      */
     function depositERC20(address token, uint amount, string memory incognitoAddress) public payable isNotPaused {
         IERC20 erc20Interface = IERC20(token);
-        uint8 decimals = erc20Interface.decimals();
+        uint8 decimals = getDecimals(token);
         uint tokenBalance = erc20Interface.balanceOf(address(this));
         uint emitAmount = amount;
         if (decimals > 9) {
@@ -235,7 +235,7 @@ contract Vault is AdminPausable {
         if (token == ETH_TOKEN) {
             require(address(this).balance >= burned);
         } else {
-            uint8 decimal = IERC20(token).decimals();
+            uint8 decimal = getDecimals(token);
             if (decimal > 9) {
                 burned = burned * (10 ** (uint(decimal) - 9));
             }
@@ -347,4 +347,35 @@ contract Vault is AdminPausable {
 		}
 		return returnValue != 0;
 	}
+
+    function getDecimals(address token) public view returns (uint8) {
+        IERC20 erc20 = IERC20(token);
+		uint256 returnValue = 0;
+        erc20.decimals();
+
+		assembly {
+			// check number of bytes returned from last function call
+			switch returndatasize
+
+			// no bytes returned: zero decimals
+			case 0x0 {
+				returnValue := 0
+			}
+
+			// 32 bytes returned: check if non-zero
+			case 0x20 {
+				// copy 32 bytes into scratch space
+				returndatacopy(0x0, 0x0, 0x20)
+
+				// load those bytes into returnValue
+				returnValue := mload(0x0)
+			}
+
+			// not sure what was returned: don't mark as success
+			default {
+                returnValue := 0
+            }
+		}
+		return uint8(returnValue);
+    }
 }

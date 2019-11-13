@@ -564,25 +564,35 @@ func TestFixedDepositERC20Paused(t *testing.T) {
 
 func TestFixedDepositCustomERC20s(t *testing.T) {
 	testCases := []struct {
-		desc  string
-		value *big.Int
-		emit  *big.Int
-		err   bool
+		desc    string
+		decimal uint8
+		value   *big.Int
+		emit    *big.Int
+		err     bool
 	}{
 		{
-			desc:  "USDT",
-			value: big.NewInt(int64(5e8)),
-			emit:  big.NewInt(int64(5e8)),
+			desc:    "USDT",
+			decimal: 6,
+			value:   big.NewInt(int64(5e8)),
+			emit:    big.NewInt(int64(5e8)),
 		},
 		{
-			desc:  "BNB",
-			value: big.NewInt(int64(3e18)),
-			emit:  big.NewInt(int64(3e9)),
+			desc:    "BNB",
+			decimal: 18,
+			value:   big.NewInt(int64(3e18)),
+			emit:    big.NewInt(int64(3e9)),
 		},
 		{
-			desc:  "FAIL",
-			value: big.NewInt(int64(1e9)),
-			err:   true,
+			desc:    "FAIL",
+			decimal: 6,
+			value:   big.NewInt(int64(1e9)),
+			err:     true,
+		},
+		{
+			desc:    "DLESS",
+			decimal: 0,
+			value:   big.NewInt(int64(1e9)),
+			emit:    big.NewInt(int64(1e9)),
 		},
 	}
 
@@ -591,8 +601,14 @@ func TestFixedDepositCustomERC20s(t *testing.T) {
 			p, _, err := setupFixedCommittee()
 			assert.Nil(t, err)
 
+			// Check decimal
 			c := p.customErc20s[tc.desc].c
 			addr := p.customErc20s[tc.desc].addr
+			decimal, err := p.v.GetDecimals(nil, addr)
+			if assert.Nil(t, err) {
+				assert.Equal(t, tc.decimal, decimal)
+			}
+
 			oldBalance := getBalanceERC20(c, p.vAddr)
 			_, tx, err := lockSimERC20WithTxs(p, c, addr, tc.value)
 			if !tc.err {
@@ -936,6 +952,12 @@ func TestFixedWithdrawCustomERC20s(t *testing.T) {
 			deposit:  big.NewInt(int64(3e18)),
 			withdraw: big.NewInt(int64(3e9)),
 			remain:   big.NewInt(int64(0)),
+		},
+		{
+			desc:     "DLESS",
+			deposit:  big.NewInt(int64(3e9)),
+			withdraw: big.NewInt(int64(1)),
+			remain:   big.NewInt(int64(3e9 - 1)),
 		},
 	}
 
