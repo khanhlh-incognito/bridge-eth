@@ -423,7 +423,7 @@ func TestFixedDepositETHPaused(t *testing.T) {
 	assert.Equal(t, oldBalance, newBalance)
 }
 
-func TestFixedDepositERC20(t *testing.T) {
+func TestFixedDepositERC20Once(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	assert.Nil(t, err)
 
