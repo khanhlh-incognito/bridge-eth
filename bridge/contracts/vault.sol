@@ -235,9 +235,9 @@ contract Vault is AdminPausable {
         if (token == ETH_TOKEN) {
             require(address(this).balance >= burned);
         } else {
-            uint8 decimal = getDecimals(token);
-            if (decimal > 9) {
-                burned = burned * (10 ** (uint(decimal) - 9));
+            uint8 decimals = getDecimals(token);
+            if (decimals > 9) {
+                burned = burned * (10 ** (uint(decimals) - 9));
             }
             require(IERC20(token).balanceOf(address(this)) >= burned);
         }
