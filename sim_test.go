@@ -21,6 +21,7 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
+	"github.com/incognitochain/bridge-eth/erc20/bnb"
 	"github.com/pkg/errors"
 )
 
@@ -170,7 +171,7 @@ func TestSimulatedBurnERC20(t *testing.T) {
 
 func lockSimERC20WithTxs(
 	p *Platform,
-	token *erc20.Erc20,
+	token Tokener,
 	tokenAddr common.Address,
 	amount *big.Int,
 ) (*types.Transaction, *types.Transaction, error) {
@@ -190,12 +191,12 @@ func lockSimERC20WithTxs(
 
 func lockSimERC20WithBalance(
 	p *Platform,
-	token *erc20.Erc20,
+	token Tokener,
 	tokenAddr common.Address,
 	amount *big.Int,
 ) (*big.Int, *big.Int, error) {
 	initBalance := getBalanceERC20(token, p.vAddr)
-	fmt.Printf("bal: %d\n", getBalanceERC20(token, genesisAcc.Address))
+	// fmt.Printf("bal: %d\n", getBalanceERC20(token, genesisAcc.Address))
 	if _, _, err := lockSimERC20WithTxs(p, token, tokenAddr, amount); err != nil {
 		return nil, nil, err
 	}
@@ -203,7 +204,7 @@ func lockSimERC20WithBalance(
 	return initBalance, newBalance, nil
 }
 
-func getBalanceERC20(token *erc20.Erc20, addr common.Address) *big.Int {
+func getBalanceERC20(token Tokener, addr common.Address) *big.Int {
 	bal, err := token.BalanceOf(nil, addr)
 	if err != nil {
 		return big.NewInt(-1)
@@ -229,7 +230,13 @@ func setup(
 		alloc[acc] = core.GenesisAccount{Balance: balance}
 	}
 	sim := backends.NewSimulatedBackend(alloc, 8000000)
-	p := &Platform{sim: sim, contracts: &contracts{tokens: map[int]tokenInfo{}}}
+	p := &Platform{
+		sim: sim,
+		contracts: &contracts{
+			tokens:       map[int]tokenInfo{},
+			customErc20s: map[string]*TokenerInfo{},
+		},
+	}
 
 	var err error
 	var tx *types.Transaction
@@ -242,6 +249,15 @@ func setup(
 	}
 	// fmt.Printf("token addr: %s\n", p.tokenAddr.Hex())
 	sim.Commit()
+
+	// Deploy BNB
+	bal, _ := big.NewInt(1).SetString("200000000000000000000000000", 10)
+	addr, _, token, err := bnb.DeployBnb(auth, sim, bal, "BNB", uint8(18), "BNB")
+	if err != nil {
+		return nil, fmt.Errorf("failed to deploy BNB contract: %v", err)
+	}
+	sim.Commit()
+	p.contracts.customErc20s["BNB"] = &TokenerInfo{addr: addr, c: token}
 
 	// Deploy erc20s with different decimals to test
 	ercBal := big.NewInt(20)

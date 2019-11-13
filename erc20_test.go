@@ -148,7 +148,7 @@ func depositERC20(
 	return tx, nil
 }
 
-func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token *erc20.Erc20, amount *big.Int) (*types.Transaction, error) {
+func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token Tokener, amount *big.Int) (*types.Transaction, error) {
 	// Check balance
 	userAddr := crypto.PubkeyToAddress(privKey.PublicKey)
 	bal, _ := token.BalanceOf(nil, userAddr)

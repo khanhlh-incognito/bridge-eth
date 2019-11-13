@@ -562,6 +562,18 @@ func TestFixedDepositERC20Paused(t *testing.T) {
 	assert.Equal(t, oldBalance, newBalance)
 }
 
+func TestFixedDepositBNB(t *testing.T) {
+	p, _, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	c := p.customErc20s["BNB"].c
+	addr := p.customErc20s["BNB"].addr
+	oldBalance, newBalance, err := lockSimERC20WithBalance(p, c, addr, big.NewInt(int64(1e9)))
+	assert.Nil(t, err)
+
+	assert.Equal(t, oldBalance.Add(oldBalance, big.NewInt(int64(1e9))), newBalance)
+}
+
 func TestFixedWithdrawAfterSwap(t *testing.T) {
 	p, _, err := setupFixedCommittee()
 	if err != nil {
@@ -865,6 +877,33 @@ func TestFixedWithdrawERC20(t *testing.T) {
 	if bal.Int64() != int64(2000) {
 		t.Fatalf("incorrect balance after withdrawing, expect %d, got %d", 2000, bal)
 	}
+}
+
+func TestFixedWithdrawBNB(t *testing.T) {
+	p, comm, err := setupFixedCommittee()
+	assert.Nil(t, err)
+
+	// Deposit, must success
+	tinfo := p.customErc20s["BNB"]
+	deposit := big.NewInt(int64(1e18))
+	_, _, err = lockSimERC20WithTxs(p, tinfo.c, tinfo.addr, deposit)
+	assert.Nil(t, err)
+
+	meta := 72
+	shardID := 1
+	withdraw := big.NewInt(int64(1e9))
+	proof := buildWithdrawTestcase(comm, meta, shardID, tinfo.addr, withdraw)
+
+	auth.GasLimit = 0
+	_, err = Withdraw(p.v, auth, proof)
+	if assert.Nil(t, err) {
+		p.sim.Commit()
+
+		// Check balance
+		bal := getBalanceERC20(tinfo.c, p.vAddr)
+		assert.Zero(t, big.NewInt(0).Cmp(bal))
+	}
+
 }
 
 func setupFixedCommittee(accs ...ec.Address) (*Platform, *committees, error) {
