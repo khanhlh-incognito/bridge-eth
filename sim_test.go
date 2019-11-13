@@ -22,6 +22,7 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/incognitochain/bridge-eth/erc20/bnb"
+	"github.com/incognitochain/bridge-eth/erc20/dai"
 	"github.com/incognitochain/bridge-eth/erc20/dless"
 	"github.com/incognitochain/bridge-eth/erc20/fail"
 	"github.com/incognitochain/bridge-eth/erc20/usdt"
@@ -313,6 +314,23 @@ func setupCustomTokens(p *Platform) error {
 	}
 	p.sim.Commit()
 	p.contracts.customErc20s["USDT"] = &TokenerInfo{addr: addr, c: usdt}
+
+	// Deploy DAI
+	symbol := [32]byte{'D', 'A', 'I'}
+	addr, _, d, err := dai.DeployDai(auth, p.sim, symbol)
+	if err != nil {
+		return errors.Errorf("failed to deploy DAI contract: %v", err)
+	}
+	p.sim.Commit()
+	p.contracts.customErc20s["DAI"] = &TokenerInfo{addr: addr, c: d}
+
+	// Mint DAI
+	bal, _ = big.NewInt(1).SetString("1000000000000000000000000000", 10)
+	_, err = d.Mint(auth, bal)
+	if err != nil {
+		return errors.Errorf("failed to mint DAI: %v", err)
+	}
+	p.sim.Commit()
 
 	// Deploy FAIL token
 	bal, _ = big.NewInt(1).SetString("1000000000000000000", 10)
