@@ -260,8 +260,8 @@ func TestDeployProxyAndVault(t *testing.T) {
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(privKey)
 	auth.Value = big.NewInt(0)
-	auth.GasPrice = big.NewInt(10000000000)
-	auth.GasLimit = 4000000
+	// auth.GasPrice = big.NewInt(10000000000)
+	// auth.GasLimit = 4000000
 	incAddr, tx, _, err := incognito_proxy.DeployIncognitoProxy(auth, client, admin, cmtee.beacons, cmtee.bridges)
 	if err != nil {
 		t.Fatal(err)
