@@ -22,6 +22,7 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
 	"github.com/incognitochain/bridge-eth/erc20/bnb"
+	"github.com/incognitochain/bridge-eth/erc20/fail"
 	"github.com/incognitochain/bridge-eth/erc20/usdt"
 	"github.com/pkg/errors"
 )
@@ -251,23 +252,11 @@ func setup(
 	// fmt.Printf("token addr: %s\n", p.tokenAddr.Hex())
 	sim.Commit()
 
-	// Deploy BNB
-	bal, _ := big.NewInt(1).SetString("200000000000000000000000000", 10)
-	addr, _, bnb, err := bnb.DeployBnb(auth, sim, bal, "BNB", uint8(18), "BNB")
+	// Custom tokens
+	err = setupCustomTokens(p)
 	if err != nil {
-		return nil, fmt.Errorf("failed to deploy BNB contract: %v", err)
+		return nil, err
 	}
-	sim.Commit()
-	p.contracts.customErc20s["BNB"] = &TokenerInfo{addr: addr, c: bnb}
-
-	// Deploy USDT
-	bal, _ = big.NewInt(1).SetString("100000000000", 10)
-	addr, _, usdt, err := usdt.DeployUsdt(auth, sim, bal, "Tether USD", "USDT", big.NewInt(6))
-	if err != nil {
-		return nil, fmt.Errorf("failed to deploy BNB contract: %v", err)
-	}
-	sim.Commit()
-	p.contracts.customErc20s["USDT"] = &TokenerInfo{addr: addr, c: usdt}
 
 	// Deploy erc20s with different decimals to test
 	ercBal := big.NewInt(20)
@@ -303,6 +292,36 @@ func setup(
 	// printReceipt(sim, tx)
 
 	return p, nil
+}
+
+func setupCustomTokens(p *Platform) error {
+	// Deploy BNB
+	bal, _ := big.NewInt(1).SetString("200000000000000000000000000", 10)
+	addr, _, bnb, err := bnb.DeployBnb(auth, p.sim, bal, "BNB", uint8(18), "BNB")
+	if err != nil {
+		return errors.Errorf("failed to deploy BNB contract: %v", err)
+	}
+	p.sim.Commit()
+	p.contracts.customErc20s["BNB"] = &TokenerInfo{addr: addr, c: bnb}
+
+	// Deploy USDT
+	bal, _ = big.NewInt(1).SetString("100000000000", 10)
+	addr, _, usdt, err := usdt.DeployUsdt(auth, p.sim, bal, "Tether USD", "USDT", big.NewInt(6))
+	if err != nil {
+		return errors.Errorf("failed to deploy USDT contract: %v", err)
+	}
+	p.sim.Commit()
+	p.contracts.customErc20s["USDT"] = &TokenerInfo{addr: addr, c: usdt}
+
+	// Deploy FAIL token
+	bal, _ = big.NewInt(1).SetString("1000000000000000000", 10)
+	addr, _, fail, err := fail.DeployFAIL(auth, p.sim, bal, "FAIL", 6, "FAIL")
+	if err != nil {
+		return errors.Errorf("failed to deploy FAIL contract: %v", err)
+	}
+	p.sim.Commit()
+	p.contracts.customErc20s["FAIL"] = &TokenerInfo{addr: addr, c: fail}
+	return nil
 }
 
 func setupWithLocalCommittee() (*Platform, error) {

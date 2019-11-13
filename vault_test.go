@@ -579,6 +579,11 @@ func TestFixedDepositCustomERC20s(t *testing.T) {
 			value: big.NewInt(int64(3e18)),
 			emit:  big.NewInt(int64(3e9)),
 		},
+		{
+			desc:  "FAIL",
+			value: big.NewInt(int64(1e9)),
+			err:   true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -590,16 +595,19 @@ func TestFixedDepositCustomERC20s(t *testing.T) {
 			addr := p.customErc20s[tc.desc].addr
 			oldBalance := getBalanceERC20(c, p.vAddr)
 			_, tx, err := lockSimERC20WithTxs(p, c, addr, tc.value)
-			if assert.Nil(t, err) {
-				newBalance := getBalanceERC20(c, p.vAddr)
-				assert.Equal(t, oldBalance.Add(oldBalance, tc.value), newBalance)
-
-				emitted, err := extractAmountInDepositERC20Event(p.sim, tx)
+			if !tc.err {
 				if assert.Nil(t, err) {
-					assert.Equal(t, tc.emit, emitted)
-				}
-			}
+					newBalance := getBalanceERC20(c, p.vAddr)
+					assert.Equal(t, oldBalance.Add(oldBalance, tc.value), newBalance)
 
+					emitted, err := extractAmountInDepositERC20Event(p.sim, tx)
+					if assert.Nil(t, err) {
+						assert.Equal(t, tc.emit, emitted)
+					}
+				}
+			} else {
+				assert.NotNil(t, err)
+			}
 		})
 	}
 }
