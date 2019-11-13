@@ -10,7 +10,7 @@ import (
 )
 
 func Withdraw(v *vault.Vault, auth *bind.TransactOpts, proof *decodedProof) (*types.Transaction, error) {
-	auth.GasPrice = big.NewInt(20000000000)
+	// auth.GasPrice = big.NewInt(20000000000)
 	tx, err := v.Withdraw(
 		auth,
 		proof.Instruction,

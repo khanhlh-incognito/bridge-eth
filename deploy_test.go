@@ -141,10 +141,11 @@ func transfer(
 
 func TestBurn(t *testing.T) {
 	// Get proof
-	proof, err := getAndDecodeBurnProof("862480b4b444215e74bce6b68c01ec93de625496cb5a71155a6e80ebc9485d9a")
+	proof, err := getAndDecodeBurnProof("59333c998a206e99621faf150f46588bbdfeb6279538266de893cc309e7cf4c5")
 	if err != nil {
 		t.Fatal(err)
 	}
+	// return
 
 	// Connect to ETH
 	privKey, client, err := connect()

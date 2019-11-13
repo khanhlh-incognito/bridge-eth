@@ -6,5 +6,5 @@ const (
 	TokenAddress          = "0x236E18f09D0F975d412D87EE3536D3037b344a2E" // v8 - kovan token GUITAR, decimals=30
 	IncPaymentAddr        = "1Uv46Pu4pqBvxCcPw7MXhHfiAD5Rmi2xgEE7XB6eQurFAt4vSYvfyGn3uMMB1xnXDq9nRTPeiAZv5gRFCBDroRNsXJF1sxPSjNQtivuHk"
 	Admin                 = "0x65033F315F214834BD6A65Dce687Bcb0f32b0a5A"
-	Successor             = "0x0FFBd68F130809BcA7b32D9536c8339E9A844620"
+	Successor             = "0x65033F315F214834BD6A65Dce687Bcb0f32b0a5A"
 )
