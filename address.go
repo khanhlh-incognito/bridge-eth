@@ -2,7 +2,7 @@ package main
 
 const (
 	IncognitoProxyAddress = "0xE34ebFf7aF293dcdDf0443818442BB5d558662Dd" // v37 - mainnet, for branch master-temp-B, with admin, 7+22 validators
-	VaultAddress          = "0xD21155E51b128f4F92708042DD08db1661ECeF9E" // v1-main - mainnet, branch master-temp-B, support erc20 with decimals > 18
+	VaultAddress          = "0x0261DB5AfF8E5eC99fBc8FBBA5D4B9f8EcD44ec7" // v2-main - mainnet, branch master-temp-B, fix transfer() no return
 	TokenAddress          = "0xB698a7d50AC03448867584959391BD60f56C2252" // v10 - kovan token DAI
 	IncPaymentAddr        = "1Uv46Pu4pqBvxCcPw7MXhHfiAD5Rmi2xgEE7XB6eQurFAt4vSYvfyGn3uMMB1xnXDq9nRTPeiAZv5gRFCBDroRNsXJF1sxPSjNQtivuHk"
 	Admin                 = "0x037ac7fFfC1C52Cf6351e33A77eDBdd14CE35040"
