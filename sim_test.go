@@ -25,8 +25,6 @@ import (
 	"github.com/incognitochain/bridge-eth/erc20/dai"
 	"github.com/incognitochain/bridge-eth/erc20/dless"
 	"github.com/incognitochain/bridge-eth/erc20/fail"
-	"github.com/incognitochain/bridge-eth/erc20/usdc"
-	"github.com/incognitochain/bridge-eth/erc20/usdc_wrap"
 	"github.com/incognitochain/bridge-eth/erc20/usdt"
 	"github.com/pkg/errors"
 )
@@ -334,24 +332,24 @@ func setupCustomTokens(p *Platform) error {
 	}
 	p.sim.Commit()
 
-	// Deploy USDC
-	// symbol := [32]byte{'D', 'A', 'I'}
-	addr, _, dc, err := usdc.DeployUsdc(auth, p.sim)
-	if err != nil {
-		fmt.Println("ASDASD", err)
-		return errors.Errorf("failed to deploy USDC contract: %v", err)
-	}
-	p.sim.Commit()
-	p.contracts.customErc20s["USDC"] = &TokenerInfo{c: dc}
+	// // Deploy USDC
+	// // symbol := [32]byte{'D', 'A', 'I'}
+	// addr, _, dc, err := usdc.DeployUsdc(auth, p.sim)
+	// if err != nil {
+	// 	fmt.Println("ASDASD", err)
+	// 	return errors.Errorf("failed to deploy USDC contract: %v", err)
+	// }
+	// p.sim.Commit()
+	// p.contracts.customErc20s["USDC"] = &TokenerInfo{c: dc}
 
-	// Deploy USDC wrapper
-	addr, _, _, err = usdc_wrap.DeployUsdcWrap(auth, p.sim, addr)
-	if err != nil {
-		fmt.Println("!@(*#&!@*(#&", err)
-		return errors.Errorf("failed to deploy USDCWrap contract: %v", err)
-	}
-	p.sim.Commit()
-	p.contracts.customErc20s["USDC"].addr = addr
+	// // Deploy USDC wrapper
+	// addr, _, _, err = usdc_wrap.DeployUsdcWrap(auth, p.sim, addr)
+	// if err != nil {
+	// 	fmt.Println("!@(*#&!@*(#&", err)
+	// 	return errors.Errorf("failed to deploy USDCWrap contract: %v", err)
+	// }
+	// p.sim.Commit()
+	// p.contracts.customErc20s["USDC"].addr = addr
 
 	// Deploy FAIL token
 	bal, _ = big.NewInt(1).SetString("1000000000000000000", 10)
