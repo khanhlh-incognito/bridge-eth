@@ -21,6 +21,11 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/erc20"
+	"github.com/incognitochain/bridge-eth/erc20/bnb"
+	"github.com/incognitochain/bridge-eth/erc20/dai"
+	"github.com/incognitochain/bridge-eth/erc20/dless"
+	"github.com/incognitochain/bridge-eth/erc20/fail"
+	"github.com/incognitochain/bridge-eth/erc20/usdt"
 	"github.com/pkg/errors"
 )
 
@@ -170,7 +175,7 @@ func TestSimulatedBurnERC20(t *testing.T) {
 
 func lockSimERC20WithTxs(
 	p *Platform,
-	token *erc20.Erc20,
+	token Tokener,
 	tokenAddr common.Address,
 	amount *big.Int,
 ) (*types.Transaction, *types.Transaction, error) {
@@ -190,12 +195,12 @@ func lockSimERC20WithTxs(
 
 func lockSimERC20WithBalance(
 	p *Platform,
-	token *erc20.Erc20,
+	token Tokener,
 	tokenAddr common.Address,
 	amount *big.Int,
 ) (*big.Int, *big.Int, error) {
 	initBalance := getBalanceERC20(token, p.vAddr)
-	fmt.Printf("bal: %d\n", getBalanceERC20(token, genesisAcc.Address))
+	// fmt.Printf("bal: %d\n", getBalanceERC20(token, genesisAcc.Address))
 	if _, _, err := lockSimERC20WithTxs(p, token, tokenAddr, amount); err != nil {
 		return nil, nil, err
 	}
@@ -203,7 +208,7 @@ func lockSimERC20WithBalance(
 	return initBalance, newBalance, nil
 }
 
-func getBalanceERC20(token *erc20.Erc20, addr common.Address) *big.Int {
+func getBalanceERC20(token Tokener, addr common.Address) *big.Int {
 	bal, err := token.BalanceOf(nil, addr)
 	if err != nil {
 		return big.NewInt(-1)
@@ -229,7 +234,13 @@ func setup(
 		alloc[acc] = core.GenesisAccount{Balance: balance}
 	}
 	sim := backends.NewSimulatedBackend(alloc, 8000000)
-	p := &Platform{sim: sim, contracts: &contracts{tokens: map[int]tokenInfo{}}}
+	p := &Platform{
+		sim: sim,
+		contracts: &contracts{
+			tokens:       map[int]tokenInfo{},
+			customErc20s: map[string]*TokenerInfo{},
+		},
+	}
 
 	var err error
 	var tx *types.Transaction
@@ -242,6 +253,12 @@ func setup(
 	}
 	// fmt.Printf("token addr: %s\n", p.tokenAddr.Hex())
 	sim.Commit()
+
+	// Custom tokens
+	err = setupCustomTokens(p)
+	if err != nil {
+		return nil, err
+	}
 
 	// Deploy erc20s with different decimals to test
 	ercBal := big.NewInt(20)
@@ -277,6 +294,82 @@ func setup(
 	// printReceipt(sim, tx)
 
 	return p, nil
+}
+
+func setupCustomTokens(p *Platform) error {
+	// Deploy BNB
+	bal, _ := big.NewInt(1).SetString("200000000000000000000000000", 10)
+	addr, _, bnb, err := bnb.DeployBnb(auth, p.sim, bal, "BNB", uint8(18), "BNB")
+	if err != nil {
+		return errors.Errorf("failed to deploy BNB contract: %v", err)
+	}
+	p.sim.Commit()
+	p.contracts.customErc20s["BNB"] = &TokenerInfo{addr: addr, c: bnb}
+
+	// Deploy USDT
+	bal, _ = big.NewInt(1).SetString("100000000000", 10)
+	addr, _, usdt, err := usdt.DeployUsdt(auth, p.sim, bal, "Tether USD", "USDT", big.NewInt(6))
+	if err != nil {
+		return errors.Errorf("failed to deploy USDT contract: %v", err)
+	}
+	p.sim.Commit()
+	p.contracts.customErc20s["USDT"] = &TokenerInfo{addr: addr, c: usdt}
+
+	// Deploy DAI
+	symbol := [32]byte{'D', 'A', 'I'}
+	addr, _, d, err := dai.DeployDai(auth, p.sim, symbol)
+	if err != nil {
+		return errors.Errorf("failed to deploy DAI contract: %v", err)
+	}
+	p.sim.Commit()
+	p.contracts.customErc20s["DAI"] = &TokenerInfo{addr: addr, c: d}
+
+	// Mint DAI
+	bal, _ = big.NewInt(1).SetString("1000000000000000000000000000", 10)
+	_, err = d.Mint(auth, bal)
+	if err != nil {
+		return errors.Errorf("failed to mint DAI: %v", err)
+	}
+	p.sim.Commit()
+
+	// // Deploy USDC
+	// // symbol := [32]byte{'D', 'A', 'I'}
+	// addr, _, dc, err := usdc.DeployUsdc(auth, p.sim)
+	// if err != nil {
+	// 	fmt.Println("ASDASD", err)
+	// 	return errors.Errorf("failed to deploy USDC contract: %v", err)
+	// }
+	// p.sim.Commit()
+	// p.contracts.customErc20s["USDC"] = &TokenerInfo{c: dc}
+
+	// // Deploy USDC wrapper
+	// addr, _, _, err = usdc_wrap.DeployUsdcWrap(auth, p.sim, addr)
+	// if err != nil {
+	// 	fmt.Println("!@(*#&!@*(#&", err)
+	// 	return errors.Errorf("failed to deploy USDCWrap contract: %v", err)
+	// }
+	// p.sim.Commit()
+	// p.contracts.customErc20s["USDC"].addr = addr
+
+	// Deploy FAIL token
+	bal, _ = big.NewInt(1).SetString("1000000000000000000", 10)
+	addr, _, fail, err := fail.DeployFAIL(auth, p.sim, bal, "FAIL", 6, "FAIL")
+	if err != nil {
+		return errors.Errorf("failed to deploy FAIL contract: %v", err)
+	}
+	p.sim.Commit()
+	p.contracts.customErc20s["FAIL"] = &TokenerInfo{addr: addr, c: fail}
+
+	// Deploy DLESS token
+	bal, _ = big.NewInt(1).SetString("1000000000000000000", 10)
+	addr, _, dless, err := dless.DeployDLESS(auth, p.sim, bal, "DLESS", "DLESS")
+	if err != nil {
+		return errors.Errorf("failed to deploy DLESS contract: %v", err)
+	}
+	p.sim.Commit()
+	p.contracts.customErc20s["DLESS"] = &TokenerInfo{addr: addr, c: dless}
+
+	return nil
 }
 
 func setupWithLocalCommittee() (*Platform, error) {
@@ -329,7 +422,7 @@ func retrieveEvents(sim *backends.SimulatedBackend, tx *types.Transaction) (*typ
 
 	if len(receipt.Logs) == 0 {
 		fmt.Println("empty log")
-		return nil, nil, nil
+		return receipt, nil, nil
 	}
 
 	events := map[string][]byte{}

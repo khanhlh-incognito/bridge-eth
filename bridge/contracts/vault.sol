@@ -87,7 +87,7 @@ contract Vault is AdminPausable {
      */
     function depositERC20(address token, uint amount, string memory incognitoAddress) public payable isNotPaused {
         IERC20 erc20Interface = IERC20(token);
-        uint8 decimals = erc20Interface.decimals(); // TODO(@0xbunyip): fallback when decimals() doesn't exist
+        uint8 decimals = getDecimals(token);
         uint tokenBalance = erc20Interface.balanceOf(address(this));
         uint emitAmount = amount;
         if (decimals > 9) {
@@ -96,7 +96,8 @@ contract Vault is AdminPausable {
         }
         require(emitAmount <= 10 ** 18 && tokenBalance <= 10 ** 18 && emitAmount + tokenBalance <= 10 ** 18);
 
-        require(erc20Interface.transferFrom(msg.sender, address(this), amount));
+        erc20Interface.transferFrom(msg.sender, address(this), amount);
+        require(checkSuccess());
         emit Deposit(token, incognitoAddress, emitAmount);
     }
 
@@ -234,9 +235,9 @@ contract Vault is AdminPausable {
         if (token == ETH_TOKEN) {
             require(address(this).balance >= burned);
         } else {
-            uint8 decimal = IERC20(token).decimals();
-            if (decimal > 9) { // TODO(@0xbunyip): fallback when decimals() doesn't exist
-                burned = burned * (10 ** (uint(decimal) - 9));
+            uint8 decimals = getDecimals(token);
+            if (decimals > 9) {
+                burned = burned * (10 ** (uint(decimals) - 9));
             }
             require(IERC20(token).balanceOf(address(this)) >= burned);
         }
@@ -258,7 +259,8 @@ contract Vault is AdminPausable {
         if (token == ETH_TOKEN) {
             to.transfer(burned);
         } else {
-            require(IERC20(token).transfer(to, burned));
+            IERC20(token).transfer(to, burned);
+            require(checkSuccess());
         }
         emit Withdraw(token, to, burned);
     }
@@ -292,7 +294,8 @@ contract Vault is AdminPausable {
             } else {
                 uint bal = IERC20(assets[i]).balanceOf(address(this));
                 if (bal > 0) {
-                    require(IERC20(assets[i]).transfer(newVault, bal));
+                    IERC20(assets[i]).transfer(newVault, bal);
+                    require(checkSuccess());
                 }
             }
         }
@@ -317,4 +320,73 @@ contract Vault is AdminPausable {
      * @dev Payable Fallback function to receive Ether from oldVault when migrating
      */
     function () external payable {}
+
+    /**
+     * @dev Check if transfer() and transferFrom() of ERC20 succeeded or not
+     * This check is needed to fix https://github.com/ethereum/solidity/issues/4116
+     * This function is copied from https://github.com/AdExNetwork/adex-protocol-eth/blob/master/contracts/libs/SafeERC20.sol
+     */
+    function checkSuccess() private pure returns (bool) {
+		uint256 returnValue = 0;
+
+		assembly {
+			// check number of bytes returned from last function call
+			switch returndatasize
+
+			// no bytes returned: assume success
+			case 0x0 {
+				returnValue := 1
+			}
+
+			// 32 bytes returned: check if non-zero
+			case 0x20 {
+				// copy 32 bytes into scratch space
+				returndatacopy(0x0, 0x0, 0x20)
+
+				// load those bytes into returnValue
+				returnValue := mload(0x0)
+			}
+
+			// not sure what was returned: don't mark as success
+			default { }
+		}
+		return returnValue != 0;
+	}
+
+    /**
+     * @dev Get the decimals of an ERC20 token, return 0 if it isn't defined
+     * We check the returndatasize to covert both cases that the token has
+     * and doesn't have the function decimals()
+     */
+    function getDecimals(address token) public view returns (uint8) {
+        IERC20 erc20 = IERC20(token);
+		uint256 returnValue = 0;
+        erc20.decimals();
+
+		assembly {
+			// check number of bytes returned from last function call
+			switch returndatasize
+
+			// no bytes returned: zero decimals
+			case 0x0 {
+				returnValue := 0
+			}
+
+            // For uint8, the returndatasize is still 32 bytes
+			// 32 bytes returned: check if non-zero
+			case 0x20 {
+				// copy 32 bytes into scratch space
+				returndatacopy(0x0, 0x0, 0x20)
+
+				// load those bytes into returnValue
+				returnValue := mload(0x0)
+			}
+
+			// not sure what was returned: don't mark as success
+			default {
+                returnValue := 0
+            }
+		}
+		return uint8(returnValue);
+    }
 }

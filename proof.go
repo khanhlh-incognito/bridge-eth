@@ -9,13 +9,16 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/consensus/signatureschemes/bridgesig"
 	"github.com/incognitochain/bridge-eth/erc20"
+	"github.com/incognitochain/bridge-eth/erc20/bnb"
 	"github.com/incognitochain/bridge-eth/jsonresult"
 	"github.com/pkg/errors"
 )
@@ -28,8 +31,21 @@ type contracts struct {
 	token     *erc20.Erc20
 	tokenAddr common.Address
 
-	tokens map[int]tokenInfo
+	tokens       map[int]tokenInfo       // mapping from decimal => token
+	customErc20s map[string]*TokenerInfo // mapping from name => token
 }
+
+type TokenerInfo struct {
+	addr common.Address
+	c    Tokener
+}
+
+type Tokener interface {
+	BalanceOf(*bind.CallOpts, common.Address) (*big.Int, error)
+	Approve(*bind.TransactOpts, common.Address, *big.Int) (*types.Transaction, error)
+}
+
+var _ Tokener = (*bnb.Bnb)(nil)
 
 type tokenInfo struct {
 	c    *erc20.Erc20
