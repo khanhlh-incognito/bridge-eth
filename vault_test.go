@@ -583,6 +583,12 @@ func TestFixedDepositCustomERC20s(t *testing.T) {
 			emit:    big.NewInt(int64(3e9)),
 		},
 		{
+			desc:    "DAI",
+			decimal: 18,
+			value:   big.NewInt(int64(8e15)),
+			emit:    big.NewInt(int64(8e6)),
+		},
+		{
 			desc:    "FAIL",
 			decimal: 6,
 			value:   big.NewInt(int64(1e9)),
@@ -952,6 +958,12 @@ func TestFixedWithdrawCustomERC20s(t *testing.T) {
 			deposit:  big.NewInt(int64(3e18)),
 			withdraw: big.NewInt(int64(3e9)),
 			remain:   big.NewInt(int64(0)),
+		},
+		{
+			desc:     "DAI",
+			deposit:  big.NewInt(int64(3e17)),
+			withdraw: big.NewInt(int64(2e8)),
+			remain:   big.NewInt(int64(1e17)),
 		},
 		{
 			desc:     "DLESS",
