@@ -17,6 +17,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestGetBridgeCommitteeOnChain(t *testing.T) {
+	url := "https://test-node.incognito.org:443"
+	_, _, err := getCommittee(url)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestFixedFindBeaconCommitteeFromHeight(t *testing.T) {
 	testCases := []struct {
 		desc   string
