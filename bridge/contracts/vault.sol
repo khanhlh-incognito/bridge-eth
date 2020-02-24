@@ -29,6 +29,7 @@ contract Incognito {
  */
 contract Withdrawable {
     function isWithdrawed(bytes32) public view returns (bool);
+    function isSigDataUsed(bytes32) public view returns (bool);
 }
 
 /**
@@ -39,6 +40,11 @@ contract Withdrawable {
 contract Vault is AdminPausable {
     address constant public ETH_TOKEN = 0x0000000000000000000000000000000000000000;
     mapping(bytes32 => bool) public withdrawed;
+    mapping(bytes32 => bool) public sigDataUsed;
+
+    mapping(address => mapping(address => uint)) public withdrawRequests;
+    mapping(address => uint) public totalDepositedToSCAmount;
+
     Incognito public incognito;
     Withdrawable public prevVault;
     address payable public newVault;
@@ -87,7 +93,7 @@ contract Vault is AdminPausable {
      */
     function depositERC20(address token, uint amount, string memory incognitoAddress) public payable isNotPaused {
         IERC20 erc20Interface = IERC20(token);
-        uint8 decimals = getDecimals(token);
+        uint8 decimals = getDecimals(address(token));
         uint tokenBalance = erc20Interface.balanceOf(address(this));
         uint emitAmount = amount;
         if (decimals > 9) {
@@ -96,8 +102,8 @@ contract Vault is AdminPausable {
         }
         require(emitAmount <= 10 ** 18 && tokenBalance <= 10 ** 18 && emitAmount + tokenBalance <= 10 ** 18);
 
-        erc20Interface.transferFrom(msg.sender, address(this), amount);
-        require(checkSuccess());
+        require(erc20Interface.transferFrom(msg.sender, address(this), amount));
+        // require(checkSuccess());
         emit Deposit(token, incognitoAddress, emitAmount);
     }
 
@@ -121,6 +127,7 @@ contract Vault is AdminPausable {
     /**
      * @dev Parses a burn instruction and returns individual components
      * @param inst: the full instruction, containing both metadata and body
+     * @return flag:
      * @return meta: type of the instruction, 72 for burning instruction
      * @return shard: ID of the Incognito shard containing the instruction, must be 1
      * @return token: ETH address of the token contract (0x0 for ETH)
@@ -135,7 +142,7 @@ contract Vault is AdminPausable {
         uint amount;
         assembly {
             // skip first 0x20 bytes (stored length of inst)
-            token := mload(add(inst, 0x22)) // [2:34]
+            token := mload(add(inst, 0x22)) // [3:34]
             to := mload(add(inst, 0x42)) // [34:66]
             amount := mload(add(inst, 0x62)) // [66:98]
         }
@@ -199,7 +206,7 @@ contract Vault is AdminPausable {
     }
 
     /**
-     * @dev Withdraws pETH/pERC20 by providing a burn proof over at Incognito Chain
+     * @dev Withdraws pETH/pIERC20 by providing a burn proof over at Incognito Chain
      * @notice This function takes a burn instruction on Incognito Chain, checks
      * for its validity and returns the token back to ETH chain
      * @notice This only works when the contract is not Paused
@@ -233,13 +240,13 @@ contract Vault is AdminPausable {
 
         // Check if balance is enough
         if (token == ETH_TOKEN) {
-            require(address(this).balance >= burned);
+            require(address(this).balance >= burned + totalDepositedToSCAmount[token]);
         } else {
             uint8 decimals = getDecimals(token);
             if (decimals > 9) {
                 burned = burned * (10 ** (uint(decimals) - 9));
             }
-            require(IERC20(token).balanceOf(address(this)) >= burned);
+            require(IERC20(token).balanceOf(address(this)) >= burned + totalDepositedToSCAmount[token]);
         }
 
         verifyInst(
@@ -259,10 +266,211 @@ contract Vault is AdminPausable {
         if (token == ETH_TOKEN) {
             to.transfer(burned);
         } else {
-            IERC20(token).transfer(to, burned);
-            require(checkSuccess());
+            require(IERC20(token).transfer(to, burned));
+            // require(checkSuccess());
         }
         emit Withdraw(token, to, burned);
+    }
+
+    /**
+     * @dev Burnt Proof is submited to store burnt amount of p-token/p-ETH and receiver's address
+     * Receiver then can call withdrawRequest to withdraw these token to he/she incognito address.
+     * @notice This function takes a burn instruction on Incognito Chain, checks
+     * for its validity and returns the token back to ETH chain
+     * @notice This only works when the contract is not Paused
+     * @notice All params except inst are the list of 2 elements corresponding to
+     * the proof on beacon and bridge
+     * @param inst: the decoded instruction as a list of bytes
+     * @param heights: the blocks containing the instruction
+     * @param instPaths: merkle path of the instruction
+     * @param instPathIsLefts: whether each node on the path is the left or right child
+     * @param instRoots: root of the merkle tree contains all instructions
+     * @param blkData: merkle has of the block body
+     * @param sigIdxs: indices of the validators who signed this block
+     * @param sigVs: part of the signatures of the validators
+     * @param sigRs: part of the signatures of the validators
+     * @param sigSs: part of the signatures of the validators
+     */
+    function submitBurnProof(
+        bytes memory inst,
+        uint[2] memory heights,
+        bytes32[][2] memory instPaths,
+        bool[][2] memory instPathIsLefts,
+        bytes32[2] memory instRoots,
+        bytes32[2] memory blkData,
+        uint[][2] memory sigIdxs,
+        uint8[][2] memory sigVs,
+        bytes32[][2] memory sigRs,
+        bytes32[][2] memory sigSs
+    ) public isNotPaused {
+        (uint8 meta, uint8 shard, address token, address payable to, uint burned) = parseBurnInst(inst);
+        require(meta == 97 && shard == 1); // Check instruction type
+        // Check if balance is enough
+        if (token == ETH_TOKEN) {
+            require(address(this).balance >= burned + totalDepositedToSCAmount[token]);
+        } else {
+            uint8 decimals = getDecimals(token);
+            if (decimals > 9) {
+                burned = burned * (10 ** (uint(decimals) - 9));
+            }
+            require(IERC20(token).balanceOf(address(this)) >= burned + totalDepositedToSCAmount[token]);
+        }
+
+        verifyInst(
+            inst,
+            heights,
+            instPaths,
+            instPathIsLefts,
+            instRoots,
+            blkData,
+            sigIdxs,
+            sigVs,
+            sigRs,
+            sigSs
+        );
+
+        withdrawRequests[to][token] += burned;
+        totalDepositedToSCAmount[token] += burned;
+    }
+
+    /**
+     * @dev generate address from signature data and hash.
+     */
+    function sigToAddress(bytes memory signData, bytes32 hash) public pure returns (address) {
+        bytes32 s;
+        bytes32 r;
+        uint8 v;
+        assembly {
+            r := mload(add(signData, 0x20))
+            s := mload(add(signData, 0x40))
+        }
+        v = uint8(signData[64]) + 27;
+        return ecrecover(hash, v, r, s);
+    }
+
+    /**
+     * @dev Checks if a sig data has been used before
+     * @notice First, we check inside the storage of this contract itself. If the
+     * hash has been used before, we return the result. Otherwise, we query
+     * previous vault recursively until the first Vault (prevVault address is 0x0)
+     * @param hash: of the sig data
+     * @return bool: whether the sig data has been used or not
+     */
+    function isSigDataUsed(bytes32 hash) public view returns(bool) {
+        if (sigDataUsed[hash]) {
+            return true;
+        } else if (address(prevVault) == address(0)) {
+            return false;
+        }
+        return prevVault.isSigDataUsed(hash);
+    }
+
+    /**
+     * @dev User requests withdraw token contains in withdrawRequests.
+     * Deposit event will be emitted to let incognito recognize and mint new p-tokens for the user.
+     * @param incognitoAddress: incognito's address that will receive minted p-tokens.
+     * @param token: ethereum's token address (eg., ETH, DAI, ...)
+     * @param amount: amount of the token in ethereum's denomination
+     * @param signData: signature of an unique data that is signed by an account which is generated from user's incognito privkey
+     * @param hash: hash of the unique data generated from client (timestamp for example)
+     */
+    function requestWithdraw(
+        string memory incognitoAddress,
+        address token,
+        uint amount,
+        bytes memory signData,
+        bytes32 hash
+    ) public {
+        require(!isSigDataUsed(hash));
+        address verifier = sigToAddress(signData, hash);
+        require(withdrawRequests[verifier][token] >= amount);
+
+        // convert denomination from ethereum's to incognito's (pcoin)
+        uint emitAmount = amount;
+        if (token == ETH_TOKEN) {
+            emitAmount = amount / (10 ** 9);
+        } else {
+            uint8 decimals = getDecimals(token);
+            if (decimals > 9) {
+                emitAmount = amount / (10 ** (uint(decimals) - 9));
+            }
+        }
+        // mark data hash of sig as used
+        sigDataUsed[hash] = true;
+
+        withdrawRequests[verifier][token] -= amount;
+        totalDepositedToSCAmount[token] -= amount;
+        emit Deposit(token, incognitoAddress, emitAmount);
+    }
+
+    /**
+     * @dev execute is a general function that plays a role as proxy to interact to other smart contracts.
+     * @param token: ethereum's token address (eg., ETH, DAI, ...)
+     * @param amount: amount of the token in ethereum's denomination
+     * @param recipientToken: received token address.
+     * @param exchangeAddress: address of targeting smart contract that actually executes the desired logics like trade, invest, borrow and so on.
+     * @param callData: encoded with signature and params of function from targeting smart contract.
+     * @param hash: hash of the unique data generated from client (timestamp for example)
+     * @param signData: signature of an unique data that is signed by an account which is generated from user's incognito privkey
+     */
+    function execute(
+        address token,
+        uint amount,
+        address recipientToken,
+        address exchangeAddress,
+        bytes memory callData,
+        bytes32 hash,
+        bytes memory signData
+    ) public payable {
+        require(!isSigDataUsed(hash));
+        address verifier = sigToAddress(signData, hash);
+
+        require(withdrawRequests[verifier][token] >= amount);
+        require(token != recipientToken);
+
+        // mark data hash of sig as used
+        sigDataUsed[hash] = true;
+
+        // define number of eth spent for forwarder.
+        uint ethAmount = msg.value;
+        if (token == ETH_TOKEN) {
+            ethAmount += amount;
+        } else {
+            // transfer token to exchangeAddress.
+            require(IERC20(token).balanceOf(address(this)) >= amount);
+            require(IERC20(token).transfer(exchangeAddress, amount));
+        }
+
+        uint returnedAmount = callExtFunc(recipientToken, ethAmount, callData, exchangeAddress);
+
+        // update withdrawRequests
+        withdrawRequests[verifier][token] -= amount;
+        withdrawRequests[verifier][recipientToken] += returnedAmount;
+        totalDepositedToSCAmount[token] -= amount;
+        totalDepositedToSCAmount[recipientToken] += returnedAmount;
+    }
+
+    function callExtFunc(address recipientToken, uint ethAmount, bytes memory callData, address exchangeAddress) internal returns (uint) {
+         // get balance of recipient token before trade to compare after trade.
+        uint balanceBeforeTrade = balanceOf(recipientToken);
+        if (recipientToken == ETH_TOKEN) {
+            balanceBeforeTrade -= msg.value;
+        }
+        require(address(this).balance >= ethAmount);
+        (bool success, bytes memory result) = exchangeAddress.call.value(ethAmount)(callData);
+        require(success);
+
+        (address returnedTokenAddress, uint returnedAmount) = abi.decode(result, (address, uint));
+        require(returnedTokenAddress == recipientToken && balanceOf(recipientToken) - balanceBeforeTrade == returnedAmount);
+
+        return returnedAmount;
+    }
+
+    function getDepositedBalance(
+        address token,
+        address owner
+    ) public view returns (uint) {
+        return withdrawRequests[owner][token];
     }
 
     /**
@@ -294,8 +502,8 @@ contract Vault is AdminPausable {
             } else {
                 uint bal = IERC20(assets[i]).balanceOf(address(this));
                 if (bal > 0) {
-                    IERC20(assets[i]).transfer(newVault, bal);
-                    require(checkSuccess());
+                    require(IERC20(assets[i]).transfer(newVault, bal));
+                    // require(checkSuccess());
                 }
             }
         }
@@ -327,31 +535,31 @@ contract Vault is AdminPausable {
      * This function is copied from https://github.com/AdExNetwork/adex-protocol-eth/blob/master/contracts/libs/SafeERC20.sol
      */
     function checkSuccess() private pure returns (bool) {
-		uint256 returnValue = 0;
+        uint256 returnValue = 0;
 
-		assembly {
-			// check number of bytes returned from last function call
-			switch returndatasize
+        assembly {
+            // check number of bytes returned from last function call
+            switch returndatasize
 
-			// no bytes returned: assume success
-			case 0x0 {
-				returnValue := 1
-			}
+            // no bytes returned: assume success
+            case 0x0 {
+                returnValue := 1
+            }
 
-			// 32 bytes returned: check if non-zero
-			case 0x20 {
-				// copy 32 bytes into scratch space
-				returndatacopy(0x0, 0x0, 0x20)
+            // 32 bytes returned: check if non-zero
+            case 0x20 {
+                // copy 32 bytes into scratch space
+                returndatacopy(0x0, 0x0, 0x20)
 
-				// load those bytes into returnValue
-				returnValue := mload(0x0)
-			}
+                // load those bytes into returnValue
+                returnValue := mload(0x0)
+            }
 
-			// not sure what was returned: don't mark as success
-			default { }
-		}
-		return returnValue != 0;
-	}
+            // not sure what was returned: don't mark as success
+            default { }
+        }
+        return returnValue != 0;
+    }
 
     /**
      * @dev Get the decimals of an ERC20 token, return 0 if it isn't defined
@@ -360,33 +568,40 @@ contract Vault is AdminPausable {
      */
     function getDecimals(address token) public view returns (uint8) {
         IERC20 erc20 = IERC20(token);
-		uint256 returnValue = 0;
-        erc20.decimals();
+        // uint256 returnValue = 0;
+        return uint8(erc20.decimals());
 
-		assembly {
-			// check number of bytes returned from last function call
-			switch returndatasize
+        // assembly {
+        //     // check number of bytes returned from last function call
+        //     switch returndatasize
 
-			// no bytes returned: zero decimals
-			case 0x0 {
-				returnValue := 0
-			}
+        //     // no bytes returned: zero decimals
+        //     case 0x0 {
+        //         returnValue := 0
+        //     }
 
-            // For uint8, the returndatasize is still 32 bytes
-			// 32 bytes returned: check if non-zero
-			case 0x20 {
-				// copy 32 bytes into scratch space
-				returndatacopy(0x0, 0x0, 0x20)
+        //     // For uint8, the returndatasize is still 32 bytes
+        //     // 32 bytes returned: check if non-zero
+        //     case 0x20 {
+        //         // copy 32 bytes into scratch space
+        //         returndatacopy(0x0, 0x0, 0x20)
 
-				// load those bytes into returnValue
-				returnValue := mload(0x0)
-			}
+        //         // load those bytes into returnValue
+        //         returnValue := mload(0x0)
+        //     }
 
-			// not sure what was returned: don't mark as success
-			default {
-                returnValue := 0
-            }
-		}
-		return uint8(returnValue);
+        //     // not sure what was returned: don't mark as success
+        //     default {
+        //         returnValue := 0
+        //     }
+        // }
+        // return uint8(returnValue);
+    }
+
+    function balanceOf(address token) public view returns (uint) {
+        if (token == ETH_TOKEN) {
+            return address(this).balance;
+        }
+        return IERC20(token).balanceOf(address(this));
     }
 }
