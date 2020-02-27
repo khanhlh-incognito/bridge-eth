@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"bytes"
 	"encoding/base64"
 	"math/big"
@@ -43,6 +44,9 @@ func getETHTransactionByHash(
 	)
 	if err != nil {
 		return nil, err
+	}
+	if res.Result == nil {
+		return nil, errors.New("eth tx by hash not found")
 	}
 	return res.Result.(map[string]interface{}), nil
 }
@@ -92,6 +96,10 @@ func getETHDepositProof(
 ) (*big.Int, string, uint, []string, error) {
 	// Get tx content
 	txContent, err := getETHTransactionByHash(url, txHash)
+	if err != nil {
+		fmt.Println("fuck fuck : ", err)
+		return nil, "", 0, nil, err
+	}
 	blockHash := txContent["blockHash"].(string)
 	if err != nil {
 		return nil, "", 0, nil, err

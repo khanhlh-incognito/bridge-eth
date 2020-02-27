@@ -2,6 +2,7 @@ package main
 
 // Basic imports
 import (
+	"context"
 	"io/ioutil"
 	"errors"
 	"encoding/json"
@@ -33,6 +34,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 
 	"github.com/incognitochain/bridge-eth/rpccaller"
+	"github.com/incognitochain/bridge-eth/erc20"
+	"github.com/stretchr/testify/require"
 )
 
 type IssuingETHRes struct {
@@ -73,6 +76,9 @@ type TradingTestSuite struct {
 	ETHClient         *ethclient.Client
 
 	VaultAddr         common.Address
+	KBNTradeDeployedAddr common.Address
+	ZRXTradeDeployedAddr common.Address
+
 	KyberContractAddr common.Address
 	ZRXContractAddr   common.Address
 	WETHAddr          common.Address
@@ -111,7 +117,7 @@ func (tradingSuite *TradingTestSuite) SetupSuite() {
 	connectToETH(tradingSuite)
 
 	// deploy all contracts to the connected ethereum network
-	// deployAllContracts(tradingSuite)
+	deployAllContracts(tradingSuite)
 }
 
 func (tradingSuite *TradingTestSuite) TearDownSuite() {
@@ -136,17 +142,36 @@ func TestTradingTestSuite(t *testing.T) {
 	fmt.Println("Finishing entry point...")
 }
 
+func getBalanceOnETHNet(
+	tradingSuite *TradingTestSuite,
+	tokenAddr common.Address,
+	ownerAddr common.Address,
+) *big.Int {
+	if tokenAddr.Hex() == tradingSuite.EtherAddressStr {
+		balance, err := tradingSuite.ETHClient.BalanceAt(context.Background(), ownerAddr, nil)
+		require.Equal(tradingSuite.T(), nil, err)
+		return balance
+	}
+	// erc20 token
+	instance, err := erc20.NewErc20(tokenAddr, tradingSuite.ETHClient)
+	require.Equal(tradingSuite.T(), nil, err)
+
+	balance, err := instance.BalanceOf(&bind.CallOpts{}, ownerAddr)
+	require.Equal(tradingSuite.T(), nil, err)
+	return balance
+}
+
 func connectToETH(tradingSuite *TradingTestSuite) {
 	privKeyHex := tradingSuite.ETHPrivKeyStr
 	privKey, err := crypto.HexToECDSA(privKeyHex)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	fmt.Printf("Sign Txs with address: %s\n", crypto.PubkeyToAddress(privKey.PublicKey).Hex())
 
 	network := "development"
 	fmt.Printf("Connecting to network %s\n", network)
 	client, err := ethclient.Dial(tradingSuite.ETHHost)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	tradingSuite.ETHClient = client
 	tradingSuite.ETHPrivKey = privKey
@@ -159,7 +184,7 @@ func deployAllContracts(tradingSuite *TradingTestSuite) {
 	// Genesis committee
 	// cmtee := getCommitteeHardcoded()
 	beaconComm, bridgeComm, err := getCommittee(tradingSuite.IncBridgeHost)
-	tradingSuite.Equal(err, nil)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(tradingSuite.ETHPrivKey)
@@ -167,7 +192,7 @@ func deployAllContracts(tradingSuite *TradingTestSuite) {
 	// auth.GasPrice = big.NewInt(10000000000)
 	// auth.GasLimit = 4000000
 	incAddr, tx, _, err := incognito_proxy.DeployIncognitoProxy(auth, tradingSuite.ETHClient, admin, beaconComm, bridgeComm)
-	tradingSuite.Equal(err, nil)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	// incAddr := common.HexToAddress(IncognitoProxyAddress)
 	fmt.Println("deployed incognito_proxy")
@@ -175,27 +200,29 @@ func deployAllContracts(tradingSuite *TradingTestSuite) {
 
 	// Wait until tx is confirmed
 	err = wait(tradingSuite.ETHClient, tx.Hash())
-	tradingSuite.Equal(err, nil)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	// Deploy vault
 	prevVault := common.Address{}
 	vaultAddr, _, _, err := vault.DeployVault(auth, tradingSuite.ETHClient, admin, incAddr, prevVault)
-	tradingSuite.Equal(err, nil)
+	require.Equal(tradingSuite.T(), nil, err)
 	tradingSuite.VaultAddr = vaultAddr
 	fmt.Println("deployed vault")
 	fmt.Printf("addr: %s\n", vaultAddr.Hex())
 
 	// Deploy kbntrade
 	kbnTradeAddr, _, _, err := kbntrade.DeployKbntrade(auth, tradingSuite.ETHClient, tradingSuite.KyberContractAddr, tradingSuite.VaultAddr)
-	tradingSuite.Equal(err, nil)
+	require.Equal(tradingSuite.T(), nil, err)
 	fmt.Println("deployed kbntrade")
 	fmt.Printf("addr: %s\n", kbnTradeAddr.Hex())
+	tradingSuite.KBNTradeDeployedAddr = kbnTradeAddr
 
 	// Deploy 0xTrade
 	zrxTradeAddr, _, _, err := zrxtrade.DeployZrxtrade(auth, tradingSuite.ETHClient, tradingSuite.WETHAddr, tradingSuite.ZRXContractAddr, tradingSuite.VaultAddr)
-	tradingSuite.Equal(err, nil)
+	require.Equal(tradingSuite.T(), nil, err)
 	fmt.Println("deployed zrxTrade")
 	fmt.Printf("addr: %s\n", zrxTradeAddr.Hex())
+	tradingSuite.ZRXTradeDeployedAddr = zrxTradeAddr
 }
 
 func depositETH(
@@ -204,16 +231,16 @@ func depositETH(
 ) common.Hash {
 	fmt.Println("tradingSuite.VaultAddr: ", tradingSuite.VaultAddr.Hex())
 	c, err := vault.NewVault(tradingSuite.VaultAddr, tradingSuite.ETHClient)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	auth := bind.NewKeyedTransactor(tradingSuite.ETHPrivKey)
 	auth.Value = big.NewInt(int64(amt * params.Ether))
 	tx, err := c.Deposit(auth, tradingSuite.IncPaymentAddrStr)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 	txHash := tx.Hash()
 
 	if err := wait(tradingSuite.ETHClient, txHash); err != nil {
-		tradingSuite.Equal(nil, err)
+		require.Equal(tradingSuite.T(), nil, err)
 	}
 	fmt.Printf("deposited, txHash: %x\n", txHash[:])
 	return txHash
@@ -266,6 +293,8 @@ func callBurningPToken(
 	meta := map[string]interface{}{
 		"TokenID": incTokenIDStr,
 		"TokenTxType": 1,
+		"TokenName": "",
+		"TokenSymbol": "",
 		"TokenAmount": amount.Uint64(),
 		"TokenReceivers": map[string]uint64{
 			tradingSuite.IncBurningAddrStr: amount.Uint64(),
@@ -293,7 +322,13 @@ func callBurningPToken(
 		&res,
 	)
 	if err != nil {
+		fmt.Println("calling burning ptokens err: ", err)
 		return nil, err
+	}
+	bb, _ := json.Marshal(res)
+	fmt.Println("calling burning ptokens res: ", string(bb))
+	if res.RPCError != nil {
+		return nil, errors.New(res.RPCError.Message)
 	}
 	return res.Result.(map[string]interface{}), nil
 }
@@ -303,22 +338,22 @@ func submitBurnProofForDepositToSC(
 	burningTxIDStr string,
 ) {
 	proof, err := getAndDecodeBurnProofV2(tradingSuite.IncBridgeHost, burningTxIDStr, "getburnprooffordeposittosc")
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	// Get contract instance
 	c, err := vault.NewVault(tradingSuite.VaultAddr, tradingSuite.ETHClient)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	// Burn
 	auth := bind.NewKeyedTransactor(tradingSuite.ETHPrivKey)
 	// auth.GasPrice = big.NewInt(1000000)
 	// auth.GasLimit = 4000000
 	tx, err := SubmitBurnProof(c, auth, proof)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	txHash := tx.Hash()
 	if err := wait(tradingSuite.ETHClient, txHash); err != nil {
-		tradingSuite.Equal(nil, err)
+		require.Equal(tradingSuite.T(), nil, err)
 	}
 	fmt.Printf("burned, txHash: %x\n", txHash[:])
 }
@@ -328,29 +363,29 @@ func submitBurnProofForWithdrawal(
 	burningTxIDStr string,
 ) {
 	proof, err := getAndDecodeBurnProofV2(tradingSuite.IncBridgeHost, burningTxIDStr, "getburnproof")
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	// Get contract instance
 	c, err := vault.NewVault(tradingSuite.VaultAddr, tradingSuite.ETHClient)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	// Burn
 	auth := bind.NewKeyedTransactor(tradingSuite.ETHPrivKey)
 	// auth.GasPrice = big.NewInt(1000000)
 	// auth.GasLimit = 4000000
 	tx, err := Withdraw(c, auth, proof)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	txHash := tx.Hash()
 	if err := wait(tradingSuite.ETHClient, txHash); err != nil {
-		tradingSuite.Equal(nil, err)
+		require.Equal(tradingSuite.T(), nil, err)
 	}
 	fmt.Printf("burned, txHash: %x\n", txHash[:])
 }
 
 func genKeysPairForSC(tradingSuite *TradingTestSuite) {
 	incPriKeyBytes, _, err := base58.Base58Check{}.Decode(tradingSuite.IncPrivKeyStr)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	tradingSuite.GeneratedPrivKeyForSC, tradingSuite.GeneratedPubKeyForSC = bridgesig.KeyGen(incPriKeyBytes)
 }
@@ -383,11 +418,11 @@ func executeWith0x(
 
 	// for 0x trade
 	tradeAbi, _ := abi.JSON(strings.NewReader(zrxtrade.ZrxtradeABI))
-	tradeAddress := common.HexToAddress("0x12180D9182c300873B2e57cD7FCfD61e736222d3")
+	// tradeAddress := common.HexToAddress("0x12180D9182c300873B2e57cD7FCfD61e736222d3")
 
 	// Get contract instance
 	c, err := vault.NewVault(tradingSuite.VaultAddr, tradingSuite.ETHClient)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 	auth := bind.NewKeyedTransactor(tradingSuite.ETHPrivKey)
 
 	// quote
@@ -396,6 +431,9 @@ func executeWith0x(
 
 	srcQty := big.NewInt(0.1 * params.Ether)
 	quoteData, _ := quote0x(srcTokenName, destTokenName, srcQty)
+	bb, _ := json.Marshal(quoteData)
+	fmt.Println("quote data: ", string(bb))
+
 	forwarder := common.HexToAddress(quoteData["to"].(string))
 	dt := common.Hex2Bytes(quoteData["data"].(string)[2:])
 	auth.Value, _ = big.NewInt(0).SetString(quoteData["protocolFee"].(string), 10)
@@ -407,15 +445,15 @@ func executeWith0x(
 		srcToken,
 		srcQty,
 		destToken,
-		tradeAddress,
+		tradingSuite.ZRXTradeDeployedAddr,
 		input,
 		toByte32(data),
 		signBytes,
 	)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 	txHash := tx.Hash()
 	if err := wait(tradingSuite.ETHClient, txHash); err != nil {
-		tradingSuite.Equal(nil, err)
+		require.Equal(tradingSuite.T(), nil, err)
 	}
 	fmt.Printf("0x trade executed , txHash: %x\n", txHash[:])
 }
@@ -453,11 +491,11 @@ func getDepositedBalance(
 	ownerAddrStr string,
 ) *big.Int {
 	c, err := vault.NewVault(tradingSuite.VaultAddr, tradingSuite.ETHClient)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 	token := common.HexToAddress(ethTokenAddrStr)
 	owner := common.HexToAddress(ownerAddrStr)
 	bal, err := c.GetDepositedBalance(nil, token, owner)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 	fmt.Printf("deposited balance: %d\n", bal)
 	return bal
 }
@@ -474,40 +512,40 @@ func requestWithdraw(
 	signBytes, _ := crypto.Sign(data, &tradingSuite.GeneratedPrivKeyForSC)
 
 	c, err := vault.NewVault(tradingSuite.VaultAddr, tradingSuite.ETHClient)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 	auth := bind.NewKeyedTransactor(tradingSuite.ETHPrivKey)
 
 	token := common.HexToAddress(withdrawalETHTokenIDStr)
 	// amount := big.NewInt(0.1 * params.Ether)
 
 	tx, err := c.RequestWithdraw(auth, tradingSuite.IncPaymentAddrStr, token, amount, signBytes, toByte32(data))
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 
 	txHash := tx.Hash()
 	if err := wait(tradingSuite.ETHClient, txHash); err != nil {
-		tradingSuite.Equal(nil, err)
+		require.Equal(tradingSuite.T(), nil, err)
 	}
 	fmt.Printf("request withdrawal, txHash: %x\n", txHash[:])
 	return txHash
 }
 
-
 func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
-	// ------------ step 0: declaration & initialization --------------
-	// depositingEther := float64(5.2) // 5.2 Ether
+	fmt.Println("------------ step 0: declaration & initialization --------------")
+	depositingEther := float64(5.2) // 5.2 Ether
 	burningPETH := big.NewInt(int64(3000000000)) // 3 pETH
-	withdrawingDAI, _ := big.NewInt(0).SetString("190000000000000000000", 10) // 190 DAI
-	withdrawingPDAI := big.NewInt(120000000000) // 120 pDAI
+	withdrawingDAI, _ := big.NewInt(0).SetString("1900000000000000000", 10) // 190 DAI
+	withdrawingPDAI := big.NewInt(1200000000) // 120 pDAI
 
 	pubKeyToAddrStr := crypto.PubkeyToAddress(tradingSuite.GeneratedPubKeyForSC).Hex()
+	fmt.Println("pubKeyToAddrStr: ", pubKeyToAddrStr)
 
-	// ------------ step 1: porting ETH to pETH --------------
-	// txHash := depositETH(tradingSuite, depositingEther)
+	fmt.Println("------------ step 1: porting ETH to pETH --------------")
+	txHash := depositETH(tradingSuite, depositingEther)
 
-	txHash := common.HexToHash("6ed79f1c0817a2367ea948355ccbaad763585595c2c0e615ad2d7ebf238af99c")
+	// txHash := common.HexToHash("6ed79f1c0817a2367ea948355ccbaad763585595c2c0e615ad2d7ebf238af99c")
 	_, ethBlockHash, ethTxIdx, ethDepositProof, err := getETHDepositProof(tradingSuite.ETHHost, txHash)
-	tradingSuite.Equal(nil, err)
-	fmt.Println("depositProof: ", ethBlockHash, ethTxIdx, ethDepositProof)
+	require.Equal(tradingSuite.T(), nil, err)
+	fmt.Println("depositProof ---- : ", ethBlockHash, ethTxIdx, ethDepositProof)
 
 	// TODO: get current balance on peth of the incognito account
 	_, err = callIssuingETHReq(
@@ -517,34 +555,34 @@ func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
 		ethBlockHash,
 		ethTxIdx,
 	)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 	time.Sleep(150 * time.Second)
 	// TODO: check the new balance on peth of the incognito account
 
-	// ------------ step 2: burning pETH to deposit ETH to SC --------------
+	fmt.Println("------------ step 2: burning pETH to deposit ETH to SC --------------")
 
 	// make a burn tx to incognito chain as a result of deposit to SC
 	burningRes, err := callBurningPToken(
 		tradingSuite,
 		tradingSuite.IncEtherTokenIDStr,
 		burningPETH,
-		pubKeyToAddrStr,
+		pubKeyToAddrStr[2:],
 		"createandsendburningfordeposittoscrequest",
 	)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 	burningTxID, found := burningRes["TxID"]
-	tradingSuite.Equal(true, found)
+	require.Equal(tradingSuite.T(), true, found)
 	time.Sleep(150 * time.Second)
 
 	submitBurnProofForDepositToSC(tradingSuite, burningTxID.(string))
 	deposited := getDepositedBalance(
 		tradingSuite,
 		tradingSuite.EtherAddressStr,
-		fmt.Sprintf("0x%s", pubKeyToAddrStr),
+		pubKeyToAddrStr,
 	)
-	tradingSuite.Equal(big.NewInt(0).Mul(burningPETH, big.NewInt(1000000000)), deposited)
+	require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPETH, big.NewInt(1000000000)), deposited)
 
-	// ------------ step 3: execute trade ETH for DAI through 0x aggregator --------------
+	fmt.Println("------------ step 3: execute trade ETH for DAI through 0x aggregator --------------")
 	executeWith0x(
 		tradingSuite,
 		"ETH",
@@ -555,15 +593,15 @@ func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
 	daiTraded := getDepositedBalance(
 		tradingSuite,
 		tradingSuite.EtherAddressStr,
-		fmt.Sprintf("0x%s", pubKeyToAddrStr),
+		pubKeyToAddrStr,
 	)
 	fmt.Println("daiTraded: ", daiTraded)
 
-	// ------------ step 4: withdrawing DAI from SC to pDAI on Incognito --------------
+	fmt.Println("------------ step 4: withdrawing DAI from SC to pDAI on Incognito --------------")
 	txHashByEmittingWithdrawalReq := requestWithdraw(tradingSuite, tradingSuite.DAIAddressStr, withdrawingDAI)
 
 	_, ethBlockHash, ethTxIdx, ethDepositProof, err = getETHDepositProof(tradingSuite.ETHHost, txHashByEmittingWithdrawalReq)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 	fmt.Println("depositProof by emitting withdarawal req: ", ethBlockHash, ethTxIdx, ethDepositProof)
 
 	_, err = callIssuingETHReq(
@@ -573,10 +611,10 @@ func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
 		ethBlockHash,
 		ethTxIdx,
 	)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 	time.Sleep(150 * time.Second)
 
-	// ------------ step 5: withdrawing pETH from Incognito to ETH --------------
+	fmt.Println("------------ step 5: withdrawing pDAI from Incognito to DAI --------------")
 	burningRes, err = callBurningPToken(
 		tradingSuite,
 		tradingSuite.IncDAITokenIDStr,
@@ -584,11 +622,18 @@ func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
 		tradingSuite.ETHOwnerAddrStr,
 		"createandsendburningrequest",
 	)
-	tradingSuite.Equal(nil, err)
+	require.Equal(tradingSuite.T(), nil, err)
 	burningTxID, found = burningRes["TxID"]
-	tradingSuite.Equal(true, found)
+	require.Equal(tradingSuite.T(), true, found)
 	time.Sleep(150 * time.Second)
 
 	submitBurnProofForWithdrawal(tradingSuite, burningTxID.(string))
-	// TODO: get balance of receiver
+
+	bal := getBalanceOnETHNet(
+		tradingSuite,
+		common.HexToAddress(tradingSuite.DAIAddressStr),
+		common.HexToAddress(fmt.Sprintf("0x%s", tradingSuite.ETHOwnerAddrStr)),
+	)
+	fmt.Println("receiving bal: ", bal)
+	require.Equal(tradingSuite.T(), withdrawingPDAI.Uint64(), bal.Div(bal, big.NewInt(1000000000)).Uint64())
 }
