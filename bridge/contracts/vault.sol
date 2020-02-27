@@ -1,4 +1,4 @@
-pragma solidity ^0.5.12;
+pragma solidity >=0.5.12;
 pragma experimental ABIEncoderV2;
 
 import "./IERC20.sol";
@@ -530,72 +530,13 @@ contract Vault is AdminPausable {
     function () external payable {}
 
     /**
-     * @dev Check if transfer() and transferFrom() of ERC20 succeeded or not
-     * This check is needed to fix https://github.com/ethereum/solidity/issues/4116
-     * This function is copied from https://github.com/AdExNetwork/adex-protocol-eth/blob/master/contracts/libs/SafeERC20.sol
-     */
-    function checkSuccess() private pure returns (bool) {
-        uint256 returnValue = 0;
-
-        assembly {
-            // check number of bytes returned from last function call
-            switch returndatasize
-
-            // no bytes returned: assume success
-            case 0x0 {
-                returnValue := 1
-            }
-
-            // 32 bytes returned: check if non-zero
-            case 0x20 {
-                // copy 32 bytes into scratch space
-                returndatacopy(0x0, 0x0, 0x20)
-
-                // load those bytes into returnValue
-                returnValue := mload(0x0)
-            }
-
-            // not sure what was returned: don't mark as success
-            default { }
-        }
-        return returnValue != 0;
-    }
-
-    /**
      * @dev Get the decimals of an ERC20 token, return 0 if it isn't defined
      * We check the returndatasize to covert both cases that the token has
      * and doesn't have the function decimals()
      */
     function getDecimals(address token) public view returns (uint8) {
         IERC20 erc20 = IERC20(token);
-        // uint256 returnValue = 0;
         return uint8(erc20.decimals());
-
-        // assembly {
-        //     // check number of bytes returned from last function call
-        //     switch returndatasize
-
-        //     // no bytes returned: zero decimals
-        //     case 0x0 {
-        //         returnValue := 0
-        //     }
-
-        //     // For uint8, the returndatasize is still 32 bytes
-        //     // 32 bytes returned: check if non-zero
-        //     case 0x20 {
-        //         // copy 32 bytes into scratch space
-        //         returndatacopy(0x0, 0x0, 0x20)
-
-        //         // load those bytes into returnValue
-        //         returnValue := mload(0x0)
-        //     }
-
-        //     // not sure what was returned: don't mark as success
-        //     default {
-        //         returnValue := 0
-        //     }
-        // }
-        // return uint8(returnValue);
     }
 
     function balanceOf(address token) public view returns (uint) {

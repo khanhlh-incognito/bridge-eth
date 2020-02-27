@@ -1,4 +1,4 @@
-pragma solidity ^0.5.12;
+pragma solidity >=0.5.12;
 pragma experimental ABIEncoderV2;
 
 import "@0x/contracts-exchange-forwarder/contracts/src/interfaces/IForwarder.sol";

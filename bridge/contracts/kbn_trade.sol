@@ -1,4 +1,4 @@
-pragma solidity ^0.5.12;
+pragma solidity >=0.5.12;
 
 import './trade_utils.sol';
 import './IERC20.sol';
