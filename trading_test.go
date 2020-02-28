@@ -3,15 +3,15 @@ package main
 // Basic imports
 import (
 	"context"
-	"io/ioutil"
-	"errors"
 	"encoding/json"
-	"time"
+	"errors"
 	"fmt"
-	"math/rand"
+	"io/ioutil"
 	"math/big"
+	"math/rand"
 	"net/http"
 	"strings"
+	"time"
 
 	"crypto/ecdsa"
 	"testing"
@@ -25,16 +25,16 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/crypto/sha3"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/rlp"
 
-	"github.com/incognitochain/bridge-eth/rpccaller"
 	"github.com/incognitochain/bridge-eth/erc20"
+	"github.com/incognitochain/bridge-eth/rpccaller"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,29 +53,29 @@ type BurningForDepositToSCRes struct {
 type TradingTestSuite struct {
 	suite.Suite
 	IncBurningAddrStr string
-	IncPrivKeyStr string
+	IncPrivKeyStr     string
 	IncPaymentAddrStr string
 
 	GeneratedPrivKeyForSC ecdsa.PrivateKey
-	GeneratedPubKeyForSC ecdsa.PublicKey
+	GeneratedPubKeyForSC  ecdsa.PublicKey
 
 	IncEtherTokenIDStr string
-	IncDAITokenIDStr string
+	IncDAITokenIDStr   string
 
-	IncBridgeHost        string
-	IncRPCHost        string
+	IncBridgeHost string
+	IncRPCHost    string
 
 	EtherAddressStr string
-	DAIAddressStr string
+	DAIAddressStr   string
 
-	ETHPrivKeyStr     string
+	ETHPrivKeyStr   string
 	ETHOwnerAddrStr string
 
-	ETHHost           string
-	ETHPrivKey        *ecdsa.PrivateKey
-	ETHClient         *ethclient.Client
+	ETHHost    string
+	ETHPrivKey *ecdsa.PrivateKey
+	ETHClient  *ethclient.Client
 
-	VaultAddr         common.Address
+	VaultAddr            common.Address
 	KBNTradeDeployedAddr common.Address
 	ZRXTradeDeployedAddr common.Address
 
@@ -256,9 +256,9 @@ func callIssuingETHReq(
 	rpcClient := rpccaller.NewRPCClient()
 	meta := map[string]interface{}{
 		"IncTokenID": incTokenIDStr,
-		"BlockHash": ethBlockHash,
-		"ProofStrs": ethDepositProof,
-		"TxIndex": ethTxIdx,
+		"BlockHash":  ethBlockHash,
+		"ProofStrs":  ethDepositProof,
+		"TxIndex":    ethTxIdx,
 	}
 	params := []interface{}{
 		tradingSuite.IncPrivKeyStr,
@@ -291,17 +291,17 @@ func callBurningPToken(
 ) (map[string]interface{}, error) {
 	rpcClient := rpccaller.NewRPCClient()
 	meta := map[string]interface{}{
-		"TokenID": incTokenIDStr,
+		"TokenID":     incTokenIDStr,
 		"TokenTxType": 1,
-		"TokenName": "",
+		"TokenName":   "",
 		"TokenSymbol": "",
 		"TokenAmount": amount.Uint64(),
 		"TokenReceivers": map[string]uint64{
 			tradingSuite.IncBurningAddrStr: amount.Uint64(),
 		},
 		"RemoteAddress": remoteAddrStr,
-		"Privacy": true,
-		"TokenFee": 0,
+		"Privacy":       true,
+		"TokenFee":      0,
 	}
 	params := []interface{}{
 		tradingSuite.IncPrivKeyStr,
@@ -391,7 +391,7 @@ func genKeysPairForSC(tradingSuite *TradingTestSuite) {
 }
 
 func randomizeTimestamp() string {
-	randomTime := rand.Int63n(time.Now().Unix() - 94608000) + 94608000
+	randomTime := rand.Int63n(time.Now().Unix()-94608000) + 94608000
 	randomNow := time.Unix(randomTime, 0)
 	return randomNow.String()
 }
@@ -405,6 +405,7 @@ func rlpHash(x interface{}) (h common.Hash) {
 
 func executeWith0x(
 	tradingSuite *TradingTestSuite,
+	srcQty *big.Int,
 	srcTokenName string,
 	srcTokenIDStr string,
 	destTokenName string,
@@ -415,10 +416,7 @@ func executeWith0x(
 	})
 	data := hash.Bytes()
 	signBytes, _ := crypto.Sign(data, &tradingSuite.GeneratedPrivKeyForSC)
-
-	// for 0x trade
 	tradeAbi, _ := abi.JSON(strings.NewReader(zrxtrade.ZrxtradeABI))
-	// tradeAddress := common.HexToAddress("0x12180D9182c300873B2e57cD7FCfD61e736222d3")
 
 	// Get contract instance
 	c, err := vault.NewVault(tradingSuite.VaultAddr, tradingSuite.ETHClient)
@@ -429,7 +427,7 @@ func executeWith0x(
 	srcToken := common.HexToAddress(srcTokenIDStr)
 	destToken := common.HexToAddress(destTokenIDStr)
 
-	srcQty := big.NewInt(0.1 * params.Ether)
+	// srcQty := big.NewInt(0.1 * params.Ether)
 	quoteData, _ := quote0x(srcTokenName, destTokenName, srcQty)
 	bb, _ := json.Marshal(quoteData)
 	fmt.Println("quote data: ", string(bb))
@@ -529,12 +527,13 @@ func requestWithdraw(
 	return txHash
 }
 
-func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
+func (tradingSuite *TradingTestSuite) Test1TradeEthForDaiWith0x() {
 	fmt.Println("------------ step 0: declaration & initialization --------------")
-	depositingEther := float64(5.2) // 5.2 Ether
-	burningPETH := big.NewInt(int64(3000000000)) // 3 pETH
-	withdrawingDAI, _ := big.NewInt(0).SetString("1900000000000000000", 10) // 190 DAI
-	withdrawingPDAI := big.NewInt(1200000000) // 120 pDAI
+	depositingEther := float64(5.2)                                           // 5.2 Ether
+	burningPETH := big.NewInt(int64(3000000000))                              // 3 pETH
+	withdrawingDAI, _ := big.NewInt(0).SetString("190000000000000000000", 10) // 190 DAI
+	withdrawingPDAI := big.NewInt(120000000000)                               // 120 pDAI
+	tradeAmount := big.NewInt(1 * params.Ether)
 
 	pubKeyToAddrStr := crypto.PubkeyToAddress(tradingSuite.GeneratedPubKeyForSC).Hex()
 	fmt.Println("pubKeyToAddrStr: ", pubKeyToAddrStr)
@@ -542,7 +541,6 @@ func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
 	fmt.Println("------------ step 1: porting ETH to pETH --------------")
 	txHash := depositETH(tradingSuite, depositingEther)
 
-	// txHash := common.HexToHash("6ed79f1c0817a2367ea948355ccbaad763585595c2c0e615ad2d7ebf238af99c")
 	_, ethBlockHash, ethTxIdx, ethDepositProof, err := getETHDepositProof(tradingSuite.ETHHost, txHash)
 	require.Equal(tradingSuite.T(), nil, err)
 	fmt.Println("depositProof ---- : ", ethBlockHash, ethTxIdx, ethDepositProof)
@@ -556,7 +554,7 @@ func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
 		ethTxIdx,
 	)
 	require.Equal(tradingSuite.T(), nil, err)
-	time.Sleep(150 * time.Second)
+	time.Sleep(120 * time.Second)
 	// TODO: check the new balance on peth of the incognito account
 
 	fmt.Println("------------ step 2: burning pETH to deposit ETH to SC --------------")
@@ -572,7 +570,7 @@ func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
 	require.Equal(tradingSuite.T(), nil, err)
 	burningTxID, found := burningRes["TxID"]
 	require.Equal(tradingSuite.T(), true, found)
-	time.Sleep(150 * time.Second)
+	time.Sleep(120 * time.Second)
 
 	submitBurnProofForDepositToSC(tradingSuite, burningTxID.(string))
 	deposited := getDepositedBalance(
@@ -585,6 +583,7 @@ func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
 	fmt.Println("------------ step 3: execute trade ETH for DAI through 0x aggregator --------------")
 	executeWith0x(
 		tradingSuite,
+		tradeAmount,
 		"ETH",
 		tradingSuite.EtherAddressStr,
 		"DAI",
@@ -592,7 +591,7 @@ func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
 	)
 	daiTraded := getDepositedBalance(
 		tradingSuite,
-		tradingSuite.EtherAddressStr,
+		tradingSuite.DAIAddressStr,
 		pubKeyToAddrStr,
 	)
 	fmt.Println("daiTraded: ", daiTraded)
@@ -612,7 +611,7 @@ func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
 		ethTxIdx,
 	)
 	require.Equal(tradingSuite.T(), nil, err)
-	time.Sleep(150 * time.Second)
+	time.Sleep(120 * time.Second)
 
 	fmt.Println("------------ step 5: withdrawing pDAI from Incognito to DAI --------------")
 	burningRes, err = callBurningPToken(
@@ -625,7 +624,7 @@ func (tradingSuite *TradingTestSuite) TestTradeEthForDaiWith0x() {
 	require.Equal(tradingSuite.T(), nil, err)
 	burningTxID, found = burningRes["TxID"]
 	require.Equal(tradingSuite.T(), true, found)
-	time.Sleep(150 * time.Second)
+	time.Sleep(120 * time.Second)
 
 	submitBurnProofForWithdrawal(tradingSuite, burningTxID.(string))
 
