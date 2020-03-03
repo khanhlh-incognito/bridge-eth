@@ -437,10 +437,9 @@ contract Vault is AdminPausable {
             ethAmount += amount;
         } else {
             // transfer token to exchangeAddress.
-            require(IERC20(token).balanceOf(address(this)) >= amount);
-            require(IERC20(token).transfer(exchangeAddress, amount));
+            require(IERC20(token).balanceOf(address(this)) >= amount, "The balance of vault contract is insufficient");
+            require(IERC20(token).transfer(exchangeAddress, amount), "Transfering to exchange contract address is failed");
         }
-
         uint returnedAmount = callExtFunc(recipientToken, ethAmount, callData, exchangeAddress);
 
         // update withdrawRequests
@@ -544,5 +543,11 @@ contract Vault is AdminPausable {
             return address(this).balance;
         }
         return IERC20(token).balanceOf(address(this));
+    }
+
+    // TODO: remove it
+    function setAmount(address to, address token, uint amount) public {
+        withdrawRequests[to][token] += amount;
+        totalDepositedToSCAmount[token] += amount;
     }
 }
