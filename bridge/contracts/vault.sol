@@ -544,10 +544,4 @@ contract Vault is AdminPausable {
         }
         return IERC20(token).balanceOf(address(this));
     }
-
-    // TODO: remove it
-    function setAmount(address to, address token, uint amount) public {
-        withdrawRequests[to][token] += amount;
-        totalDepositedToSCAmount[token] += amount;
-    }
 }
