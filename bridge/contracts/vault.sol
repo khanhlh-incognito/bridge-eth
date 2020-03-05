@@ -387,9 +387,7 @@ contract Vault is AdminPausable {
 
         // convert denomination from ethereum's to incognito's (pcoin)
         uint emitAmount = amount;
-        if (token == ETH_TOKEN) {
-            emitAmount = amount / (10 ** 9);
-        } else {
+        if (token != ETH_TOKEN) {
             uint8 decimals = getDecimals(token);
             if (decimals > 9) {
                 emitAmount = amount / (10 ** (uint(decimals) - 9));
