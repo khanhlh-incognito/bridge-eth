@@ -372,15 +372,17 @@ contract Vault is AdminPausable {
      * @param token: ethereum's token address (eg., ETH, DAI, ...)
      * @param amount: amount of the token in ethereum's denomination
      * @param signData: signature of an unique data that is signed by an account which is generated from user's incognito privkey
-     * @param hash: hash of the unique data generated from client (timestamp for example)
+     * @param timestamp: unique data generated from client (timestamp for example)
      */
     function requestWithdraw(
         string memory incognitoAddress,
         address token,
         uint amount,
         bytes memory signData,
-        bytes32 hash
+        bytes memory timestamp
     ) public {
+        bytes memory tempData = abi.encodePacked(incognitoAddress, token, timestamp);
+        bytes32 hash = keccak256(tempData);
         require(!isSigDataUsed(hash));
         address verifier = sigToAddress(signData, hash);
         require(withdrawRequests[verifier][token] >= amount);
@@ -408,7 +410,7 @@ contract Vault is AdminPausable {
      * @param recipientToken: received token address.
      * @param exchangeAddress: address of targeting smart contract that actually executes the desired logics like trade, invest, borrow and so on.
      * @param callData: encoded with signature and params of function from targeting smart contract.
-     * @param hash: hash of the unique data generated from client (timestamp for example)
+     * @param timestamp: unique data generated from client (timestamp for example)
      * @param signData: signature of an unique data that is signed by an account which is generated from user's incognito privkey
      */
     function execute(
@@ -417,14 +419,21 @@ contract Vault is AdminPausable {
         address recipientToken,
         address exchangeAddress,
         bytes memory callData,
-        bytes32 hash,
+        bytes memory timestamp,
         bytes memory signData
     ) public payable {
+        //generate sign data from input
+        bytes memory tempData = abi.encodePacked(exchangeAddress, callData, timestamp);
+        bytes32 hash = keccak256(tempData);
         require(!isSigDataUsed(hash));
-        address verifier = sigToAddress(signData, hash);
+        address verifier = sigToAddress(signData, hash); 
 
         require(withdrawRequests[verifier][token] >= amount);
         require(token != recipientToken);
+
+        // update balance of verifier
+        totalDepositedToSCAmount[token] -= amount;
+        withdrawRequests[verifier][token] -= amount;
 
         // mark data hash of sig as used
         sigDataUsed[hash] = true;
@@ -441,9 +450,7 @@ contract Vault is AdminPausable {
         uint returnedAmount = callExtFunc(recipientToken, ethAmount, callData, exchangeAddress);
 
         // update withdrawRequests
-        withdrawRequests[verifier][token] -= amount;
         withdrawRequests[verifier][recipientToken] += returnedAmount;
-        totalDepositedToSCAmount[token] -= amount;
         totalDepositedToSCAmount[recipientToken] += returnedAmount;
     }
 
