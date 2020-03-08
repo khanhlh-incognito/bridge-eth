@@ -251,6 +251,9 @@ func (tradingSuite *TradingTestSuite) callIssuingETHReq(
 	response, _ := json.Marshal(res)
 	fmt.Println("get response", string(response))
 
+	if res.RPCError != nil {
+		return nil, errors.New(res.RPCError.Message)
+	}
 	return res.Result.(map[string]interface{}), nil
 }
 
