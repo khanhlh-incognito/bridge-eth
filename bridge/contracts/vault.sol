@@ -428,7 +428,7 @@ contract Vault is AdminPausable {
         address verifier = verifySignData(abi.encodePacked(incognitoAddress, token, timestamp), signData);
         // check the balance of previous version 
         if(address(prevVault) != address(0) && !migration[verifier][token]) {
-            withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeAdd(prevVault.getDepositedBalance(verifier, token));
+            withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeAdd(prevVault.getDepositedBalance(token, verifier));
             migration[verifier][token] = true;
         }
         require(withdrawRequests[verifier][token] >= amount);
@@ -471,7 +471,7 @@ contract Vault is AdminPausable {
          
         // check the balance of previous version 
         if(address(prevVault) != address(0) && !migration[verifier][token]) {
-            withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeAdd(prevVault.getDepositedBalance(verifier, token));
+            withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeAdd(prevVault.getDepositedBalance(token, verifier));
             migration[verifier][token] = true;
         }
         require(withdrawRequests[verifier][token] >= amount);
@@ -518,7 +518,7 @@ contract Vault is AdminPausable {
         for(uint i = 0; i < tokens.length; i++){
             // check the balance of previous version
             if(address(prevVault) != address(0) && !migration[verifier][tokens[i]]) {
-                withdrawRequests[verifier][tokens[i]] = withdrawRequests[verifier][tokens[i]].safeAdd(prevVault.getDepositedBalance(verifier, tokens[i]));
+                withdrawRequests[verifier][tokens[i]] = withdrawRequests[verifier][tokens[i]].safeAdd(prevVault.getDepositedBalance(tokens[i], verifier));
                 migration[verifier][tokens[i]] = true;
             }
             
