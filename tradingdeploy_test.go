@@ -8,19 +8,21 @@ import (
 	"testing"
 
 	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
+	kbnmultiTrade "github.com/incognitochain/bridge-eth/bridge/kbnmultitrade"
 	"github.com/incognitochain/bridge-eth/bridge/kbntrade"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/bridge-eth/bridge/zrxtrade"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-		"github.com/stretchr/testify/require"
 )
 
 type TradingDeployTestSuite struct {
 	*TradingTestSuite
 
+	KyberContractAddr common.Address
 	ZRXContractAddr   common.Address
 	WETHAddr          common.Address
 }
@@ -34,6 +36,7 @@ func NewTradingDeployTestSuite(tradingTestSuite *TradingTestSuite) *TradingDeplo
 func (tradingDeploySuite *TradingDeployTestSuite) SetupSuite() {
 	fmt.Println("Setting up the suite...")
 	// 0x kovan env
+	tradingDeploySuite.KyberContractAddr = common.HexToAddress("0xF77eC7Ed5f5B9a5aee4cfa6FFCaC6A4C315BaC76") // rinkeby
 	tradingDeploySuite.ZRXContractAddr = common.HexToAddress("0xf1ec01d6236d3cd881a0bf0130ea25fe4234003e")
 	tradingDeploySuite.WETHAddr = common.HexToAddress("0xd0a1e359811322d97991e03f863a0c30c2cf029c")
 }
@@ -53,7 +56,7 @@ func TestTradingDeployTestSuite(t *testing.T) {
 	fmt.Println("Finishing entry point...")
 }
 
-func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts()  {
+func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts() {
 	admin := common.HexToAddress(Admin)
 	fmt.Println("Admin address:", admin.Hex())
 
@@ -89,17 +92,23 @@ func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts()  {
 	require.Equal(tradingDeploySuite.T(), nil, err)
 
 	// Deploy kbntrade
-	kbnTradeAddr, tx, _, err := kbntrade.DeployKbntrade(auth, tradingDeploySuite.ETHClient, tradingDeploySuite.KyberContractAddr, tradingDeploySuite.VaultAddr)
+	kbnTradeAddr, tx, _, err := kbntrade.DeployKbntrade(auth, tradingDeploySuite.ETHClient, tradingDeploySuite.KyberContractAddr, vaultAddr)
 	require.Equal(tradingDeploySuite.T(), nil, err)
 	fmt.Println("deployed kbntrade")
 	fmt.Printf("addr: %s\n", kbnTradeAddr.Hex())
+
+	// Deploy kbnMultitrade
+	kbnMultiTradeAddr, tx, _, err := kbnmultiTrade.DeployKbnmultiTrade(auth, tradingDeploySuite.ETHClient, tradingDeploySuite.KyberContractAddr, vaultAddr)
+	require.Equal(tradingDeploySuite.T(), nil, err)
+	fmt.Println("deployed kbnMultitrade")
+	fmt.Printf("addr: %s\n", kbnMultiTradeAddr.Hex())
 
 	// Wait until tx is confirmed
 	err = wait(tradingDeploySuite.ETHClient, tx.Hash())
 	require.Equal(tradingDeploySuite.T(), nil, err)
 
 	// Deploy 0xTrade
-	zrxTradeAddr, tx, _, err := zrxtrade.DeployZrxtrade(auth, tradingDeploySuite.ETHClient, tradingDeploySuite.WETHAddr, tradingDeploySuite.ZRXContractAddr, tradingDeploySuite.VaultAddr)
+	zrxTradeAddr, tx, _, err := zrxtrade.DeployZrxtrade(auth, tradingDeploySuite.ETHClient, tradingDeploySuite.WETHAddr, tradingDeploySuite.ZRXContractAddr, vaultAddr)
 	require.Equal(tradingDeploySuite.T(), nil, err)
 
 	// Wait until tx is confirmed

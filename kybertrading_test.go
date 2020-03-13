@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	kbnmultiTrade "github.com/incognitochain/bridge-eth/bridge/kbnmultitrade"
+
 	"github.com/incognitochain/bridge-eth/bridge/kbntrade"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/stretchr/testify/suite"
@@ -25,22 +27,26 @@ import (
 type KyberTradingTestSuite struct {
 	*TradingTestSuite
 
-	KyberTradeDeployedAddr common.Address
+	KyberTradeDeployedAddr      common.Address
+	KyberMultiTradeDeployedAddr common.Address
+	KyberContractAddr           common.Address
+	WETHAddr                    common.Address
+	EtherAddressStrKyber        common.Address
 
-	KyberContractAddr    common.Address
-	WETHAddr             common.Address
-	EtherAddressStrKyber common.Address
-
+	IncKBNTokenIDStr  string
+	IncSALTTokenIDStr string
 	IncOMGTokenIDStr  string
-	IncPOLYTokenIDStr string
+	IncSNTTokenIDStr  string
 
+	KBNAddressStr  string
+	SALTAddressStr string
 	OMGAddressStr  string
-	POLYAddressStr string
+	SNTAddressStr  string
 
 	// token amounts for tests
 	DepositingEther       float64
-	OMGBalanceAfterStep1  *big.Int
-	POLYBalanceAfterStep2 *big.Int
+	KBNBalanceAfterStep1  *big.Int
+	SALTBalanceAfterStep2 *big.Int
 }
 
 func NewKyberTradingTestSuite(tradingTestSuite *TradingTestSuite) *KyberTradingTestSuite {
@@ -56,13 +62,18 @@ func (tradingSuite *KyberTradingTestSuite) SetupSuite() {
 	// Kovan env
 	tradingSuite.EtherAddressStrKyber = common.HexToAddress("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
 
-	tradingSuite.IncOMGTokenIDStr = "0000000000000000000000000000000000000000000000000000000000000092"
-	tradingSuite.IncPOLYTokenIDStr = "0000000000000000000000000000000000000000000000000000000000000091"
-	tradingSuite.OMGAddressStr = "0xC4375B7De8af5a38a93548eb8453a498222C4fF2"
-	tradingSuite.POLYAddressStr = "0xdB7ec4E4784118D9733710e46F7C83fE7889596a"
-	tradingSuite.KyberTradeDeployedAddr = common.HexToAddress("0xCbB310ef7e7bcA0f5Ec82b23AEAA3bf2157DD39a")
-	tradingSuite.DepositingEther = float64(0.05)
-	tradingSuite.KyberContractAddr = common.HexToAddress("0x692f391bCc85cefCe8C237C01e1f636BbD70EA4D")
+	tradingSuite.IncKBNTokenIDStr = "0000000000000000000000000000000000000000000000000000000000000082"
+	tradingSuite.IncSALTTokenIDStr = "0000000000000000000000000000000000000000000000000000000000000081"
+	tradingSuite.IncOMGTokenIDStr = "0000000000000000000000000000000000000000000000000000000000000072"
+	tradingSuite.IncSNTTokenIDStr = "0000000000000000000000000000000000000000000000000000000000000071"
+	tradingSuite.KBNAddressStr = "0x6FA355a7b6bD2D6bD8b927C489221BFBb6f1D7B2"                                    // rinkeby
+	tradingSuite.SALTAddressStr = "0x058832CA736AB027c12367e53915e34e87a6081B"                                   // rinkeby
+	tradingSuite.OMGAddressStr = "0x732fBA98dca813C3A630b53a8bFc1d6e87B1db65"                                    // rinkeby
+	tradingSuite.SNTAddressStr = "0x01DAd357f21BD4fB1D3d8f3B05d1cc151807AA23"                                    // rinkeby
+	tradingSuite.KyberTradeDeployedAddr = common.HexToAddress("0x25fadCA663deb649bd0A34753444853887412d21")      //rinkeby
+	tradingSuite.KyberMultiTradeDeployedAddr = common.HexToAddress("0x2065Ea2260080C27E16Bf3cFdC3ACF26E747B36b") //rinkeby
+	tradingSuite.DepositingEther = float64(0.1)
+	tradingSuite.KyberContractAddr = common.HexToAddress("0xF77eC7Ed5f5B9a5aee4cfa6FFCaC6A4C315BaC76") // rinkeby
 }
 
 func (tradingSuite *KyberTradingTestSuite) TearDownSuite() {
@@ -134,8 +145,62 @@ func (tradingSuite *KyberTradingTestSuite) executeWithKyber(
 	fmt.Printf("Kyber trade executed , txHash: %x\n", txHash[:])
 }
 
-func (tradingSuite *KyberTradingTestSuite) Test1TradeEthForOMGWithKyber() {
-	fmt.Println("============ TEST TRADE ETHER FOR OMG WITH Kyber AGGREGATOR ===========")
+func (tradingSuite *KyberTradingTestSuite) executeMultiTradeWithKyber(
+	srcQties []*big.Int,
+	srcTokenIDStrs []string,
+	destTokenIDStrs []string,
+) {
+	tradeAbi, _ := abi.JSON(strings.NewReader(kbnmultiTrade.KbnmultiTradeABI))
+	auth := bind.NewKeyedTransactor(tradingSuite.ETHPrivKey)
+	auth.GasPrice = big.NewInt(50000000000)
+	auth.GasLimit = 2000000
+	// Deploy kbnMultitrade
+	// kbnMultiTradeAddr, tx, _, err := kbnmultiTrade.DeployKbnmultiTrade(auth, tradingSuite.ETHClient, tradingSuite.KyberContractAddr, tradingSuite.VaultAddr)
+	// require.Equal(tradingSuite.T(), nil, err)
+	// fmt.Println("deployed kbnMultitrade")
+	// fmt.Printf("addr: %s\n", kbnMultiTradeAddr.Hex())
+	// tradingSuite.KyberMultiTradeDeployedAddr = kbnMultiTradeAddr
+
+	// Get contract instance
+	c, err := vault.NewVault(tradingSuite.VaultAddr, tradingSuite.ETHClient)
+	require.Equal(tradingSuite.T(), nil, err)
+	auth.GasPrice = big.NewInt(50000000000)
+	auth.GasLimit = 5000000
+	sourceAddresses := make([]common.Address, 0)
+	for _, p := range srcTokenIDStrs {
+		sourceAddresses = append(sourceAddresses, common.HexToAddress(p))
+	}
+	destAddresses := make([]common.Address, 0)
+	for _, p := range destTokenIDStrs {
+		destAddresses = append(destAddresses, common.HexToAddress(p))
+	}
+	input, _ := tradeAbi.Pack("trade", sourceAddresses, srcQties, destAddresses)
+	timestamp := []byte(randomizeTimestamp())
+	tempData := append(tradingSuite.KyberMultiTradeDeployedAddr[:], input...)
+	tempData1 := append(tempData, timestamp...)
+	data := rawsha3(tempData1)
+	signBytes, _ := crypto.Sign(data, &tradingSuite.GeneratedPrivKeyForSC)
+
+	tx, err := c.ExecuteMulti(
+		auth,
+		sourceAddresses,
+		srcQties,
+		destAddresses,
+		tradingSuite.KyberMultiTradeDeployedAddr,
+		input,
+		timestamp,
+		signBytes,
+	)
+	require.Equal(tradingSuite.T(), nil, err)
+	txHash := tx.Hash()
+	if err := wait(tradingSuite.ETHClient, txHash); err != nil {
+		require.Equal(tradingSuite.T(), nil, err)
+	}
+	fmt.Printf("Kyber multi trade executed , txHash: %x\n", txHash[:])
+}
+
+func (tradingSuite *KyberTradingTestSuite) Test1TradeEthForKBNWithKyber() {
+	fmt.Println("============ TEST TRADE ETHER FOR KBN WITH Kyber AGGREGATOR ===========")
 	fmt.Println("------------ STEP 0: declaration & initialization --------------")
 	tradeAmount := big.NewInt(int64(tradingSuite.DepositingEther * params.Ether))
 	burningPETH := big.NewInt(0).Div(tradeAmount, big.NewInt(1000000000))
@@ -183,23 +248,23 @@ func (tradingSuite *KyberTradingTestSuite) Test1TradeEthForOMGWithKyber() {
 	fmt.Println("deposited EHT: ", deposited)
 	//require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPETH, big.NewInt(1000000000)), deposited)
 
-	fmt.Println("------------ step 3: execute trade ETH for OMG through Kyber aggregator --------------")
+	fmt.Println("------------ step 3: execute trade ETH for KBN through Kyber aggregator --------------")
 	tradingSuite.executeWithKyber(
 		tradeAmount,
 		tradingSuite.EtherAddressStr,
-		tradingSuite.OMGAddressStr,
+		tradingSuite.KBNAddressStr,
 	)
 	time.Sleep(15 * time.Second)
-	omgTraded := tradingSuite.getDepositedBalance(
-		tradingSuite.OMGAddressStr,
+	kbnTraded := tradingSuite.getDepositedBalance(
+		tradingSuite.KBNAddressStr,
 		pubKeyToAddrStr,
 	)
-	fmt.Println("omgTraded: ", omgTraded)
+	fmt.Println("kbnTraded: ", kbnTraded)
 
-	fmt.Println("------------ step 4: withdrawing OMG from SC to pOMG on Incognito --------------")
+	fmt.Println("------------ step 4: withdrawing KBN from SC to pKBN on Incognito --------------")
 	txHashByEmittingWithdrawalReq := tradingSuite.requestWithdraw(
-		tradingSuite.OMGAddressStr,
-		omgTraded,
+		tradingSuite.KBNAddressStr,
+		kbnTraded,
 	)
 	time.Sleep(15 * time.Second)
 
@@ -210,7 +275,7 @@ func (tradingSuite *KyberTradingTestSuite) Test1TradeEthForOMGWithKyber() {
 	fmt.Println("Waiting 90s for 15 blocks confirmation")
 	time.Sleep(90 * time.Second)
 	_, err = tradingSuite.callIssuingETHReq(
-		tradingSuite.IncOMGTokenIDStr,
+		tradingSuite.IncKBNTokenIDStr,
 		ethDepositProof,
 		ethBlockHash,
 		ethTxIdx,
@@ -218,11 +283,11 @@ func (tradingSuite *KyberTradingTestSuite) Test1TradeEthForOMGWithKyber() {
 	require.Equal(tradingSuite.T(), nil, err)
 	time.Sleep(120 * time.Second)
 
-	fmt.Println("------------ step 5: withdrawing pOMG from Incognito to OMG --------------")
-	withdrawingPOMG := big.NewInt(0).Div(omgTraded, big.NewInt(1000000000))
+	fmt.Println("------------ step 5: withdrawing pKBN from Incognito to KBN --------------")
+	withdrawingPKBN := big.NewInt(0).Div(kbnTraded, big.NewInt(1000000000))
 	burningRes, err = tradingSuite.callBurningPToken(
-		tradingSuite.IncOMGTokenIDStr,
-		withdrawingPOMG,
+		tradingSuite.IncKBNTokenIDStr,
+		withdrawingPKBN,
 		tradingSuite.ETHOwnerAddrStr,
 		"createandsendburningrequest",
 	)
@@ -234,34 +299,34 @@ func (tradingSuite *KyberTradingTestSuite) Test1TradeEthForOMGWithKyber() {
 	tradingSuite.submitBurnProofForWithdrawal(burningTxID.(string))
 
 	bal := tradingSuite.getBalanceOnETHNet(
-		common.HexToAddress(tradingSuite.OMGAddressStr),
+		common.HexToAddress(tradingSuite.KBNAddressStr),
 		common.HexToAddress(fmt.Sprintf("0x%s", tradingSuite.ETHOwnerAddrStr)),
 	)
-	tradingSuite.OMGBalanceAfterStep1 = bal
-	fmt.Println("OMG balance after step 1: ", tradingSuite.OMGBalanceAfterStep1)
-	// require.Equal(tradingSuite.T(), withdrawingPOMG.Uint64(), bal.Div(bal, big.NewInt(1000000000)).Uint64())
+	tradingSuite.KBNBalanceAfterStep1 = bal
+	fmt.Println("KBN balance after step 1: ", tradingSuite.KBNBalanceAfterStep1)
+	// require.Equal(tradingSuite.T(), withdrawingPKBN.Uint64(), bal.Div(bal, big.NewInt(1000000000)).Uint64())
 }
 
-func (tradingSuite *KyberTradingTestSuite) Test2TradeOMGForPOLYWithKyber() {
-	fmt.Println("============ TEST TRADE OMG FOR POLY WITH KYBER AGGREGATOR ===========")
+func (tradingSuite *KyberTradingTestSuite) Test2TradeKBNForSALTWithKyber() {
+	fmt.Println("============ TEST TRADE KBN FOR SALT WITH KYBER AGGREGATOR ===========")
 	fmt.Println("------------ step 0: declaration & initialization --------------")
-	depositingOMG := tradingSuite.OMGBalanceAfterStep1
-	burningPOMG := big.NewInt(0).Div(depositingOMG, big.NewInt(1000000000))
-	tradeAmount := depositingOMG
+	depositingKBN := tradingSuite.KBNBalanceAfterStep1
+	burningPKBN := big.NewInt(0).Div(depositingKBN, big.NewInt(1000000000))
+	tradeAmount := depositingKBN
 
-	omgbal := tradingSuite.getBalanceOnETHNet(
-		common.HexToAddress(tradingSuite.OMGAddressStr),
+	kbnbal := tradingSuite.getBalanceOnETHNet(
+		common.HexToAddress(tradingSuite.KBNAddressStr),
 		common.HexToAddress(fmt.Sprintf("0x%s", tradingSuite.ETHOwnerAddrStr)),
 	)
-	fmt.Println("omg balance of owner: ", omgbal)
+	fmt.Println("kbn balance of owner: ", kbnbal)
 
 	pubKeyToAddrStr := crypto.PubkeyToAddress(tradingSuite.GeneratedPubKeyForSC).Hex()
 	fmt.Println("pubKeyToAddrStr: ", pubKeyToAddrStr)
 
-	fmt.Println("------------ step 1: porting OMG to pOMG --------------")
+	fmt.Println("------------ step 1: porting KBN to pKBN --------------")
 	txHash := tradingSuite.depositERC20ToBridge(
-		depositingOMG,
-		common.HexToAddress(tradingSuite.OMGAddressStr),
+		depositingKBN,
+		common.HexToAddress(tradingSuite.KBNAddressStr),
 		tradingSuite.IncPaymentAddrStr,
 	)
 
@@ -273,7 +338,7 @@ func (tradingSuite *KyberTradingTestSuite) Test2TradeOMGForPOLYWithKyber() {
 	time.Sleep(90 * time.Second)
 
 	_, err = tradingSuite.callIssuingETHReq(
-		tradingSuite.IncOMGTokenIDStr,
+		tradingSuite.IncKBNTokenIDStr,
 		ethDepositProof,
 		ethBlockHash,
 		ethTxIdx,
@@ -282,12 +347,12 @@ func (tradingSuite *KyberTradingTestSuite) Test2TradeOMGForPOLYWithKyber() {
 	time.Sleep(120 * time.Second)
 	// TODO: check the new balance on peth of the incognito account
 
-	fmt.Println("------------ step 2: burning pOMG to deposit OMG to SC --------------")
+	fmt.Println("------------ step 2: burning pKBN to deposit KBN to SC --------------")
 
 	// make a burn tx to incognito chain as a result of deposit to SC
 	burningRes, err := tradingSuite.callBurningPToken(
-		tradingSuite.IncOMGTokenIDStr,
-		burningPOMG,
+		tradingSuite.IncKBNTokenIDStr,
+		burningPKBN,
 		pubKeyToAddrStr[2:],
 		"createandsendburningfordeposittoscrequest",
 	)
@@ -298,29 +363,29 @@ func (tradingSuite *KyberTradingTestSuite) Test2TradeOMGForPOLYWithKyber() {
 
 	tradingSuite.submitBurnProofForDepositToSC(burningTxID.(string))
 	deposited := tradingSuite.getDepositedBalance(
-		tradingSuite.OMGAddressStr,
+		tradingSuite.KBNAddressStr,
 		pubKeyToAddrStr,
 	)
-	fmt.Println("deposited omg: ", deposited)
-	// require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPOMG, big.NewInt(1000000000)), deposited)
+	fmt.Println("deposited kbn: ", deposited)
+	// require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPKBN, big.NewInt(1000000000)), deposited)
 
-	fmt.Println("------------ step 3: execute trade OMG for POLY through Kyber aggregator --------------")
+	fmt.Println("------------ step 3: execute trade KBN for SALT through Kyber aggregator --------------")
 	tradingSuite.executeWithKyber(
 		tradeAmount,
-		tradingSuite.OMGAddressStr,
-		tradingSuite.POLYAddressStr,
+		tradingSuite.KBNAddressStr,
+		tradingSuite.SALTAddressStr,
 	)
 	time.Sleep(15 * time.Second)
-	polyTraded := tradingSuite.getDepositedBalance(
-		tradingSuite.POLYAddressStr,
+	saltTraded := tradingSuite.getDepositedBalance(
+		tradingSuite.SALTAddressStr,
 		pubKeyToAddrStr,
 	)
-	fmt.Println("polyTraded: ", polyTraded)
+	fmt.Println("saltTraded: ", saltTraded)
 
-	fmt.Println("------------ step 4: withdrawing POLY from SC to pPOLY on Incognito --------------")
+	fmt.Println("------------ step 4: withdrawing SALT from SC to pSALT on Incognito --------------")
 	txHashByEmittingWithdrawalReq := tradingSuite.requestWithdraw(
-		tradingSuite.POLYAddressStr,
-		polyTraded,
+		tradingSuite.SALTAddressStr,
+		saltTraded,
 	)
 	time.Sleep(15 * time.Second)
 
@@ -332,7 +397,7 @@ func (tradingSuite *KyberTradingTestSuite) Test2TradeOMGForPOLYWithKyber() {
 	time.Sleep(90 * time.Second)
 
 	_, err = tradingSuite.callIssuingETHReq(
-		tradingSuite.IncPOLYTokenIDStr,
+		tradingSuite.IncSALTTokenIDStr,
 		ethDepositProof,
 		ethBlockHash,
 		ethTxIdx,
@@ -340,11 +405,11 @@ func (tradingSuite *KyberTradingTestSuite) Test2TradeOMGForPOLYWithKyber() {
 	require.Equal(tradingSuite.T(), nil, err)
 	time.Sleep(120 * time.Second)
 
-	fmt.Println("------------ step 5: withdrawing pPOLY from Incognito to POLY --------------")
-	withdrawingPPOLY := big.NewInt(0).Div(polyTraded, big.NewInt(1000000000))
+	fmt.Println("------------ step 5: withdrawing pSALT from Incognito to SALT --------------")
+	withdrawingPSALT := saltTraded // SALT decimal 8
 	burningRes, err = tradingSuite.callBurningPToken(
-		tradingSuite.IncPOLYTokenIDStr,
-		withdrawingPPOLY,
+		tradingSuite.IncSALTTokenIDStr,
+		withdrawingPSALT,
 		tradingSuite.ETHOwnerAddrStr,
 		"createandsendburningrequest",
 	)
@@ -356,29 +421,29 @@ func (tradingSuite *KyberTradingTestSuite) Test2TradeOMGForPOLYWithKyber() {
 	tradingSuite.submitBurnProofForWithdrawal(burningTxID.(string))
 
 	bal := tradingSuite.getBalanceOnETHNet(
-		common.HexToAddress(tradingSuite.POLYAddressStr),
+		common.HexToAddress(tradingSuite.SALTAddressStr),
 		common.HexToAddress(fmt.Sprintf("0x%s", tradingSuite.ETHOwnerAddrStr)),
 	)
-	tradingSuite.POLYBalanceAfterStep2 = bal
-	fmt.Println("POLY balance after step 2: ", tradingSuite.POLYBalanceAfterStep2)
-	// require.Equal(tradingSuite.T(), withdrawingPPOLY.Uint64(), bal.Uint64())
-	// require.Equal(tradingSuite.T(), withdrawingPPOLY.Uint64(), bal.Div(bal, big.NewInt(1000000000)).Uint64())
+	tradingSuite.SALTBalanceAfterStep2 = bal
+	fmt.Println("SALT balance after step 2: ", tradingSuite.SALTBalanceAfterStep2)
+	// require.Equal(tradingSuite.T(), withdrawingPSALT.Uint64(), bal.Uint64())
+	// require.Equal(tradingSuite.T(), withdrawingPSALT.Uint64(), bal.Div(bal, big.NewInt(1000000000)).Uint64())
 }
 
-func (tradingSuite *KyberTradingTestSuite) Test3TradePOLYForEthWithKyber() {
-	fmt.Println("============ TEST TRADE POLY FOR ETH WITH KYBER AGGREGATOR ===========")
+func (tradingSuite *KyberTradingTestSuite) Test3TradeSALTForEthWithKyber() {
+	fmt.Println("============ TEST TRADE SALT FOR ETH WITH KYBER AGGREGATOR ===========")
 	fmt.Println("------------ step 0: declaration & initialization --------------")
-	depositingPOLY := tradingSuite.POLYBalanceAfterStep2
-	burningPPOLY := big.NewInt(0).Div(depositingPOLY, big.NewInt(1000000000))
-	tradeAmount := depositingPOLY
+	depositingSALT := tradingSuite.SALTBalanceAfterStep2
+	burningPSALT := depositingSALT // SALT decimal 8
+	tradeAmount := depositingSALT
 
 	pubKeyToAddrStr := crypto.PubkeyToAddress(tradingSuite.GeneratedPubKeyForSC).Hex()
 	fmt.Println("pubKeyToAddrStr: ", pubKeyToAddrStr)
 
-	fmt.Println("------------ step 1: porting POLY to pPOLY --------------")
+	fmt.Println("------------ step 1: porting SALT to pSALT --------------")
 	txHash := tradingSuite.depositERC20ToBridge(
-		depositingPOLY,
-		common.HexToAddress(tradingSuite.POLYAddressStr),
+		depositingSALT,
+		common.HexToAddress(tradingSuite.SALTAddressStr),
 		tradingSuite.IncPaymentAddrStr,
 	)
 
@@ -390,7 +455,7 @@ func (tradingSuite *KyberTradingTestSuite) Test3TradePOLYForEthWithKyber() {
 	time.Sleep(90 * time.Second)
 
 	issuingRes, err := tradingSuite.callIssuingETHReq(
-		tradingSuite.IncPOLYTokenIDStr,
+		tradingSuite.IncSALTTokenIDStr,
 		ethDepositProof,
 		ethBlockHash,
 		ethTxIdx,
@@ -399,11 +464,11 @@ func (tradingSuite *KyberTradingTestSuite) Test3TradePOLYForEthWithKyber() {
 	fmt.Println("issuingRes: ", issuingRes)
 	time.Sleep(120 * time.Second)
 
-	fmt.Println("------------ step 2: burning pPOLY to deposit POLY to SC --------------")
+	fmt.Println("------------ step 2: burning pSALT to deposit SALT to SC --------------")
 	// make a burn tx to incognito chain as a result of deposit to SC
 	burningRes, err := tradingSuite.callBurningPToken(
-		tradingSuite.IncPOLYTokenIDStr,
-		burningPPOLY,
+		tradingSuite.IncSALTTokenIDStr,
+		burningPSALT,
 		pubKeyToAddrStr[2:],
 		"createandsendburningfordeposittoscrequest",
 	)
@@ -414,15 +479,15 @@ func (tradingSuite *KyberTradingTestSuite) Test3TradePOLYForEthWithKyber() {
 
 	tradingSuite.submitBurnProofForDepositToSC(burningTxID.(string))
 	deposited := tradingSuite.getDepositedBalance(
-		tradingSuite.POLYAddressStr,
+		tradingSuite.SALTAddressStr,
 		pubKeyToAddrStr,
 	)
-	require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPPOLY, big.NewInt(1000000000)), deposited)
+	require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPSALT, big.NewInt(1000000000)), deposited)
 
-	fmt.Println("------------ step 3: execute trade POLY for ETH through Kyber aggregator --------------")
+	fmt.Println("------------ step 3: execute trade SALT for ETH through Kyber aggregator --------------")
 	tradingSuite.executeWithKyber(
 		tradeAmount,
-		tradingSuite.POLYAddressStr,
+		tradingSuite.SALTAddressStr,
 		tradingSuite.EtherAddressStr,
 	)
 	etherTraded := tradingSuite.getDepositedBalance(
@@ -475,4 +540,92 @@ func (tradingSuite *KyberTradingTestSuite) Test3TradePOLYForEthWithKyber() {
 	)
 	fmt.Println("Ether balance after step 3: ", bal)
 	// require.Equal(tradingSuite.T(), withdrawingPETH.Uint64(), bal.Div(bal, big.NewInt(1000000000)).Uint64())
+}
+
+func (tradingSuite *KyberTradingTestSuite) Test4MultiTradeWithKyber() {
+	fmt.Println("============ TEST TRADE ETHER FOR KBN WITH Kyber AGGREGATOR ===========")
+	fmt.Println("------------ STEP 0: declaration & initialization --------------")
+	tradeAmount := big.NewInt(int64(tradingSuite.DepositingEther * params.Ether * 2))
+	tradeHaftAmount := big.NewInt(int64(tradingSuite.DepositingEther * params.Ether))
+	burningPETH := big.NewInt(0).Div(tradeAmount, big.NewInt(1000000000))
+
+	pubKeyToAddrStr := crypto.PubkeyToAddress(tradingSuite.GeneratedPubKeyForSC).Hex()
+	fmt.Println("------------ STEP 1: porting ETH to pETH --------------")
+	txHash := tradingSuite.depositETH(
+		tradingSuite.DepositingEther*2,
+		tradingSuite.IncPaymentAddrStr,
+	)
+	time.Sleep(15 * time.Second)
+	_, ethBlockHash, ethTxIdx, ethDepositProof, err := getETHDepositProof(tradingSuite.ETHHost, txHash)
+	require.Equal(tradingSuite.T(), nil, err)
+	fmt.Println("depositProof ---- : ", ethBlockHash, ethTxIdx, ethDepositProof)
+
+	fmt.Println("Waiting 90s for 15 blocks confirmation")
+	time.Sleep(90 * time.Second)
+	_, err = tradingSuite.callIssuingETHReq(
+		tradingSuite.IncEtherTokenIDStr,
+		ethDepositProof,
+		ethBlockHash,
+		ethTxIdx,
+	)
+	require.Equal(tradingSuite.T(), nil, err)
+	time.Sleep(120 * time.Second)
+
+	fmt.Println("------------ STEP 2: burning pETH to deposit ETH to SC --------------")
+	// make a burn tx to incognito chain as a result of deposit to SC
+	burningRes, err := tradingSuite.callBurningPToken(
+		tradingSuite.IncEtherTokenIDStr,
+		burningPETH,
+		pubKeyToAddrStr[2:],
+		"createandsendburningfordeposittoscrequest",
+	)
+	require.Equal(tradingSuite.T(), nil, err)
+	burningTxID, found := burningRes["TxID"]
+	require.Equal(tradingSuite.T(), true, found)
+	time.Sleep(120 * time.Second)
+
+	tradingSuite.submitBurnProofForDepositToSC(burningTxID.(string))
+	deposited := tradingSuite.getDepositedBalance(
+		tradingSuite.EtherAddressStr,
+		pubKeyToAddrStr,
+	)
+	fmt.Println("deposited EHT: ", deposited)
+
+	fmt.Println("------------ step 3: execute trade ETH for KBN through Kyber aggregator --------------")
+	tradingSuite.executeWithKyber(
+		tradeHaftAmount,
+		tradingSuite.EtherAddressStr,
+		tradingSuite.KBNAddressStr,
+	)
+	time.Sleep(20 * time.Second)
+	kbnTraded := tradingSuite.getDepositedBalance(
+		tradingSuite.KBNAddressStr,
+		pubKeyToAddrStr,
+	)
+	tradingSuite.getDepositedBalance(
+		tradingSuite.EtherAddressStr,
+		pubKeyToAddrStr,
+	)
+	fmt.Println("kbnTraded: ", kbnTraded)
+
+	fmt.Println("------------ step 4: execute trade ETH and KBN for OMG and SALT and through Kyber aggregator --------------")
+
+	tradingSuite.executeMultiTradeWithKyber(
+		[]*big.Int{kbnTraded, tradeHaftAmount},
+		[]string{tradingSuite.KBNAddressStr, tradingSuite.EtherAddressStr},
+		[]string{tradingSuite.OMGAddressStr, tradingSuite.SALTAddressStr},
+	)
+	time.Sleep(15 * time.Second)
+
+	omgTraded := tradingSuite.getDepositedBalance(
+		tradingSuite.OMGAddressStr,
+		pubKeyToAddrStr,
+	)
+	fmt.Println("omgTraded: ", omgTraded)
+
+	saltTraded := tradingSuite.getDepositedBalance(
+		tradingSuite.SALTAddressStr,
+		pubKeyToAddrStr,
+	)
+	fmt.Println("saltTraded: ", saltTraded)
 }
