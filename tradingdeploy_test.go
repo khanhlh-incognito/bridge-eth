@@ -58,7 +58,17 @@ func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts()  {
 	fmt.Println("Admin address:", admin.Hex())
 
 	// Genesis committee
-	beaconComm, bridgeComm, err := getCommittee(tradingDeploySuite.IncBridgeHost)
+	// for testnet & local env
+	beaconComm, bridgeComm, err := convertCommittees(
+		testnetBeaconCommitteePubKeys, testnetBridgeCommitteePubKeys,
+	)
+	// NOTE: uncomment this block to get mainnet committees when deploying to mainnet env
+	/*
+	beaconComm, bridgeComm, err := convertCommittees(
+		mainnetBeaconCommitteePubKeys, mainnetBridgeCommitteePubKeys,
+	)
+	*/
+
 	require.Equal(tradingDeploySuite.T(), nil, err)
 
 	// Deploy incognito_proxy
@@ -108,4 +118,33 @@ func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts()  {
 
 	fmt.Println("deployed zrxTrade")
 	fmt.Printf("addr: %s\n", zrxTradeAddr.Hex())
+}
+
+func convertCommittees(
+	beaconComms []string, brigeComms []string,
+) ([]common.Address, []common.Address, error)  {
+	beaconOld := make([]common.Address, len(beaconComms))
+	for i, pk := range beaconComms {
+		cpk := &CommitteePublicKey{}
+		cpk.FromString(pk)
+		addr, err := convertPubkeyToAddress(*cpk)
+		if err != nil {
+			return nil, nil, err
+		}
+		beaconOld[i] = addr
+		fmt.Printf("beaconOld: %s\n", addr.Hex())
+	}
+
+	bridgeOld := make([]common.Address, len(brigeComms))
+	for i, pk := range brigeComms {
+		cpk := &CommitteePublicKey{}
+		cpk.FromString(pk)
+		addr, err := convertPubkeyToAddress(*cpk)
+		if err != nil {
+			return nil, nil, err
+		}
+		bridgeOld[i] = addr
+		fmt.Printf("bridgeOld: %s\n", addr.Hex())
+	}
+	return beaconOld, bridgeOld, nil
 }
