@@ -1,17 +1,17 @@
 package main
 
 import (
-	"math/rand"
-	"encoding/json"
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"time"
 
-	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
+	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/consensus/signatureschemes/bridgesig"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/crypto/sha3"
@@ -98,10 +98,8 @@ func (tradingSuite *TradingTestSuite) SetupSuite() {
 	tradingSuite.ETHHost = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
 	tradingSuite.IncBridgeHost = "http://127.0.0.1:9338"
 	tradingSuite.IncRPCHost = "http://127.0.0.1:9334"
-	tradingSuite.KyberContractAddr = common.HexToAddress("0xdd974d5c2e2928dea5f71b9825b8b646686bd200")
 
 	tradingSuite.VaultAddr = common.HexToAddress("0x36E59EA6f27C7d33432adD1C017Ee70Def5eE7d9")
-	tradingSuite.KBNTradeDeployedAddr = common.HexToAddress("0x6dE453d6f7EB17Eb51Ee1A20544a1cD9200a1a55")
 
 	// generate a new keys pair for SC
 	tradingSuite.genKeysPairForSC()
@@ -123,8 +121,7 @@ func (tradingSuite *TradingTestSuite) TearDownTest() {
 	fmt.Println("Tearing down the test...")
 }
 
-
-func (tradingSuite *TradingTestSuite) TestTradingTestSuite()  {
+func (tradingSuite *TradingTestSuite) TestTradingTestSuite() {
 	fmt.Println("This is generic test suite")
 }
 
