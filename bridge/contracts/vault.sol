@@ -402,10 +402,13 @@ contract Vault is AdminPausable {
     function isSigDataUsed(bytes32 hash) public view returns(bool) {
         if (sigDataUsed[hash]) {
             return true;
-        } else if (address(prevVault) == address(0)) {
-            return false;
+        // TODO: check previous signature    
+        // } else if (address(prevVault) == address(0)) {
+        //     return false;
+        // }
+        // return prevVault.isSigDataUsed(hash);
         }
-        return prevVault.isSigDataUsed(hash);
+        return false;
     }
 
     /**
@@ -426,11 +429,11 @@ contract Vault is AdminPausable {
     ) public isNotPaused {
         // verify owner signs data
         address verifier = verifySignData(abi.encodePacked(incognitoAddress, token, timestamp), signData);
-        // check the balance of previous version 
-        if(address(prevVault) != address(0) && !migration[verifier][token]) {
-            withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeAdd(prevVault.getDepositedBalance(token, verifier));
-            migration[verifier][token] = true;
-        }
+        // TODO: check the balance of previous version 
+        // if(address(prevVault) != address(0) && !migration[verifier][token]) {
+        //     withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeAdd(prevVault.getDepositedBalance(token, verifier));
+        //     migration[verifier][token] = true;
+        // }
         require(withdrawRequests[verifier][token] >= amount);
         withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeSub(amount);
         totalDepositedToSCAmount[token] = totalDepositedToSCAmount[token].safeSub(amount);
@@ -469,11 +472,11 @@ contract Vault is AdminPausable {
         //verify ower signs data from input
         address verifier = verifySignData(abi.encodePacked(exchangeAddress, callData, timestamp), signData);
          
-        // check the balance of previous version 
-        if(address(prevVault) != address(0) && !migration[verifier][token]) {
-            withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeAdd(prevVault.getDepositedBalance(token, verifier));
-            migration[verifier][token] = true;
-        }
+        // TODO: check the balance of previous version 
+        // if(address(prevVault) != address(0) && !migration[verifier][token]) {
+        //     withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeAdd(prevVault.getDepositedBalance(token, verifier));
+        //     migration[verifier][token] = true;
+        // }
         require(withdrawRequests[verifier][token] >= amount);
         require(token != recipientToken);
 
@@ -516,11 +519,11 @@ contract Vault is AdminPausable {
         // define number of eth spent for forwarder.
         uint ethAmount = msg.value;
         for(uint i = 0; i < tokens.length; i++){
-            // check the balance of previous version
-            if(address(prevVault) != address(0) && !migration[verifier][tokens[i]]) {
-                withdrawRequests[verifier][tokens[i]] = withdrawRequests[verifier][tokens[i]].safeAdd(prevVault.getDepositedBalance(tokens[i], verifier));
-                migration[verifier][tokens[i]] = true;
-            }
+            // TODO: check the balance of previous version
+            // if(address(prevVault) != address(0) && !migration[verifier][tokens[i]]) {
+            //     withdrawRequests[verifier][tokens[i]] = withdrawRequests[verifier][tokens[i]].safeAdd(prevVault.getDepositedBalance(tokens[i], verifier));
+            //     migration[verifier][tokens[i]] = true;
+            // }
             
             // check balance is enough or not
             require(withdrawRequests[verifier][tokens[i]] >= amounts[i]);
