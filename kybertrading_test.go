@@ -31,17 +31,17 @@ type KyberTradingTestSuite struct {
 	KyberMultiTradeDeployedAddr common.Address
 	KyberContractAddr           common.Address
 	WETHAddr                    common.Address
-	EtherAddressStrKyber        common.Address
 
 	IncKBNTokenIDStr  string
 	IncSALTTokenIDStr string
 	IncOMGTokenIDStr  string
 	IncSNTTokenIDStr  string
 
-	KBNAddressStr  string
-	SALTAddressStr string
-	OMGAddressStr  string
-	SNTAddressStr  string
+	EtherAddressStrKyber string
+	KBNAddressStr        string
+	SALTAddressStr       string
+	OMGAddressStr        string
+	SNTAddressStr        string
 
 	// token amounts for tests
 	DepositingEther       float64
@@ -60,20 +60,20 @@ func NewKyberTradingTestSuite(tradingTestSuite *TradingTestSuite) *KyberTradingT
 func (tradingSuite *KyberTradingTestSuite) SetupSuite() {
 	fmt.Println("Setting up the suite...")
 	// Kovan env
-	tradingSuite.EtherAddressStrKyber = common.HexToAddress("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+	tradingSuite.EtherAddressStrKyber = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 
 	tradingSuite.IncKBNTokenIDStr = "0000000000000000000000000000000000000000000000000000000000000082"
 	tradingSuite.IncSALTTokenIDStr = "0000000000000000000000000000000000000000000000000000000000000081"
 	tradingSuite.IncOMGTokenIDStr = "0000000000000000000000000000000000000000000000000000000000000072"
 	tradingSuite.IncSNTTokenIDStr = "0000000000000000000000000000000000000000000000000000000000000071"
-	tradingSuite.KBNAddressStr = "0x6FA355a7b6bD2D6bD8b927C489221BFBb6f1D7B2"                                    // rinkeby
-	tradingSuite.SALTAddressStr = "0x058832CA736AB027c12367e53915e34e87a6081B"                                   // rinkeby
-	tradingSuite.OMGAddressStr = "0x732fBA98dca813C3A630b53a8bFc1d6e87B1db65"                                    // rinkeby
-	tradingSuite.SNTAddressStr = "0x01DAd357f21BD4fB1D3d8f3B05d1cc151807AA23"                                    // rinkeby
-	tradingSuite.KyberTradeDeployedAddr = common.HexToAddress("0x25fadCA663deb649bd0A34753444853887412d21")      //rinkeby
-	tradingSuite.KyberMultiTradeDeployedAddr = common.HexToAddress("0x2065Ea2260080C27E16Bf3cFdC3ACF26E747B36b") //rinkeby
-	tradingSuite.DepositingEther = float64(0.1)
-	tradingSuite.KyberContractAddr = common.HexToAddress("0xF77eC7Ed5f5B9a5aee4cfa6FFCaC6A4C315BaC76") // rinkeby
+	tradingSuite.KBNAddressStr = "0xad67cB4d63C9da94AcA37fDF2761AaDF780ff4a2"                                    // kovan
+	tradingSuite.SALTAddressStr = "0x6fEE5727EE4CdCBD91f3A873ef2966dF31713A04"                                   // kovan
+	tradingSuite.OMGAddressStr = "0xdB7ec4E4784118D9733710e46F7C83fE7889596a"                                    // kovan
+	tradingSuite.SNTAddressStr = "0x4c99B04682fbF9020Fcb31677F8D8d66832d3322"                                    // kovan
+	tradingSuite.KyberTradeDeployedAddr = common.HexToAddress("0x243ad46Be9697Dc9dc45e701D03D6F920f60c09d")      //kovan
+	tradingSuite.KyberMultiTradeDeployedAddr = common.HexToAddress("0xa5BCDBF240CC2310BD71D8cAd03Bc5892Ba5f4Ee") //kovan
+	tradingSuite.DepositingEther = float64(0.05)
+	tradingSuite.KyberContractAddr = common.HexToAddress("0x692f391bCc85cefCe8C237C01e1f636BbD70EA4D") // kovan
 }
 
 func (tradingSuite *KyberTradingTestSuite) TearDownSuite() {
@@ -103,6 +103,26 @@ func TestKyberTradingTestSuite(t *testing.T) {
 	fmt.Println("Finishing entry point for 0x test suite...")
 }
 
+func (tradingSuite *KyberTradingTestSuite) getExpectedRate(
+	srcToken string,
+	destToken string,
+	srcQty *big.Int,
+) *big.Int {
+	if srcToken == tradingSuite.EtherAddressStr {
+		srcToken = tradingSuite.EtherAddressStrKyber
+	}
+	if destToken == tradingSuite.EtherAddressStr {
+		destToken = tradingSuite.EtherAddressStrKyber
+	}
+	c, err := kbntrade.NewKbntrade(tradingSuite.KyberTradeDeployedAddr, tradingSuite.ETHClient)
+	require.Equal(tradingSuite.T(), nil, err)
+	expectRate, slippageRate, err := c.GetConversionRates(nil, common.HexToAddress(srcToken), srcQty, common.HexToAddress(destToken))
+	require.Equal(tradingSuite.T(), nil, err)
+	fmt.Printf("slippageRate value: %d\n", slippageRate)
+	fmt.Printf("expectRate value: %d\n", expectRate)
+	return expectRate
+}
+
 func (tradingSuite *KyberTradingTestSuite) executeWithKyber(
 	srcQty *big.Int,
 	srcTokenIDStr string,
@@ -120,7 +140,8 @@ func (tradingSuite *KyberTradingTestSuite) executeWithKyber(
 	destToken := common.HexToAddress(destTokenIDStr)
 	auth.GasPrice = big.NewInt(50000000000)
 	auth.GasLimit = 2000000
-	input, _ := tradeAbi.Pack("trade", srcToken, srcQty, destToken)
+	expectRate := tradingSuite.getExpectedRate(srcTokenIDStr, destTokenIDStr, srcQty)
+	input, _ := tradeAbi.Pack("trade", srcToken, srcQty, destToken, expectRate)
 	timestamp := []byte(randomizeTimestamp())
 	tempData := append(tradingSuite.KyberTradeDeployedAddr[:], input...)
 	tempData1 := append(tempData, timestamp...)
@@ -174,7 +195,12 @@ func (tradingSuite *KyberTradingTestSuite) executeMultiTradeWithKyber(
 	for _, p := range destTokenIDStrs {
 		destAddresses = append(destAddresses, common.HexToAddress(p))
 	}
-	input, _ := tradeAbi.Pack("trade", sourceAddresses, srcQties, destAddresses)
+	expectRates := make([]*big.Int, 0)
+	for i := range destTokenIDStrs {
+		expectRates = append(expectRates, tradingSuite.getExpectedRate(srcTokenIDStrs[i], destTokenIDStrs[i], srcQties[i]))
+	}
+
+	input, _ := tradeAbi.Pack("trade", sourceAddresses, srcQties, destAddresses, expectRates)
 	timestamp := []byte(randomizeTimestamp())
 	tempData := append(tradingSuite.KyberMultiTradeDeployedAddr[:], input...)
 	tempData1 := append(tempData, timestamp...)
@@ -211,7 +237,7 @@ func (tradingSuite *KyberTradingTestSuite) Test1TradeEthForKBNWithKyber() {
 		tradingSuite.DepositingEther,
 		tradingSuite.IncPaymentAddrStr,
 	)
-	time.Sleep(15 * time.Second)
+	// time.Sleep(15 * time.Second)
 	_, ethBlockHash, ethTxIdx, ethDepositProof, err := getETHDepositProof(tradingSuite.ETHHost, txHash)
 	require.Equal(tradingSuite.T(), nil, err)
 	fmt.Println("depositProof ---- : ", ethBlockHash, ethTxIdx, ethDepositProof)
@@ -246,7 +272,7 @@ func (tradingSuite *KyberTradingTestSuite) Test1TradeEthForKBNWithKyber() {
 		pubKeyToAddrStr,
 	)
 	fmt.Println("deposited EHT: ", deposited)
-	//require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPETH, big.NewInt(1000000000)), deposited)
+	// require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPETH, big.NewInt(1000000000)), deposited)
 
 	fmt.Println("------------ step 3: execute trade ETH for KBN through Kyber aggregator --------------")
 	tradingSuite.executeWithKyber(

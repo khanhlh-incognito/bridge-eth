@@ -39,7 +39,7 @@ contract KBNTrade is TradeUtils {
         return kyberNetworkProxyContract.getExpectedRate(srcToken, destToken, srcQty);
     }
 
-    function trade(IERC20 srcToken, uint srcQty, IERC20 destToken) public payable isIncognitoSmartContract returns (address, uint) {
+    function trade(IERC20 srcToken, uint srcQty, IERC20 destToken, uint minConversionRate) public payable isIncognitoSmartContract returns (address, uint) {
         require(balanceOf(srcToken) >= srcQty);
         require(srcToken != destToken);
         uint amount = 0;
@@ -47,12 +47,12 @@ contract KBNTrade is TradeUtils {
             // approve
             approve(srcToken, address(kyberNetworkProxyContract), srcQty);
             if (destToken != ETH_CONTRACT_ADDRESS) { // token to token.
-                require(tokenToToken(srcToken, srcQty, destToken) > 0);
+                require(tokenToToken(srcToken, srcQty, destToken, minConversionRate) > 0);
             } else {
-                require(tokenToEth(srcToken, srcQty) > 0);
+                require(tokenToEth(srcToken, srcQty, minConversionRate) > 0);
             }
         } else {
-            require(ethToToken(destToken, srcQty) > 0);
+            require(ethToToken(destToken, srcQty, minConversionRate) > 0);
         }
         // transfer back to incognito smart contract
         amount = balanceOf(destToken);
@@ -60,20 +60,17 @@ contract KBNTrade is TradeUtils {
         return (address(destToken), amount);
     }
 
-    function ethToToken(IERC20 token, uint srcQty) internal returns (uint) {
+    function ethToToken(IERC20 token, uint srcQty, uint minConversionRate) internal returns (uint) {
         // Get the minimum conversion rate
         require(address(this).balance >= srcQty);
-        (uint minConversionRate,) = kyberNetworkProxyContract.getExpectedRate(KYBER_ETH_TOKEN_ADDRESS, token, msg.value);
         return kyberNetworkProxyContract.swapEtherToToken.value(srcQty)(token, minConversionRate);
     }
 
-    function tokenToEth(IERC20 token, uint amount) internal returns (uint) {
-        (uint minConversionRate,) = kyberNetworkProxyContract.getExpectedRate(token, KYBER_ETH_TOKEN_ADDRESS, amount);
+    function tokenToEth(IERC20 token, uint amount, uint minConversionRate) internal returns (uint) {
         return kyberNetworkProxyContract.swapTokenToEther(token, amount, minConversionRate);
     }
 
-    function tokenToToken(IERC20 srcToken, uint srcQty, IERC20 destToken) internal returns (uint) {
-        (uint minConversionRate,) = kyberNetworkProxyContract.getExpectedRate(srcToken, destToken, srcQty);
+    function tokenToToken(IERC20 srcToken, uint srcQty, IERC20 destToken, uint minConversionRate) internal returns (uint) {
         return kyberNetworkProxyContract.swapTokenToToken(srcToken, srcQty, destToken, minConversionRate);
     }
 }
