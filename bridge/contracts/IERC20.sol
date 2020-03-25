@@ -22,7 +22,7 @@ interface IERC20 {
      *
      * Emits a `Transfer` event.
      */
-    function transfer(address recipient, uint amount) external returns (bool);
+    function transfer(address recipient, uint amount) external;
 
     /**
      * @dev Returns the remaining number of tokens that `spender` will be
@@ -47,7 +47,7 @@ interface IERC20 {
      *
      * Emits an `Approval` event.
      */
-    function approve(address spender, uint amount) external returns (bool);
+    function approve(address spender, uint amount) external;
 
     /**
      * @dev Moves `amount` tokens from `sender` to `recipient` using the
@@ -58,7 +58,7 @@ interface IERC20 {
      *
      * Emits a `Transfer` event.
      */
-    function transferFrom(address sender, address recipient, uint amount) external returns (bool);
+    function transferFrom(address sender, address recipient, uint amount) external;
 
     /**
      * @dev Returns the number of decimals used to get its user representation.

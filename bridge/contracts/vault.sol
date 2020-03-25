@@ -145,8 +145,8 @@ contract Vault is AdminPausable {
         }
         require(emitAmount <= 10 ** 18 && tokenBalance <= 10 ** 18 && emitAmount.safeAdd(tokenBalance) <= 10 ** 18);
 
-        require(erc20Interface.transferFrom(msg.sender, address(this), amount));
-        // require(checkSuccess());
+        erc20Interface.transferFrom(msg.sender, address(this), amount);
+        require(checkSuccess());
         emit Deposit(token, incognitoAddress, emitAmount);
     }
 
@@ -309,8 +309,8 @@ contract Vault is AdminPausable {
         if (token == ETH_TOKEN) {
             to.transfer(burned);
         } else {
-            require(IERC20(token).transfer(to, burned));
-            // require(checkSuccess());
+            IERC20(token).transfer(to, burned);
+            require(checkSuccess());
         }
         emit Withdraw(token, to, burned);
     }
@@ -491,7 +491,8 @@ contract Vault is AdminPausable {
         } else {
             // transfer token to exchangeAddress.
             require(IERC20(token).balanceOf(address(this)) >= amount, "The balance of vault contract is insufficient");
-            require(IERC20(token).transfer(exchangeAddress, amount), "Transfering to exchange contract address is failed");
+            IERC20(token).transfer(exchangeAddress, amount);
+            require(checkSuccess(), "Transfering to exchange contract address is failed");
         }
         uint returnedAmount = callExtFunc(recipientToken, ethAmount, callData, exchangeAddress);
 
@@ -537,7 +538,8 @@ contract Vault is AdminPausable {
             } else {
             // transfer token to exchangeAddress.
                 require(IERC20(tokens[i]).balanceOf(address(this)) >= amounts[i], "The balance of vault contract is insufficient");
-                require(IERC20(tokens[i]).transfer(exchangeAddress, amounts[i]), "Transfering to exchange contract address is failed");
+                IERC20(tokens[i]).transfer(exchangeAddress, amounts[i]);
+                require(checkSuccess(), "Transfering to exchange contract address is failed");
             }
         }
         
@@ -648,7 +650,8 @@ contract Vault is AdminPausable {
             } else {
                 uint bal = IERC20(assets[i]).balanceOf(address(this));
                 if (bal > 0) {
-                    require(IERC20(assets[i]).transfer(newVault, bal));
+                    IERC20(assets[i]).transfer(newVault, bal);
+                    require(checkSuccess());
                 }
                 amounts[i] = bal;
             }
@@ -693,6 +696,38 @@ contract Vault is AdminPausable {
      * @dev Payable Fallback function to receive Ether from oldVault when migrating
      */
     function () external payable {}
+
+    /**
+     * @dev Check if transfer() and transferFrom() of ERC20 succeeded or not
+     * This check is needed to fix https://github.com/ethereum/solidity/issues/4116
+     * This function is copied from https://github.com/AdExNetwork/adex-protocol-eth/blob/master/contracts/libs/SafeERC20.sol
+     */
+    function checkSuccess() private pure returns (bool) {
+		uint256 returnValue = 0;
+
+		assembly {
+			// check number of bytes returned from last function call
+			switch returndatasize
+
+			// no bytes returned: assume success
+			case 0x0 {
+				returnValue := 1
+			}
+
+			// 32 bytes returned: check if non-zero
+			case 0x20 {
+				// copy 32 bytes into scratch space
+				returndatacopy(0x0, 0x0, 0x20)
+
+				// load those bytes into returnValue
+				returnValue := mload(0x0)
+			}
+
+			// not sure what was returned: don't mark as success
+			default { }
+		}
+		return returnValue != 0;
+	}
 
     /**
      * @dev Get the decimals of an ERC20 token, return 0 if it isn't defined

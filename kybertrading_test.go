@@ -70,8 +70,8 @@ func (tradingSuite *KyberTradingTestSuite) SetupSuite() {
 	tradingSuite.SALTAddressStr = "0x6fEE5727EE4CdCBD91f3A873ef2966dF31713A04"                                   // kovan
 	tradingSuite.OMGAddressStr = "0xdB7ec4E4784118D9733710e46F7C83fE7889596a"                                    // kovan
 	tradingSuite.SNTAddressStr = "0x4c99B04682fbF9020Fcb31677F8D8d66832d3322"                                    // kovan
-	tradingSuite.KyberTradeDeployedAddr = common.HexToAddress("0x243ad46Be9697Dc9dc45e701D03D6F920f60c09d")      //kovan
-	tradingSuite.KyberMultiTradeDeployedAddr = common.HexToAddress("0xa5BCDBF240CC2310BD71D8cAd03Bc5892Ba5f4Ee") //kovan
+	tradingSuite.KyberTradeDeployedAddr = common.HexToAddress("0x6245B92635f020fd524Baa13C5c64CE5ce105c02")      //kovan
+	tradingSuite.KyberMultiTradeDeployedAddr = common.HexToAddress("0xFA42779af0ab5058C2DC0c902B8B412dD9dA3317") //kovan
 	tradingSuite.DepositingEther = float64(0.05)
 	tradingSuite.KyberContractAddr = common.HexToAddress("0x692f391bCc85cefCe8C237C01e1f636BbD70EA4D") // kovan
 }

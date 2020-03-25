@@ -67,9 +67,9 @@ func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts() {
 	)
 	// NOTE: uncomment this block to get mainnet committees when deploying to mainnet env
 	/*
-	beaconComm, bridgeComm, err := convertCommittees(
-		mainnetBeaconCommitteePubKeys, mainnetBridgeCommitteePubKeys,
-	)
+		beaconComm, bridgeComm, err := convertCommittees(
+			mainnetBeaconCommitteePubKeys, mainnetBridgeCommitteePubKeys,
+		)
 	*/
 
 	require.Equal(tradingDeploySuite.T(), nil, err)
@@ -107,6 +107,10 @@ func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts() {
 	fmt.Println("deployed kbntrade")
 	fmt.Printf("addr: %s\n", kbnTradeAddr.Hex())
 
+	// Wait until tx is confirmed
+	err = wait(tradingDeploySuite.ETHClient, tx.Hash())
+	require.Equal(tradingDeploySuite.T(), nil, err)
+
 	// Deploy kbnMultitrade
 	kbnMultiTradeAddr, tx, _, err := kbnmultiTrade.DeployKbnmultiTrade(auth, tradingDeploySuite.ETHClient, tradingDeploySuite.KyberContractAddr, vaultAddr)
 	require.Equal(tradingDeploySuite.T(), nil, err)
@@ -131,7 +135,7 @@ func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts() {
 
 func convertCommittees(
 	beaconComms []string, brigeComms []string,
-) ([]common.Address, []common.Address, error)  {
+) ([]common.Address, []common.Address, error) {
 	beaconOld := make([]common.Address, len(beaconComms))
 	for i, pk := range beaconComms {
 		cpk := &CommitteePublicKey{}
