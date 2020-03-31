@@ -645,7 +645,7 @@ contract Vault is AdminPausable {
         uint[] memory amounts = new uint[](assets.length);
         for (uint i = 0; i < assets.length; i++) {
             if (assets[i] == ETH_TOKEN) {
-                amounts[i] = address(this).balance;
+                amounts[i] = totalDepositedToSCAmount[ETH_TOKEN];
                 newVault.transfer(address(this).balance);
             } else {
                 uint bal = IERC20(assets[i]).balanceOf(address(this));
@@ -653,7 +653,7 @@ contract Vault is AdminPausable {
                     IERC20(assets[i]).transfer(newVault, bal);
                     require(checkSuccess());
                 }
-                amounts[i] = bal;
+                amounts[i] = totalDepositedToSCAmount[assets[i]];
             }
         }
         require(Withdrawable(newVault).updateAssets(assets, amounts));
