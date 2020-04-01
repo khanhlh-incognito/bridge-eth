@@ -655,6 +655,7 @@ contract Vault is AdminPausable {
                 }
                 amounts[i] = totalDepositedToSCAmount[assets[i]];
             }
+            totalDepositedToSCAmount[assets[i]] = 0;
         }
         require(Withdrawable(newVault).updateAssets(assets, amounts));
         
