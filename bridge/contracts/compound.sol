@@ -72,6 +72,7 @@ contract CompoundAgent is TradeUtils {
      * @dev Call borrow func to compound 
      * @param cToken: cToken of compound
      * @param amount: total to borrow
+     * @param addToMarkets: add tokens to market as collateral
      * @return bool: token address, amount recieved
      */
     function borrow(address cToken, uint amount, address[] calldata addToMarkets) external onlyProxyCompound returns (address, uint) {
@@ -82,6 +83,27 @@ contract CompoundAgent is TradeUtils {
         uint amountAfter = balanceOf(IERC20(cToken));
         transfer(IERC20(cToken), amountAfter);
         return (cToken, amountAfter);
+    }
+
+    /**
+     * @dev Call borrow func to compound 
+     * @param cToken: cToken of compound
+     * @param amount: total to borrow
+     * @param addToMarkets: add token to market as collateral
+     * @return bool: token address, amount recieved
+     */
+    function borrowByMultiCollateral(address cToken, uint amount, address[] calldata addToMarkets) external onlyProxyCompound returns (address[] memory, uint[] memory) {
+        if(addToMarkets.length > 0) {
+            comptroller.enterMarkets(addToMarkets);
+        }
+        require(CTokenInterface(cToken).borrow(amount) == 0);
+        uint amountAfter = balanceOf(IERC20(cToken));
+        transfer(IERC20(cToken), amountAfter);
+        address[] memory addressAfter = new address[](1);
+        addressAfter[0] = cToken;
+        uint[] memory balAfter = new uint[](1);
+        balAfter[0] = amountAfter;
+        return (addressAfter,  balAfter);
     }
 
     /**
@@ -224,6 +246,32 @@ contract CompoundProxy is TradeUtils {
         require(success);
 
         return abi.decode(result, (address, uint));
+    }
+
+    /**
+     * @dev : borrow by sending many coins to 
+     */
+    function executeMulti(
+        IERC20[] memory srcTokens,
+        uint[] memory amounts,
+        bytes memory callData,
+        bytes memory timestamp,
+        bytes memory signData
+    ) public payable returns(address[] memory, uint[] memory) {
+        require(srcTokens.length == amounts.length);
+        //verify ower signs data from input
+        address verifier = verifySignData(abi.encodePacked(callData, timestamp), signData);
+        address agent = isAgentExist(verifier);
+        for(uint i = 0; i < srcTokens.length; i++) {
+            if(srcTokens[i] != ETH_CONTRACT_ADDRESS) {
+                srcTokens[i].transfer(agent, amounts[i]);
+                checkSuccess();
+            }
+        }
+        (bool success, bytes memory result) = agent.call.value(msg.value)(callData);
+        require(success);
+
+        return abi.decode(result, (address[], uint[]));
     }
 
     /**
