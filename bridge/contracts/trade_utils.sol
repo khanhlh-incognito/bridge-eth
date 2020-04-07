@@ -45,7 +45,7 @@ contract TradeUtils {
      * This check is needed to fix https://github.com/ethereum/solidity/issues/4116
      * This function is copied from https://github.com/AdExNetwork/adex-protocol-eth/blob/master/contracts/libs/SafeERC20.sol
      */
-    function checkSuccess() private pure returns (bool) {
+    function checkSuccess() internal pure returns (bool) {
 		uint256 returnValue = 0;
 
 		assembly {
