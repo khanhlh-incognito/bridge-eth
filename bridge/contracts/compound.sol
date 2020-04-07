@@ -174,6 +174,14 @@ contract CompoundAgent is TradeUtils {
         transfer(IERC20(cToken), amountAfter);
         return (cToken, amountAfter);
     }
+
+    /**
+    * @dev upgrade proxy compound  
+    */
+    function upgrade(address _proxyCompound) external onlyProxyCompound returns (address, uint) {
+        proxyCompound = _proxyCompound;
+        return (address(0x0), 0);
+    }
 }
 
 contract CompoundProxy is TradeUtils {
@@ -234,7 +242,7 @@ contract CompoundProxy is TradeUtils {
         bytes memory callData,
         bytes memory timestamp,
         bytes memory signData
-    ) public payable returns(address, uint) {
+    ) public payable isIncognitoSmartContract returns(address, uint)  {
         //verify ower signs data from input
         address verifier = verifySignData(abi.encodePacked(srcToken, callData, timestamp), signData);
         address agent = isAgentExist(verifier);
@@ -257,7 +265,7 @@ contract CompoundProxy is TradeUtils {
         bytes memory callData,
         bytes memory timestamp,
         bytes memory signData
-    ) public payable returns(address[] memory, uint[] memory) {
+    ) public payable isIncognitoSmartContract returns(address[] memory, uint[] memory) {
         require(srcTokens.length == amounts.length);
         //verify ower signs data from input
         address verifier = verifySignData(abi.encodePacked(callData, timestamp), signData);
