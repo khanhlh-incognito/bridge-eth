@@ -163,16 +163,16 @@ contract CompoundAgent is TradeUtils {
      * @param cTokenCollateral: the address of ctoken 
      * @return bool: token address, amount recieved
      */
-    function liquidateBorrow(address cToken, address borrower, uint repayAmount, CTokenInterface cTokenCollateral) external payable onlyProxyCompound returns (address, uint) {
+    function liquidateBorrow(address cToken, address borrower, uint repayAmount, address cTokenCollateral) external payable onlyProxyCompound returns (address, uint) {
         if(cToken == address(cEther)) {
-            require(CEther(cToken).liquidateBorrow.value(msg.value)(borrower, cTokenCollateral) == 0);
+            require(CEther(cToken).liquidateBorrow.value(msg.value)(borrower, CTokenInterface(cTokenCollateral)) == 0);
         } else {
             approve(IERC20(CErc20(cToken).underlying()), cToken, repayAmount);
-            require(CErc20(cToken).liquidateBorrow(borrower, repayAmount, cTokenCollateral) == 0);
+            require(CErc20(cToken).liquidateBorrow(borrower, repayAmount, CTokenInterface(cTokenCollateral)) == 0);
         }
-        uint amountAfter = balanceOf(IERC20(cToken));
-        transfer(IERC20(cToken), amountAfter);
-        return (cToken, amountAfter);
+        uint amountAfter = balanceOf(IERC20(cTokenCollateral));
+        transfer(IERC20(cTokenCollateral), amountAfter);
+        return (cTokenCollateral, amountAfter);
     }
 
     /**
