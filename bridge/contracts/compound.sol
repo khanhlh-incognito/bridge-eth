@@ -10,10 +10,10 @@ interface CTokenInterface {
 }
 
 contract CEther is CTokenInterface {
-    function mint() external payable returns (uint);
-    function repayBorrow() external payable returns (uint);
+    function mint() external payable;
+    function repayBorrow() external payable;
     function repayBorrowBehalf(address borrower) external returns (uint);
-    function liquidateBorrow(address borrower, CTokenInterface cTokenCollateral) external payable returns (uint);
+    function liquidateBorrow(address borrower, CTokenInterface cTokenCollateral) external payable;
 }
 
 contract CErc20 is CTokenInterface {
@@ -58,7 +58,7 @@ contract CompoundAgent is TradeUtils {
      */
     function mint(address cToken, uint amount) external payable onlyProxyCompound returns (address, uint) {
         if(cToken == address(cEther)) {
-            require(CEther(cToken).mint.value(msg.value)() == 0);
+            CEther(cToken).mint.value(msg.value)();
         } else {
             approve(IERC20(CErc20(cToken).underlying()), cToken, amount);
             require(CErc20(cToken).mint(amount) == 0);
@@ -143,7 +143,7 @@ contract CompoundAgent is TradeUtils {
      */
     function repayBorrow(address cToken, uint amount) external payable onlyProxyCompound returns (address, uint) {
         if(cToken == address(cEther)) {
-            require(CEther(cToken).repayBorrow.value(msg.value)() == 0);
+            CEther(cToken).repayBorrow.value(msg.value)();
         } else {
             approve(IERC20(CErc20(cToken).underlying()), cToken, amount);
             require(CErc20(cToken).repayBorrow(amount) == 0);
@@ -165,7 +165,7 @@ contract CompoundAgent is TradeUtils {
      */
     function liquidateBorrow(address cToken, address borrower, uint repayAmount, address cTokenCollateral) external payable onlyProxyCompound returns (address, uint) {
         if(cToken == address(cEther)) {
-            require(CEther(cToken).liquidateBorrow.value(msg.value)(borrower, CTokenInterface(cTokenCollateral)) == 0);
+            CEther(cToken).liquidateBorrow.value(msg.value)(borrower, CTokenInterface(cTokenCollateral));
         } else {
             approve(IERC20(CErc20(cToken).underlying()), cToken, repayAmount);
             require(CErc20(cToken).liquidateBorrow(borrower, repayAmount, CTokenInterface(cTokenCollateral)) == 0);
