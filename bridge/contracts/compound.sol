@@ -12,7 +12,7 @@ interface CTokenInterface {
 contract CEther is CTokenInterface {
     function mint() external payable;
     function repayBorrow() external payable;
-    function repayBorrowBehalf(address borrower) external returns (uint);
+    function repayBorrowBehalf(address borrower) external;
     function liquidateBorrow(address borrower, CTokenInterface cTokenCollateral) external payable;
 }
 
@@ -80,9 +80,16 @@ contract CompoundAgent is TradeUtils {
             comptroller.enterMarkets(addToMarkets);
         }
         require(CTokenInterface(cToken).borrow(amount) == 0);
-        uint amountAfter = balanceOf(IERC20(cToken));
-        transfer(IERC20(cToken), amountAfter);
-        return (cToken, amountAfter);
+        uint amountAfter = 0;
+        if (cToken == address(cEther)) {
+            amountAfter = balanceOf(ETH_CONTRACT_ADDRESS);
+            transfer(ETH_CONTRACT_ADDRESS, amountAfter);
+            return (address(ETH_CONTRACT_ADDRESS), amountAfter); 
+        } else {
+            amountAfter = balanceOf(IERC20(CErc20(cToken).underlying()));
+            transfer(IERC20(CErc20(cToken).underlying()), amountAfter);
+            return (CErc20(cToken).underlying(), amountAfter);
+        }
     }
 
     /**
@@ -97,8 +104,14 @@ contract CompoundAgent is TradeUtils {
             comptroller.enterMarkets(addToMarkets);
         }
         require(CTokenInterface(cToken).borrow(amount) == 0);
-        uint amountAfter = balanceOf(IERC20(cToken));
-        transfer(IERC20(cToken), amountAfter);
+        uint amountAfter = 0;
+        if (cToken == address(cEther)) {
+            amountAfter = balanceOf(ETH_CONTRACT_ADDRESS);
+            transfer(ETH_CONTRACT_ADDRESS, amountAfter);
+        } else {
+            amountAfter = balanceOf(IERC20(CErc20(cToken).underlying()));
+            transfer(IERC20(CErc20(cToken).underlying()), amountAfter);
+        }
         address[] memory addressAfter = new address[](1);
         addressAfter[0] = cToken;
         uint[] memory balAfter = new uint[](1);
@@ -118,7 +131,7 @@ contract CompoundAgent is TradeUtils {
         if(exitToMarkets != address(0x0)) {
             comptroller.exitMarket(exitToMarkets);   
         }
-        if(isredeemUnderlying) {
+        if(!isredeemUnderlying) {
             require(CTokenInterface(cToken).redeem(amount) == 0);
         } else {
             require(CTokenInterface(cToken).redeemUnderlying(amount) == 0);
