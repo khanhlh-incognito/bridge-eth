@@ -131,10 +131,10 @@ contract CompoundAgent is TradeUtils {
         if(exitToMarkets != address(0x0)) {
             comptroller.exitMarket(exitToMarkets);   
         }
-        if(!isredeemUnderlying) {
-            require(CTokenInterface(cToken).redeem(amount) == 0);
-        } else {
+        if(isredeemUnderlying) {
             require(CTokenInterface(cToken).redeemUnderlying(amount) == 0);
+        } else {
+            require(CTokenInterface(cToken).redeem(amount) == 0);
         }
         uint amountAfter = 0;
         if (cToken == address(cEther)) {
