@@ -116,15 +116,16 @@ contract CompoundAgentLogic is TradeUtilsCompound {
      * @return bool: token address, amount recieved
      */
     function mint(address cToken, uint amount) external payable returns (address, uint) {
+        uint amountRecieved = balanceOf(IERC20(cToken));
         if(cToken == address(cEther)) {
             CEther(cToken).mint.value(msg.value)();
         } else {
             approve(IERC20(CErc20(cToken).underlying()), cToken, amount);
             require(CErc20(cToken).mint(amount) == 0);
         }
-        uint amountAfter = balanceOf(IERC20(cToken));
-        transfer(IERC20(cToken), amountAfter);
-        return (cToken, amountAfter);
+        amountRecieved = balanceOf(IERC20(cToken)) - amountRecieved ;
+        transfer(IERC20(cToken), amountRecieved);
+        return (cToken, amountRecieved);
     }
 
     /**
@@ -236,15 +237,16 @@ contract CompoundAgentLogic is TradeUtilsCompound {
      * @return bool: token address, amount recieved
      */
     function liquidateBorrow(address cToken, address borrower, uint repayAmount, address cTokenCollateral) external payable returns (address, uint) {
+        uint amountRecieved = balanceOf(IERC20(cTokenCollateral));
         if(cToken == address(cEther)) {
             CEther(cToken).liquidateBorrow.value(msg.value)(borrower, CTokenInterface(cTokenCollateral));
         } else {
             approve(IERC20(CErc20(cToken).underlying()), cToken, repayAmount);
             require(CErc20(cToken).liquidateBorrow(borrower, repayAmount, CTokenInterface(cTokenCollateral)) == 0);
         }
-        uint amountAfter = balanceOf(IERC20(cTokenCollateral));
-        transfer(IERC20(cTokenCollateral), amountAfter);
-        return (cTokenCollateral, amountAfter);
+        amountRecieved = balanceOf(IERC20(cTokenCollateral)) - amountRecieved;
+        transfer(IERC20(cTokenCollateral), amountRecieved);
+        return (cTokenCollateral, amountRecieved);
     }
 }
 
@@ -321,6 +323,7 @@ contract CompoundProxy is TradeUtils {
     }
     
     event UpdateVaultCompound(address);
+    event UpdateAgentLogic(address);
     
     /**
      * @dev Checks if a caller already has agent or not
@@ -446,10 +449,19 @@ contract CompoundProxy is TradeUtils {
     /**
      * @dev update vault address
      */
-    function updateVault(address payable vault) external onlyAdmin {
-        incognitoSmartContract = vault;
+    function updateVault(address payable _incognitoSmartContract) external onlyAdmin {
+        incognitoSmartContract = _incognitoSmartContract;
         
-        emit UpdateVaultCompound(vault);
+        emit UpdateVaultCompound(_incognitoSmartContract);
+    }
+    
+    /**
+     * @dev update compoundAgentLogic compound  
+     */
+    function updateAgentLogic(address _compoundAgentLogic) external onlyAdmin {
+        compoundAgentLogic = _compoundAgentLogic;
+        
+        emit UpdateAgentLogic(_compoundAgentLogic);
     }
 }
 
