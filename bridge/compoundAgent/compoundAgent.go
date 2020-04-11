@@ -28,7 +28,7 @@ var (
 )
 
 // CompoundAgentABI is the input ABI used to generate the binding from.
-const CompoundAgentABI = "[{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"_incognitoSmartContract\",\"type\":\"address\"},{\"internalType\":\"contractComptroller\",\"name\":\"_comptroller\",\"type\":\"address\"},{\"internalType\":\"contractCEther\",\"name\":\"_cEther\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_proxyCompound\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"constant\":true,\"inputs\":[],\"name\":\"ETH_CONTRACT_ADDRESS\",\"outputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"cToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"addToMarkets\",\"type\":\"address[]\"}],\"name\":\"borrow\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"cToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"addToMarkets\",\"type\":\"address[]\"}],\"name\":\"borrowByMultiCollateral\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"incognitoSmartContract\",\"outputs\":[{\"internalType\":\"addresspayable\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"cToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"borrower\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"repayAmount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"cTokenCollateral\",\"type\":\"address\"}],\"name\":\"liquidateBorrow\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"cToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"mint\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"proxyCompound\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"cToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"isredeemUnderlying\",\"type\":\"bool\"},{\"internalType\":\"address\",\"name\":\"exitToMarkets\",\"type\":\"address\"}],\"name\":\"redeem\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"cToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"repayBorrow\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_proxyCompound\",\"type\":\"address\"}],\"name\":\"upgrade\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const CompoundAgentABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_proxyCompound\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_compoundAgentLogic\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"constant\":true,\"inputs\":[],\"name\":\"compoundAgentLogic\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"delegateCall\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"proxyCompound\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_compoundAgentLogic\",\"type\":\"address\"}],\"name\":\"updateAgentLogic\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_proxyCompound\",\"type\":\"address\"}],\"name\":\"updateProxy\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // CompoundAgent is an auto generated Go binding around an Ethereum contract.
 type CompoundAgent struct {
@@ -172,56 +172,30 @@ func (_CompoundAgent *CompoundAgentTransactorRaw) Transact(opts *bind.TransactOp
 	return _CompoundAgent.Contract.contract.Transact(opts, method, params...)
 }
 
-// ETHCONTRACTADDRESS is a free data retrieval call binding the contract method 0x72e94bf6.
+// CompoundAgentLogic is a free data retrieval call binding the contract method 0xfee8a5c1.
 //
-// Solidity: function ETH_CONTRACT_ADDRESS() constant returns(address)
-func (_CompoundAgent *CompoundAgentCaller) ETHCONTRACTADDRESS(opts *bind.CallOpts) (common.Address, error) {
+// Solidity: function compoundAgentLogic() constant returns(address)
+func (_CompoundAgent *CompoundAgentCaller) CompoundAgentLogic(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
 	out := ret0
-	err := _CompoundAgent.contract.Call(opts, out, "ETH_CONTRACT_ADDRESS")
+	err := _CompoundAgent.contract.Call(opts, out, "compoundAgentLogic")
 	return *ret0, err
 }
 
-// ETHCONTRACTADDRESS is a free data retrieval call binding the contract method 0x72e94bf6.
+// CompoundAgentLogic is a free data retrieval call binding the contract method 0xfee8a5c1.
 //
-// Solidity: function ETH_CONTRACT_ADDRESS() constant returns(address)
-func (_CompoundAgent *CompoundAgentSession) ETHCONTRACTADDRESS() (common.Address, error) {
-	return _CompoundAgent.Contract.ETHCONTRACTADDRESS(&_CompoundAgent.CallOpts)
+// Solidity: function compoundAgentLogic() constant returns(address)
+func (_CompoundAgent *CompoundAgentSession) CompoundAgentLogic() (common.Address, error) {
+	return _CompoundAgent.Contract.CompoundAgentLogic(&_CompoundAgent.CallOpts)
 }
 
-// ETHCONTRACTADDRESS is a free data retrieval call binding the contract method 0x72e94bf6.
+// CompoundAgentLogic is a free data retrieval call binding the contract method 0xfee8a5c1.
 //
-// Solidity: function ETH_CONTRACT_ADDRESS() constant returns(address)
-func (_CompoundAgent *CompoundAgentCallerSession) ETHCONTRACTADDRESS() (common.Address, error) {
-	return _CompoundAgent.Contract.ETHCONTRACTADDRESS(&_CompoundAgent.CallOpts)
-}
-
-// IncognitoSmartContract is a free data retrieval call binding the contract method 0xb42a644b.
-//
-// Solidity: function incognitoSmartContract() constant returns(address)
-func (_CompoundAgent *CompoundAgentCaller) IncognitoSmartContract(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _CompoundAgent.contract.Call(opts, out, "incognitoSmartContract")
-	return *ret0, err
-}
-
-// IncognitoSmartContract is a free data retrieval call binding the contract method 0xb42a644b.
-//
-// Solidity: function incognitoSmartContract() constant returns(address)
-func (_CompoundAgent *CompoundAgentSession) IncognitoSmartContract() (common.Address, error) {
-	return _CompoundAgent.Contract.IncognitoSmartContract(&_CompoundAgent.CallOpts)
-}
-
-// IncognitoSmartContract is a free data retrieval call binding the contract method 0xb42a644b.
-//
-// Solidity: function incognitoSmartContract() constant returns(address)
-func (_CompoundAgent *CompoundAgentCallerSession) IncognitoSmartContract() (common.Address, error) {
-	return _CompoundAgent.Contract.IncognitoSmartContract(&_CompoundAgent.CallOpts)
+// Solidity: function compoundAgentLogic() constant returns(address)
+func (_CompoundAgent *CompoundAgentCallerSession) CompoundAgentLogic() (common.Address, error) {
+	return _CompoundAgent.Contract.CompoundAgentLogic(&_CompoundAgent.CallOpts)
 }
 
 // ProxyCompound is a free data retrieval call binding the contract method 0x370f81fe.
@@ -250,149 +224,65 @@ func (_CompoundAgent *CompoundAgentCallerSession) ProxyCompound() (common.Addres
 	return _CompoundAgent.Contract.ProxyCompound(&_CompoundAgent.CallOpts)
 }
 
-// Borrow is a paid mutator transaction binding the contract method 0x26d5e251.
+// DelegateCall is a paid mutator transaction binding the contract method 0xda67bcc4.
 //
-// Solidity: function borrow(address cToken, uint256 amount, address[] addToMarkets) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactor) Borrow(opts *bind.TransactOpts, cToken common.Address, amount *big.Int, addToMarkets []common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.contract.Transact(opts, "borrow", cToken, amount, addToMarkets)
+// Solidity: function delegateCall(bytes data) returns(bytes)
+func (_CompoundAgent *CompoundAgentTransactor) DelegateCall(opts *bind.TransactOpts, data []byte) (*types.Transaction, error) {
+	return _CompoundAgent.contract.Transact(opts, "delegateCall", data)
 }
 
-// Borrow is a paid mutator transaction binding the contract method 0x26d5e251.
+// DelegateCall is a paid mutator transaction binding the contract method 0xda67bcc4.
 //
-// Solidity: function borrow(address cToken, uint256 amount, address[] addToMarkets) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentSession) Borrow(cToken common.Address, amount *big.Int, addToMarkets []common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.Borrow(&_CompoundAgent.TransactOpts, cToken, amount, addToMarkets)
+// Solidity: function delegateCall(bytes data) returns(bytes)
+func (_CompoundAgent *CompoundAgentSession) DelegateCall(data []byte) (*types.Transaction, error) {
+	return _CompoundAgent.Contract.DelegateCall(&_CompoundAgent.TransactOpts, data)
 }
 
-// Borrow is a paid mutator transaction binding the contract method 0x26d5e251.
+// DelegateCall is a paid mutator transaction binding the contract method 0xda67bcc4.
 //
-// Solidity: function borrow(address cToken, uint256 amount, address[] addToMarkets) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactorSession) Borrow(cToken common.Address, amount *big.Int, addToMarkets []common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.Borrow(&_CompoundAgent.TransactOpts, cToken, amount, addToMarkets)
+// Solidity: function delegateCall(bytes data) returns(bytes)
+func (_CompoundAgent *CompoundAgentTransactorSession) DelegateCall(data []byte) (*types.Transaction, error) {
+	return _CompoundAgent.Contract.DelegateCall(&_CompoundAgent.TransactOpts, data)
 }
 
-// BorrowByMultiCollateral is a paid mutator transaction binding the contract method 0xb6dbc8ed.
+// UpdateAgentLogic is a paid mutator transaction binding the contract method 0xea1efaf4.
 //
-// Solidity: function borrowByMultiCollateral(address cToken, uint256 amount, address[] addToMarkets) returns(address[], uint256[])
-func (_CompoundAgent *CompoundAgentTransactor) BorrowByMultiCollateral(opts *bind.TransactOpts, cToken common.Address, amount *big.Int, addToMarkets []common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.contract.Transact(opts, "borrowByMultiCollateral", cToken, amount, addToMarkets)
+// Solidity: function updateAgentLogic(address _compoundAgentLogic) returns(address, uint256)
+func (_CompoundAgent *CompoundAgentTransactor) UpdateAgentLogic(opts *bind.TransactOpts, _compoundAgentLogic common.Address) (*types.Transaction, error) {
+	return _CompoundAgent.contract.Transact(opts, "updateAgentLogic", _compoundAgentLogic)
 }
 
-// BorrowByMultiCollateral is a paid mutator transaction binding the contract method 0xb6dbc8ed.
+// UpdateAgentLogic is a paid mutator transaction binding the contract method 0xea1efaf4.
 //
-// Solidity: function borrowByMultiCollateral(address cToken, uint256 amount, address[] addToMarkets) returns(address[], uint256[])
-func (_CompoundAgent *CompoundAgentSession) BorrowByMultiCollateral(cToken common.Address, amount *big.Int, addToMarkets []common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.BorrowByMultiCollateral(&_CompoundAgent.TransactOpts, cToken, amount, addToMarkets)
+// Solidity: function updateAgentLogic(address _compoundAgentLogic) returns(address, uint256)
+func (_CompoundAgent *CompoundAgentSession) UpdateAgentLogic(_compoundAgentLogic common.Address) (*types.Transaction, error) {
+	return _CompoundAgent.Contract.UpdateAgentLogic(&_CompoundAgent.TransactOpts, _compoundAgentLogic)
 }
 
-// BorrowByMultiCollateral is a paid mutator transaction binding the contract method 0xb6dbc8ed.
+// UpdateAgentLogic is a paid mutator transaction binding the contract method 0xea1efaf4.
 //
-// Solidity: function borrowByMultiCollateral(address cToken, uint256 amount, address[] addToMarkets) returns(address[], uint256[])
-func (_CompoundAgent *CompoundAgentTransactorSession) BorrowByMultiCollateral(cToken common.Address, amount *big.Int, addToMarkets []common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.BorrowByMultiCollateral(&_CompoundAgent.TransactOpts, cToken, amount, addToMarkets)
+// Solidity: function updateAgentLogic(address _compoundAgentLogic) returns(address, uint256)
+func (_CompoundAgent *CompoundAgentTransactorSession) UpdateAgentLogic(_compoundAgentLogic common.Address) (*types.Transaction, error) {
+	return _CompoundAgent.Contract.UpdateAgentLogic(&_CompoundAgent.TransactOpts, _compoundAgentLogic)
 }
 
-// LiquidateBorrow is a paid mutator transaction binding the contract method 0x64fd7078.
+// UpdateProxy is a paid mutator transaction binding the contract method 0x9e955149.
 //
-// Solidity: function liquidateBorrow(address cToken, address borrower, uint256 repayAmount, address cTokenCollateral) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactor) LiquidateBorrow(opts *bind.TransactOpts, cToken common.Address, borrower common.Address, repayAmount *big.Int, cTokenCollateral common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.contract.Transact(opts, "liquidateBorrow", cToken, borrower, repayAmount, cTokenCollateral)
+// Solidity: function updateProxy(address _proxyCompound) returns(address, uint256)
+func (_CompoundAgent *CompoundAgentTransactor) UpdateProxy(opts *bind.TransactOpts, _proxyCompound common.Address) (*types.Transaction, error) {
+	return _CompoundAgent.contract.Transact(opts, "updateProxy", _proxyCompound)
 }
 
-// LiquidateBorrow is a paid mutator transaction binding the contract method 0x64fd7078.
+// UpdateProxy is a paid mutator transaction binding the contract method 0x9e955149.
 //
-// Solidity: function liquidateBorrow(address cToken, address borrower, uint256 repayAmount, address cTokenCollateral) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentSession) LiquidateBorrow(cToken common.Address, borrower common.Address, repayAmount *big.Int, cTokenCollateral common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.LiquidateBorrow(&_CompoundAgent.TransactOpts, cToken, borrower, repayAmount, cTokenCollateral)
+// Solidity: function updateProxy(address _proxyCompound) returns(address, uint256)
+func (_CompoundAgent *CompoundAgentSession) UpdateProxy(_proxyCompound common.Address) (*types.Transaction, error) {
+	return _CompoundAgent.Contract.UpdateProxy(&_CompoundAgent.TransactOpts, _proxyCompound)
 }
 
-// LiquidateBorrow is a paid mutator transaction binding the contract method 0x64fd7078.
+// UpdateProxy is a paid mutator transaction binding the contract method 0x9e955149.
 //
-// Solidity: function liquidateBorrow(address cToken, address borrower, uint256 repayAmount, address cTokenCollateral) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactorSession) LiquidateBorrow(cToken common.Address, borrower common.Address, repayAmount *big.Int, cTokenCollateral common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.LiquidateBorrow(&_CompoundAgent.TransactOpts, cToken, borrower, repayAmount, cTokenCollateral)
-}
-
-// Mint is a paid mutator transaction binding the contract method 0x40c10f19.
-//
-// Solidity: function mint(address cToken, uint256 amount) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactor) Mint(opts *bind.TransactOpts, cToken common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _CompoundAgent.contract.Transact(opts, "mint", cToken, amount)
-}
-
-// Mint is a paid mutator transaction binding the contract method 0x40c10f19.
-//
-// Solidity: function mint(address cToken, uint256 amount) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentSession) Mint(cToken common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.Mint(&_CompoundAgent.TransactOpts, cToken, amount)
-}
-
-// Mint is a paid mutator transaction binding the contract method 0x40c10f19.
-//
-// Solidity: function mint(address cToken, uint256 amount) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactorSession) Mint(cToken common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.Mint(&_CompoundAgent.TransactOpts, cToken, amount)
-}
-
-// Redeem is a paid mutator transaction binding the contract method 0x7520f7ed.
-//
-// Solidity: function redeem(address cToken, uint256 amount, bool isredeemUnderlying, address exitToMarkets) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactor) Redeem(opts *bind.TransactOpts, cToken common.Address, amount *big.Int, isredeemUnderlying bool, exitToMarkets common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.contract.Transact(opts, "redeem", cToken, amount, isredeemUnderlying, exitToMarkets)
-}
-
-// Redeem is a paid mutator transaction binding the contract method 0x7520f7ed.
-//
-// Solidity: function redeem(address cToken, uint256 amount, bool isredeemUnderlying, address exitToMarkets) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentSession) Redeem(cToken common.Address, amount *big.Int, isredeemUnderlying bool, exitToMarkets common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.Redeem(&_CompoundAgent.TransactOpts, cToken, amount, isredeemUnderlying, exitToMarkets)
-}
-
-// Redeem is a paid mutator transaction binding the contract method 0x7520f7ed.
-//
-// Solidity: function redeem(address cToken, uint256 amount, bool isredeemUnderlying, address exitToMarkets) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactorSession) Redeem(cToken common.Address, amount *big.Int, isredeemUnderlying bool, exitToMarkets common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.Redeem(&_CompoundAgent.TransactOpts, cToken, amount, isredeemUnderlying, exitToMarkets)
-}
-
-// RepayBorrow is a paid mutator transaction binding the contract method 0xabdb5ea8.
-//
-// Solidity: function repayBorrow(address cToken, uint256 amount) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactor) RepayBorrow(opts *bind.TransactOpts, cToken common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _CompoundAgent.contract.Transact(opts, "repayBorrow", cToken, amount)
-}
-
-// RepayBorrow is a paid mutator transaction binding the contract method 0xabdb5ea8.
-//
-// Solidity: function repayBorrow(address cToken, uint256 amount) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentSession) RepayBorrow(cToken common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.RepayBorrow(&_CompoundAgent.TransactOpts, cToken, amount)
-}
-
-// RepayBorrow is a paid mutator transaction binding the contract method 0xabdb5ea8.
-//
-// Solidity: function repayBorrow(address cToken, uint256 amount) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactorSession) RepayBorrow(cToken common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.RepayBorrow(&_CompoundAgent.TransactOpts, cToken, amount)
-}
-
-// Upgrade is a paid mutator transaction binding the contract method 0x0900f010.
-//
-// Solidity: function upgrade(address _proxyCompound) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactor) Upgrade(opts *bind.TransactOpts, _proxyCompound common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.contract.Transact(opts, "upgrade", _proxyCompound)
-}
-
-// Upgrade is a paid mutator transaction binding the contract method 0x0900f010.
-//
-// Solidity: function upgrade(address _proxyCompound) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentSession) Upgrade(_proxyCompound common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.Upgrade(&_CompoundAgent.TransactOpts, _proxyCompound)
-}
-
-// Upgrade is a paid mutator transaction binding the contract method 0x0900f010.
-//
-// Solidity: function upgrade(address _proxyCompound) returns(address, uint256)
-func (_CompoundAgent *CompoundAgentTransactorSession) Upgrade(_proxyCompound common.Address) (*types.Transaction, error) {
-	return _CompoundAgent.Contract.Upgrade(&_CompoundAgent.TransactOpts, _proxyCompound)
+// Solidity: function updateProxy(address _proxyCompound) returns(address, uint256)
+func (_CompoundAgent *CompoundAgentTransactorSession) UpdateProxy(_proxyCompound common.Address) (*types.Transaction, error) {
+	return _CompoundAgent.Contract.UpdateProxy(&_CompoundAgent.TransactOpts, _proxyCompound)
 }

@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/incognitochain/bridge-eth/bridge/compound"
-
 	"testing"
 
+	"github.com/incognitochain/bridge-eth/bridge/compound"
+	"github.com/incognitochain/bridge-eth/bridge/compoundLogic"
+	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
 	kbnmultiTrade "github.com/incognitochain/bridge-eth/bridge/kbnmultitrade"
 	"github.com/incognitochain/bridge-eth/bridge/kbntrade"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
@@ -67,9 +68,9 @@ func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts() {
 
 	// Genesis committee
 	// for testnet & local env
-	// beaconComm, bridgeComm, err := convertCommittees(
-	// 	testnetBeaconCommitteePubKeys, testnetBridgeCommitteePubKeys,
-	// )
+	beaconComm, bridgeComm, err := convertCommittees(
+		testnetBeaconCommitteePubKeys, testnetBridgeCommitteePubKeys,
+	)
 	// NOTE: uncomment this block to get mainnet committees when deploying to mainnet env
 	/*
 		beaconComm, bridgeComm, err := convertCommittees(
@@ -77,24 +78,23 @@ func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts() {
 		)
 	*/
 
-	// require.Equal(tradingDeploySuite.T(), nil, err)
+	require.Equal(tradingDeploySuite.T(), nil, err)
 
 	// Deploy incognito_proxy
 	auth := bind.NewKeyedTransactor(tradingDeploySuite.ETHPrivKey)
 	auth.Value = big.NewInt(0)
-	// auth.GasPrice = big.NewInt(10000000000)
+	auth.GasPrice = big.NewInt(10000000000)
 	// auth.GasLimit = 4000000
-	// incAddr, tx, _, err := incognito_proxy.DeployIncognitoProxy(auth, tradingDeploySuite.ETHClient, admin, beaconComm, bridgeComm)
-	// require.Equal(tradingDeploySuite.T(), nil, err)
+	incAddr, tx, _, err := incognito_proxy.DeployIncognitoProxy(auth, tradingDeploySuite.ETHClient, admin, beaconComm, bridgeComm)
+	require.Equal(tradingDeploySuite.T(), nil, err)
 
 	// incAddr := common.HexToAddress(IncognitoProxyAddress)
-	incAddr := common.HexToAddress("0x5E30E3c4135eF11181Df891B67ab775C02C8dB04")
 	fmt.Println("deployed incognito_proxy")
 	fmt.Printf("addr: %s\n", incAddr.Hex())
 
 	// Wait until tx is confirmed
-	// err = wait(tradingDeploySuite.ETHClient, tx.Hash())
-	// require.Equal(tradingDeploySuite.T(), nil, err)
+	err = wait(tradingDeploySuite.ETHClient, tx.Hash())
+	require.Equal(tradingDeploySuite.T(), nil, err)
 
 	// Deploy vault
 	prevVault := common.Address{}
@@ -138,8 +138,18 @@ func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts() {
 	fmt.Println("deployed zrxTrade")
 	fmt.Printf("addr: %s\n", zrxTradeAddr.Hex())
 
-	// Deploy 0xTrade
-	compoundAddr, tx, _, err := compound.DeployCompound(auth, tradingDeploySuite.ETHClient, vaultAddr, tradingDeploySuite.cController, tradingDeploySuite.cETH)
+	// Deploy compound
+	compounAgentLogicdAddr, tx, _, err := compoundLogic.DeployCompoundLogic(auth, tradingDeploySuite.ETHClient)
+	require.Equal(tradingDeploySuite.T(), nil, err)
+
+	// Wait until tx is confirmed
+	err = wait(tradingDeploySuite.ETHClient, tx.Hash())
+	require.Equal(tradingDeploySuite.T(), nil, err)
+
+	fmt.Println("deployed compound agent logic")
+	fmt.Printf("addr: %s\n", compounAgentLogicdAddr.Hex())
+
+	compoundAddr, tx, _, err := compound.DeployCompound(auth, tradingDeploySuite.ETHClient, tradingDeploySuite.VaultAddr, compounAgentLogicdAddr, admin)
 	require.Equal(tradingDeploySuite.T(), nil, err)
 
 	// Wait until tx is confirmed

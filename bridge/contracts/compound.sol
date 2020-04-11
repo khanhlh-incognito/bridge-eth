@@ -1,7 +1,77 @@
 pragma solidity >= 0.5.12;
 
-import './utils.sol';
 import './IERC20.sol';
+
+contract TradeUtilsCompound {
+	IERC20 constant public ETH_CONTRACT_ADDRESS = IERC20(0x0000000000000000000000000000000000000000);
+	address payable constant public incognitoSmartContract = 0x8C4B922E2f7d6d1ABA41d79C47F497F6F54e0Af8;
+
+	modifier isIncognitoSmartContract {
+	    require(msg.sender == incognitoSmartContract);
+	    _;
+	}
+
+	// fallback function is used to receive eth.
+	function() external payable {}
+
+	function balanceOf(IERC20 token) internal view returns (uint256) {
+		if (token == ETH_CONTRACT_ADDRESS) {
+			return address(this).balance;
+		}
+        return token.balanceOf(address(this));
+    }
+
+	function transfer(IERC20 token, uint amount) internal {
+		if (token == ETH_CONTRACT_ADDRESS) {
+			require(address(this).balance >= amount);
+			incognitoSmartContract.transfer(amount);
+		} else {
+			token.transfer(incognitoSmartContract, amount);
+			require(checkSuccess());
+		}
+	}
+
+	function approve(IERC20 token, address proxy, uint amount) internal {
+		if (token != ETH_CONTRACT_ADDRESS) {
+			token.approve(proxy, 0);
+			require(checkSuccess());
+			token.approve(proxy, amount);
+			require(checkSuccess());
+		}
+	}
+
+	/**
+     * @dev Check if transfer() and transferFrom() of ERC20 succeeded or not
+     * This check is needed to fix https://github.com/ethereum/solidity/issues/4116
+     * This function is copied from https://github.com/AdExNetwork/adex-protocol-eth/blob/master/contracts/libs/SafeERC20.sol
+     */
+    function checkSuccess() internal pure returns (bool) {
+		uint256 returnValue = 0;
+
+		assembly {
+			// check number of bytes returned from last function call
+			switch returndatasize
+
+			// no bytes returned: assume success
+			case 0x0 {
+				returnValue := 1
+			}
+
+			// 32 bytes returned: check if non-zero
+			case 0x20 {
+				// copy 32 bytes into scratch space
+				returndatacopy(0x0, 0x0, 0x20)
+
+				// load those bytes into returnValue
+				returnValue := mload(0x0)
+			}
+
+			// not sure what was returned: don't mark as success
+			default { }
+		}
+		return returnValue != 0;
+	}
+}
 
 interface CTokenInterface {
     function redeem(uint redeemTokens) external returns (uint);
@@ -29,23 +99,12 @@ interface Comptroller {
     function exitMarket(address cTokenAddress) external returns (uint);
 }
 
-contract CompoundAgent is TradeUtils {
+contract CompoundAgentLogic is TradeUtilsCompound {
 
-    Comptroller comptroller;
-    CEther cEther;
-    address public proxyCompound;
+    Comptroller public constant comptroller = Comptroller(0x1f5D7F3CaAC149fE41b8bd62A3673FE6eC0AB73b);
+    CEther public constant cEther = CEther(0xf92FbE0D3C0dcDAE407923b2Ac17eC223b1084E4);
 
-    constructor(address payable _incognitoSmartContract, Comptroller _comptroller, CEther _cEther, address _proxyCompound) public {
-        incognitoSmartContract = _incognitoSmartContract;
-        comptroller = _comptroller;
-        cEther = _cEther;
-        proxyCompound = _proxyCompound;
-    }
-
-    modifier onlyProxyCompound () {
-        require(msg.sender == proxyCompound, "Only proxy compound call this agent");
-        _;
-    }
+    constructor() public {}
 
     // fallback function which allows transfer eth.
     function() external payable {}
@@ -56,7 +115,7 @@ contract CompoundAgent is TradeUtils {
      * @param amount: total to mint
      * @return bool: token address, amount recieved
      */
-    function mint(address cToken, uint amount) external payable onlyProxyCompound returns (address, uint) {
+    function mint(address cToken, uint amount) external payable returns (address, uint) {
         if(cToken == address(cEther)) {
             CEther(cToken).mint.value(msg.value)();
         } else {
@@ -75,7 +134,7 @@ contract CompoundAgent is TradeUtils {
      * @param addToMarkets: add tokens to market as collateral
      * @return bool: token address, amount recieved
      */
-    function borrow(address cToken, uint amount, address[] calldata addToMarkets) external onlyProxyCompound returns (address, uint) {
+    function borrow(address cToken, uint amount, address[] calldata addToMarkets) external returns (address, uint) {
         if(addToMarkets.length > 0) {
             comptroller.enterMarkets(addToMarkets);
         }
@@ -99,7 +158,7 @@ contract CompoundAgent is TradeUtils {
      * @param addToMarkets: add token to market as collateral
      * @return bool: token address, amount recieved
      */
-    function borrowByMultiCollateral(address cToken, uint amount, address[] calldata addToMarkets) external onlyProxyCompound returns (address[] memory, uint[] memory) {
+    function borrowByMultiCollateral(address cToken, uint amount, address[] calldata addToMarkets) external returns (address[] memory, uint[] memory) {
         if(addToMarkets.length > 0) {
             comptroller.enterMarkets(addToMarkets);
         }
@@ -127,7 +186,7 @@ contract CompoundAgent is TradeUtils {
      * @param exitToMarkets: remove coin from market
      * @return bool: token address, amount recieved
      */
-    function redeem(address cToken, uint amount, bool isredeemUnderlying, address exitToMarkets) external onlyProxyCompound returns (address, uint) {
+    function redeem(address cToken, uint amount, bool isredeemUnderlying, address exitToMarkets) external returns (address, uint) {
         if(exitToMarkets != address(0x0)) {
             comptroller.exitMarket(exitToMarkets);   
         }
@@ -154,7 +213,7 @@ contract CompoundAgent is TradeUtils {
      * @param amount: total to repay
      * @return bool: token address, amount (default 0)
      */
-    function repayBorrow(address cToken, uint amount) external payable onlyProxyCompound returns (address, uint) {
+    function repayBorrow(address cToken, uint amount) external payable returns (address, uint) {
         if(cToken == address(cEther)) {
             CEther(cToken).repayBorrow.value(msg.value)();
         } else {
@@ -176,7 +235,7 @@ contract CompoundAgent is TradeUtils {
      * @param cTokenCollateral: the address of ctoken 
      * @return bool: token address, amount recieved
      */
-    function liquidateBorrow(address cToken, address borrower, uint repayAmount, address cTokenCollateral) external payable onlyProxyCompound returns (address, uint) {
+    function liquidateBorrow(address cToken, address borrower, uint repayAmount, address cTokenCollateral) external payable returns (address, uint) {
         if(cToken == address(cEther)) {
             CEther(cToken).liquidateBorrow.value(msg.value)(borrower, CTokenInterface(cTokenCollateral));
         } else {
@@ -187,29 +246,81 @@ contract CompoundAgent is TradeUtils {
         transfer(IERC20(cTokenCollateral), amountAfter);
         return (cTokenCollateral, amountAfter);
     }
+}
 
-    /**
-    * @dev upgrade proxy compound  
-    */
-    function upgrade(address _proxyCompound) external onlyProxyCompound returns (address, uint) {
+contract CompoundAgent {
+    
+    address public proxyCompound;
+    address public compoundAgentLogic;
+    
+    modifier onlyProxyCompound () {
+        require(msg.sender == proxyCompound, "Only proxy compound allowed to call this agent!");
+        _;
+    }
+    
+    constructor(address _proxyCompound, address _compoundAgentLogic) public {
         proxyCompound = _proxyCompound;
+        compoundAgentLogic = _compoundAgentLogic;
+    }
+    
+    // fallback function which allows transfer eth.
+    function() external payable {}
+    
+    /**
+     * @notice External method to delegate execution to another contract
+     * @dev It returns to the external caller whatever the implementation returns or forwards reverts
+     * @param data The raw data to delegatecall
+     * @return The returned bytes from the delegatecall
+     */
+    function delegateCall(bytes calldata data) external payable onlyProxyCompound returns (bytes memory) {
+        (bool success, bytes memory returnData) = compoundAgentLogic.delegatecall(data);
+        assembly {
+            if eq(success, 0) {
+                revert(add(returnData, 0x20), returndatasize)
+            }
+        }
+        
+        return returnData;
+    }
+    
+    /**
+     * @dev update proxy compound  
+     */
+    function updateProxy(address _proxyCompound) external onlyProxyCompound returns (address, uint) {
+        proxyCompound = _proxyCompound;
+        return (address(0x0), 0);
+    }
+    
+    /**
+     * @dev update compoundAgentLogic compound  
+     */
+    function updateAgentLogic(address _compoundAgentLogic) external onlyProxyCompound returns (address, uint) {
+        compoundAgentLogic = _compoundAgentLogic;
         return (address(0x0), 0);
     }
 }
 
+import './utils.sol';
 contract CompoundProxy is TradeUtils {
      
     mapping(bytes32 => bool) public sigDataUsed;
     mapping(address => address) public agents;
     
-    Comptroller comptroller;
-    CEther cEther;
+    address public admin;
+    address public compoundAgentLogic;
 
-    constructor(address payable _incognitoSmartContract, Comptroller _comptroller, CEther _cEther) public {
+    constructor(address payable _incognitoSmartContract, address  _compoundAgentLogic, address _admin) public {
         incognitoSmartContract = _incognitoSmartContract;
-        comptroller = _comptroller;
-        cEther = _cEther;
+        compoundAgentLogic = _compoundAgentLogic;
+        admin = _admin;
     }
+    
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only admin can call this function!");
+        _;
+    }
+    
+    event UpdateVaultCompound(address);
     
     /**
      * @dev Checks if a caller already has agent or not
@@ -221,7 +332,7 @@ contract CompoundProxy is TradeUtils {
      */
     function isAgentExist(address caller) internal returns(address) {
         if(agents[caller] == address(0x0)) {
-            agents[caller] = address(new CompoundAgent(incognitoSmartContract, comptroller, cEther, address(this)));
+            agents[caller] = address(new CompoundAgent(address(this), compoundAgentLogic));
         }
         return agents[caller];
     }
@@ -265,8 +376,9 @@ contract CompoundProxy is TradeUtils {
         }
         (bool success, bytes memory result) = agent.call.value(msg.value)(callData);
         require(success);
-
-        return abi.decode(result, (address, uint));
+        bytes memory decodeReult = abi.decode(result, (bytes));
+        
+        return abi.decode(decodeReult, (address, uint));
     }
 
     /**
@@ -291,8 +403,9 @@ contract CompoundProxy is TradeUtils {
         }
         (bool success, bytes memory result) = agent.call.value(msg.value)(callData);
         require(success);
-
-        return abi.decode(result, (address[], uint[]));
+        bytes memory decodeReult = abi.decode(result, (bytes));
+        
+        return abi.decode(decodeReult, (address[], uint[]));
     }
 
     /**
@@ -328,6 +441,15 @@ contract CompoundProxy is TradeUtils {
         sigDataUsed[hash] = true;
         
         return verifier;
+    }
+    
+    /**
+     * @dev update vault address
+     */
+    function updateVault(address payable vault) external onlyAdmin {
+        incognitoSmartContract = vault;
+        
+        emit UpdateVaultCompound(vault);
     }
 }
 

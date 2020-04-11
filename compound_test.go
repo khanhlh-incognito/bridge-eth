@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"github.com/incognitochain/bridge-eth/bridge/compoundAgent"
+
+	"github.com/incognitochain/bridge-eth/bridge/compoundLogic"
+
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 
 	"github.com/incognitochain/bridge-eth/bridge/compound"
@@ -67,8 +70,8 @@ func (tradingSuite *CompoundTradingTestSuite) SetupSuite() {
 	tradingSuite.cDAIAddressStr = "0xe7bc397dbd069fc7d0109c0636d06888bb50668c"                            // kovan
 	tradingSuite.cETHAddressStr = "0xf92fbe0d3c0dcdae407923b2ac17ec223b1084e4"                            // kovan
 	tradingSuite.cREPAddressStr = "0xfd874be7e6733bdc6dca9c7cdd97c225ec235d39"                            // kovan
-	tradingSuite.CompoundDeployedAddr = common.HexToAddress("0xDAB1b9895eefb393feA37d184F93FBAce3aa42C1") //kovan
-	tradingSuite.DepositingEther = float64(0.08)
+	tradingSuite.CompoundDeployedAddr = common.HexToAddress("0xaB58Ae78640C33CaD1FAf9Ca6902983622C926C6") //kovan
+	tradingSuite.DepositingEther = float64(0.12)
 }
 
 func (tradingSuite *CompoundTradingTestSuite) TearDownSuite() {
@@ -103,11 +106,11 @@ func (tradingSuite *CompoundTradingTestSuite) mintCoin(
 	srcTokenIDStr string,
 	destTokenIDStr string,
 ) {
-	compounAgentAbi, _ := abi.JSON(strings.NewReader(compoundAgent.CompoundAgentABI))
+	compounAgentLogicAbi, _ := abi.JSON(strings.NewReader(compoundLogic.CompoundLogicABI))
 
 	srcToken := common.HexToAddress(srcTokenIDStr)
 	destToken := common.HexToAddress(destTokenIDStr)
-	inputAgent, _ := compounAgentAbi.Pack("mint", destToken, srcQty)
+	inputAgent, _ := compounAgentLogicAbi.Pack("mint", destToken, srcQty)
 	tradingSuite.callVault(srcToken, srcQty, destToken, inputAgent, "mint")
 }
 
@@ -119,12 +122,12 @@ func (tradingSuite *CompoundTradingTestSuite) borrowCoin(
 	destTokenIDStr string,
 	addCollaterals []common.Address,
 ) {
-	compounAgentAbi, _ := abi.JSON(strings.NewReader(compoundAgent.CompoundAgentABI))
+	compounAgentLogicAbi, _ := abi.JSON(strings.NewReader(compoundLogic.CompoundLogicABI))
 
 	cBorrow := common.HexToAddress(cTokenBorrow)
 	srcToken := common.HexToAddress(srcTokenIDStr)
 	destToken := common.HexToAddress(destTokenIDStr)
-	inputAgent, _ := compounAgentAbi.Pack("borrow", cBorrow, borrowAmount, addCollaterals)
+	inputAgent, _ := compounAgentLogicAbi.Pack("borrow", cBorrow, borrowAmount, addCollaterals)
 	tradingSuite.callVault(srcToken, collateralAmount, destToken, inputAgent, "borrow")
 }
 
@@ -136,11 +139,11 @@ func (tradingSuite *CompoundTradingTestSuite) redeemCoin(
 	isUnderlyingToken bool,
 	removecollateral common.Address,
 ) {
-	compounAgentAbi, _ := abi.JSON(strings.NewReader(compoundAgent.CompoundAgentABI))
+	compounAgentLogicAbi, _ := abi.JSON(strings.NewReader(compoundLogic.CompoundLogicABI))
 
 	srcToken := common.HexToAddress(srcTokenIDStr)
 	destToken := common.HexToAddress(destTokenIDStr)
-	inputAgent, _ := compounAgentAbi.Pack("redeem", srcToken, amountRedeem, isUnderlyingToken, removecollateral)
+	inputAgent, _ := compounAgentLogicAbi.Pack("redeem", srcToken, amountRedeem, isUnderlyingToken, removecollateral)
 	tradingSuite.callVault(srcToken, amountSentFromVault, destToken, inputAgent, "redeem")
 }
 
@@ -149,11 +152,11 @@ func (tradingSuite *CompoundTradingTestSuite) repayBorrow(
 	srcTokenIDStr string,
 	destTokenIDStr string,
 ) {
-	compounAgentAbi, _ := abi.JSON(strings.NewReader(compoundAgent.CompoundAgentABI))
+	compounAgentLogicAbi, _ := abi.JSON(strings.NewReader(compoundLogic.CompoundLogicABI))
 
 	srcToken := common.HexToAddress(srcTokenIDStr)
 	destToken := common.HexToAddress(destTokenIDStr)
-	inputAgent, _ := compounAgentAbi.Pack("repayBorrow", destToken, srcQty)
+	inputAgent, _ := compounAgentLogicAbi.Pack("repayBorrow", destToken, srcQty)
 	tradingSuite.callVault(srcToken, srcQty, destToken, inputAgent, "repayBorrow")
 }
 
@@ -162,13 +165,12 @@ func (tradingSuite *CompoundTradingTestSuite) liquidateBorrow(
 	srcTokenIDStr string,
 	destTokenIDStr string,
 	borrower common.Address,
-	CCollateral common.Address,
 ) {
-	compounAgentAbi, _ := abi.JSON(strings.NewReader(compoundAgent.CompoundAgentABI))
+	compounAgentLogicAbi, _ := abi.JSON(strings.NewReader(compoundLogic.CompoundLogicABI))
 
 	srcToken := common.HexToAddress(srcTokenIDStr)
 	destToken := common.HexToAddress(destTokenIDStr)
-	inputAgent, _ := compounAgentAbi.Pack("liquidateBorrow", destToken, borrower, srcQty, CCollateral)
+	inputAgent, _ := compounAgentLogicAbi.Pack("liquidateBorrow", destToken, borrower, srcQty, destToken)
 	tradingSuite.callVault(srcToken, srcQty, destToken, inputAgent, "liquidateBorrow")
 }
 
@@ -179,6 +181,9 @@ func (tradingSuite *CompoundTradingTestSuite) callVault(
 	inputAgent []byte,
 	whocall string,
 ) {
+	compounAgent, _ := abi.JSON(strings.NewReader(compoundAgent.CompoundAgentABI))
+	inputAgent, _ = compounAgent.Pack("delegateCall", inputAgent)
+
 	compounProxyAbi, _ := abi.JSON(strings.NewReader(compound.CompoundABI))
 	timestamp := []byte(randomizeTimestamp())
 	tempData := append(srcToken.Bytes(), inputAgent...)
@@ -258,17 +263,17 @@ func (tradingSuite *CompoundTradingTestSuite) Test1TradeEthForKBNWithKyber() {
 	time.Sleep(120 * time.Second)
 
 	tradingSuite.submitBurnProofForDepositToSC(burningTxID.(string))
-	// require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPETH, big.NewInt(1000000000)), deposited)
+	require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPETH, big.NewInt(1000000000)), deposited)
 
 	deposited := tradingSuite.getDepositedBalance(
-		tradingSuite.cETHAddressStr,
+		tradingSuite.EtherAddressStr,
 		pubKeyToAddrStr,
 	)
-	fmt.Println("Prev: deposited cEHT: ", deposited)
+	fmt.Println("deposited EHT: ", deposited)
 
 	fmt.Println("------------ step 3: mint cETH through Compound aggregator --------------")
 	tradingSuite.mintCoin(
-		tradeAmount,
+		big.NewInt(0).Div(tradeAmount, big.NewInt(int64(3))),
 		tradingSuite.EtherAddressStr,
 		tradingSuite.cETHAddressStr,
 	)
@@ -281,7 +286,7 @@ func (tradingSuite *CompoundTradingTestSuite) Test1TradeEthForKBNWithKyber() {
 
 	fmt.Println("------------ step 4: collateral cETH and borrow DAI through Compound aggregator --------------")
 	tradingSuite.borrowCoin(
-		big.NewInt(0).Div(deposited, big.NewInt(int64(2))),
+		big.NewInt(0).Div(deposited, big.NewInt(int64(3))),
 		big.NewInt(10000000),
 		tradingSuite.cDAIAddressStr,
 		tradingSuite.cETHAddressStr,
@@ -297,8 +302,8 @@ func (tradingSuite *CompoundTradingTestSuite) Test1TradeEthForKBNWithKyber() {
 
 	fmt.Println("------------ step 5: Redeem cETH through Compound aggregator --------------")
 	tradingSuite.redeemCoin(
-		big.NewInt(0).Div(deposited, big.NewInt(int64(2))),
-		big.NewInt(0).Div(deposited, big.NewInt(int64(2))),
+		big.NewInt(0).Div(deposited, big.NewInt(int64(3))),
+		big.NewInt(0).Div(deposited, big.NewInt(int64(3))),
 		tradingSuite.cETHAddressStr,
 		tradingSuite.EtherAddressStr,
 		false,
@@ -309,66 +314,22 @@ func (tradingSuite *CompoundTradingTestSuite) Test1TradeEthForKBNWithKyber() {
 		tradingSuite.DAIAddressStr,
 		pubKeyToAddrStr,
 	)
-	fmt.Println("ETH redeem: ", ETHredeem)
+	fmt.Println("ETH after call redeem: ", ETHredeem)
 
-	// fmt.Println("------------ step 6: Repay borrow DAI through Compound aggregator --------------")
-	// tradingSuite.redeemCoin(
-	// 	big.NewInt(0).Div(deposited, big.NewInt(int64(2))),
-	// 	big.NewInt(0).Div(deposited, big.NewInt(int64(2))),
-	// 	tradingSuite.cETHAddressStr,
-	// 	tradingSuite.EtherAddressStr,
-	// 	false,
-	// 	common.Address{},
-	// )
+	fmt.Println("------------ step 6: Borrow ETH and Repay ETH through Compound aggregator --------------")
 
-	// ETHredeem := tradingSuite.getDepositedBalance(
-	// 	tradingSuite.DAIAddressStr,
-	// 	pubKeyToAddrStr,
-	// )
-	// fmt.Println("ETH redeem: ", ETHredeem)
+	tradingSuite.borrowCoin(
+		big.NewInt(0).Div(deposited, big.NewInt(int64(3))),
+		big.NewInt(10000000),
+		tradingSuite.cETHAddressStr,
+		tradingSuite.cETHAddressStr,
+		tradingSuite.EtherAddressStr,
+		[]common.Address{},
+	)
 
-	// fmt.Println("------------ step 4: withdrawing KBN from SC to pKBN on Incognito --------------")
-	// txHashByEmittingWithdrawalReq := tradingSuite.requestWithdraw(
-	// 	tradingSuite.KBNAddressStr,
-	// 	kbnTraded,
-	// )
-	// time.Sleep(15 * time.Second)
-
-	// _, ethBlockHash, ethTxIdx, ethDepositProof, err = getETHDepositProof(tradingSuite.ETHHost, txHashByEmittingWithdrawalReq)
-	// require.Equal(tradingSuite.T(), nil, err)
-	// fmt.Println("depositProof by emitting withdarawal req: ", ethBlockHash, ethTxIdx, ethDepositProof)
-
-	// fmt.Println("Waiting 90s for 15 blocks confirmation")
-	// time.Sleep(90 * time.Second)
-	// _, err = tradingSuite.callIssuingETHReq(
-	// 	tradingSuite.IncKBNTokenIDStr,
-	// 	ethDepositProof,
-	// 	ethBlockHash,
-	// 	ethTxIdx,
-	// )
-	// require.Equal(tradingSuite.T(), nil, err)
-	// time.Sleep(120 * time.Second)
-
-	// fmt.Println("------------ step 5: withdrawing pKBN from Incognito to KBN --------------")
-	// withdrawingPKBN := big.NewInt(0).Div(kbnTraded, big.NewInt(1000000000))
-	// burningRes, err = tradingSuite.callBurningPToken(
-	// 	tradingSuite.IncKBNTokenIDStr,
-	// 	withdrawingPKBN,
-	// 	tradingSuite.ETHOwnerAddrStr,
-	// 	"createandsendburningrequest",
-	// )
-	// require.Equal(tradingSuite.T(), nil, err)
-	// burningTxID, found = burningRes["TxID"]
-	// require.Equal(tradingSuite.T(), true, found)
-	// time.Sleep(120 * time.Second)
-
-	// tradingSuite.submitBurnProofForWithdrawal(burningTxID.(string))
-
-	// bal := tradingSuite.getBalanceOnETHNet(
-	// 	common.HexToAddress(tradingSuite.KBNAddressStr),
-	// 	common.HexToAddress(fmt.Sprintf("0x%s", tradingSuite.ETHOwnerAddrStr)),
-	// )
-	// tradingSuite.KBNBalanceAfterStep1 = bal
-	// fmt.Println("KBN balance after step 1: ", tradingSuite.KBNBalanceAfterStep1)
-	// require.Equal(tradingSuite.T(), withdrawingPKBN.Uint64(), bal.Div(bal, big.NewInt(1000000000)).Uint64())
+	tradingSuite.repayBorrow(
+		big.NewInt(10000000),
+		tradingSuite.EtherAddressStr,
+		tradingSuite.cETHAddressStr,
+	)
 }
