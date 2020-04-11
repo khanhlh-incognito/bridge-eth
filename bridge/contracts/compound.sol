@@ -376,9 +376,9 @@ contract CompoundProxy is TradeUtils {
         }
         (bool success, bytes memory result) = agent.call.value(msg.value)(callData);
         require(success);
-        bytes memory decodeReult = abi.decode(result, (bytes));
+        bytes memory decodeResult = abi.decode(result, (bytes));
         
-        return abi.decode(decodeReult, (address, uint));
+        return abi.decode(decodeResult, (address, uint));
     }
 
     /**
@@ -403,9 +403,9 @@ contract CompoundProxy is TradeUtils {
         }
         (bool success, bytes memory result) = agent.call.value(msg.value)(callData);
         require(success);
-        bytes memory decodeReult = abi.decode(result, (bytes));
+        bytes memory decodeResult = abi.decode(result, (bytes));
         
-        return abi.decode(decodeReult, (address[], uint[]));
+        return abi.decode(decodeResult, (address[], uint[]));
     }
 
     /**

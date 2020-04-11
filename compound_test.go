@@ -70,8 +70,8 @@ func (tradingSuite *CompoundTradingTestSuite) SetupSuite() {
 	tradingSuite.cDAIAddressStr = "0xe7bc397dbd069fc7d0109c0636d06888bb50668c"                            // kovan
 	tradingSuite.cETHAddressStr = "0xf92fbe0d3c0dcdae407923b2ac17ec223b1084e4"                            // kovan
 	tradingSuite.cREPAddressStr = "0xfd874be7e6733bdc6dca9c7cdd97c225ec235d39"                            // kovan
-	tradingSuite.CompoundDeployedAddr = common.HexToAddress("0xaB58Ae78640C33CaD1FAf9Ca6902983622C926C6") //kovan
-	tradingSuite.DepositingEther = float64(0.12)
+	tradingSuite.CompoundDeployedAddr = common.HexToAddress("0xEcE8Fd8CBe31c44804e161a6eC328061c91A286B") //kovan
+	tradingSuite.DepositingEther = float64(0.1)
 }
 
 func (tradingSuite *CompoundTradingTestSuite) TearDownSuite() {
@@ -263,17 +263,17 @@ func (tradingSuite *CompoundTradingTestSuite) Test1TradeEthForKBNWithKyber() {
 	time.Sleep(120 * time.Second)
 
 	tradingSuite.submitBurnProofForDepositToSC(burningTxID.(string))
-	require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPETH, big.NewInt(1000000000)), deposited)
+	// require.Equal(tradingSuite.T(), big.NewInt(0).Mul(burningPETH, big.NewInt(1000000000)), deposited)
 
 	deposited := tradingSuite.getDepositedBalance(
 		tradingSuite.EtherAddressStr,
 		pubKeyToAddrStr,
 	)
-	fmt.Println("deposited EHT: ", deposited)
+	fmt.Println("deposited EHT: ", deposited, big.NewInt(0).Div(tradeAmount, big.NewInt(int64(3))))
 
 	fmt.Println("------------ step 3: mint cETH through Compound aggregator --------------")
 	tradingSuite.mintCoin(
-		big.NewInt(0).Div(tradeAmount, big.NewInt(int64(3))),
+		big.NewInt(0).Div(deposited, big.NewInt(int64(3))),
 		tradingSuite.EtherAddressStr,
 		tradingSuite.cETHAddressStr,
 	)
@@ -282,7 +282,7 @@ func (tradingSuite *CompoundTradingTestSuite) Test1TradeEthForKBNWithKyber() {
 		tradingSuite.cETHAddressStr,
 		pubKeyToAddrStr,
 	)
-	fmt.Println("After: deposited cEHT: ", deposited)
+	fmt.Println("After: minted cEHT: ", deposited)
 
 	fmt.Println("------------ step 4: collateral cETH and borrow DAI through Compound aggregator --------------")
 	tradingSuite.borrowCoin(
@@ -317,7 +317,7 @@ func (tradingSuite *CompoundTradingTestSuite) Test1TradeEthForKBNWithKyber() {
 	fmt.Println("ETH after call redeem: ", ETHredeem)
 
 	fmt.Println("------------ step 6: Borrow ETH and Repay ETH through Compound aggregator --------------")
-
+	// borrow to repay
 	tradingSuite.borrowCoin(
 		big.NewInt(0).Div(deposited, big.NewInt(int64(3))),
 		big.NewInt(10000000),
@@ -332,4 +332,6 @@ func (tradingSuite *CompoundTradingTestSuite) Test1TradeEthForKBNWithKyber() {
 		tradingSuite.EtherAddressStr,
 		tradingSuite.cETHAddressStr,
 	)
+
+	fmt.Println("------------ step 7: Liquidate Borrow ETH and Repay ETH through Compound aggregator --------------")
 }

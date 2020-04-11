@@ -149,7 +149,7 @@ func (tradingDeploySuite *TradingDeployTestSuite) TestDeployAllContracts() {
 	fmt.Println("deployed compound agent logic")
 	fmt.Printf("addr: %s\n", compounAgentLogicdAddr.Hex())
 
-	compoundAddr, tx, _, err := compound.DeployCompound(auth, tradingDeploySuite.ETHClient, tradingDeploySuite.VaultAddr, compounAgentLogicdAddr, admin)
+	compoundAddr, tx, _, err := compound.DeployCompound(auth, tradingDeploySuite.ETHClient, vaultAddr, compounAgentLogicdAddr, admin)
 	require.Equal(tradingDeploySuite.T(), nil, err)
 
 	// Wait until tx is confirmed
