@@ -163,17 +163,18 @@ contract CompoundAgentLogic is TradeUtilsCompound {
         if(addToMarkets.length > 0) {
             comptroller.enterMarkets(addToMarkets);
         }
+        address[] memory addressAfter = new address[](1);
         require(CTokenInterface(cToken).borrow(amount) == 0);
         uint amountAfter = 0;
         if (cToken == address(cEther)) {
             amountAfter = balanceOf(ETH_CONTRACT_ADDRESS);
             transfer(ETH_CONTRACT_ADDRESS, amountAfter);
+            addressAfter[0] = address(ETH_CONTRACT_ADDRESS);
         } else {
             amountAfter = balanceOf(IERC20(CErc20(cToken).underlying()));
             transfer(IERC20(CErc20(cToken).underlying()), amountAfter);
+            addressAfter[0] = CErc20(cToken).underlying();
         }
-        address[] memory addressAfter = new address[](1);
-        addressAfter[0] = cToken;
         uint[] memory balAfter = new uint[](1);
         balAfter[0] = amountAfter;
         return (addressAfter,  balAfter);
