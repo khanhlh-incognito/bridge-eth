@@ -53,9 +53,9 @@ func (tradingDeploySuite *TradingMainnetDeployTestSuite) SetupSuite() {
 	// tradingDeploySuite.ETHPrivKeyHex = "B8DB29A7A43FB88AD520F762C5FDF6F1B0155637FA1E5CB2C796AFE9E5C04E31"
 	// tradingDeploySuite.ETHRelayer = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
 
-	tradingDeploySuite.KyberContractAddr = common.HexToAddress("")
-	tradingDeploySuite.ZRXContractAddr = common.HexToAddress("")
-	tradingDeploySuite.WETHAddr = common.HexToAddress("")
+	tradingDeploySuite.KyberContractAddr = common.HexToAddress("0x818E6FECD516Ecc3849DAf6845e3EC868087B755")
+	tradingDeploySuite.ZRXContractAddr = common.HexToAddress("0x95e6f48254609a6ee006f7d493c8e5fb97094cef")
+	tradingDeploySuite.WETHAddr = common.HexToAddress("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")
 
 	tradingDeploySuite.Admin = common.HexToAddress("")
 	tradingDeploySuite.IncProxyAddr = common.HexToAddress("")
