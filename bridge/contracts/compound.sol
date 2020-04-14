@@ -303,7 +303,7 @@ contract CompoundAgent {
     }
 }
 
-import './utils.sol';
+import './trade_utils.sol';
 contract CompoundProxy is TradeUtils {
      
     mapping(bytes32 => bool) public sigDataUsed;
