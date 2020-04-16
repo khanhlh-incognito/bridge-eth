@@ -92,7 +92,7 @@ func TestFixedUpdateIncognitoProxy(t *testing.T) {
 	}
 }
 
-func TestFixedIsWithdrawedTrue(t *testing.T) {
+func TestFixedIsWithdrawedFalse(t *testing.T) {
 	proof := getFixedBurnProofETH()
 
 	p, _, err := setupFixedCommittee()
@@ -131,7 +131,7 @@ func TestFixedIsWithdrawedTrue(t *testing.T) {
 	assert.Equal(t, big.NewInt(2000), getBalanceERC20(p.token, withdrawer))
 }
 
-func TestFixedIsWithdrawedFalse(t *testing.T) {
+func TestFixedIsWithdrawedTrue(t *testing.T) {
 	proof := getFixedBurnProofETH()
 
 	p, _, err := setupFixedCommittee()
