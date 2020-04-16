@@ -602,12 +602,6 @@ func TestFixedDepositCustomERC20s(t *testing.T) {
 			value:   big.NewInt(int64(1e9)),
 			err:     true,
 		},
-		{
-			desc:    "DLESS",
-			decimal: 0,
-			value:   big.NewInt(int64(1e9)),
-			emit:    big.NewInt(int64(1e9)),
-		},
 	}
 
 	for _, tc := range testCases {
@@ -972,12 +966,6 @@ func TestFixedWithdrawCustomERC20s(t *testing.T) {
 			deposit:  big.NewInt(int64(3e17)),
 			withdraw: big.NewInt(int64(2e8)),
 			remain:   big.NewInt(int64(1e17)),
-		},
-		{
-			desc:     "DLESS",
-			deposit:  big.NewInt(int64(3e9)),
-			withdraw: big.NewInt(int64(1)),
-			remain:   big.NewInt(int64(3e9 - 1)),
 		},
 	}
 
