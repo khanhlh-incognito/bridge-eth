@@ -168,12 +168,11 @@ func TestFixedIsWithdrawedFalse(t *testing.T) {
 func TestFixedMoveERC20(t *testing.T) {
 	p, _, _ := setupFixedCommittee() // New SimulatedBackend each time => ERC20 address is fixed
 	erc20Addr := p.tokenAddr
-	newVault := newAccount()
-
 	type initAsset struct {
 		addr  ec.Address
 		value int64
 	}
+	randAcc := newAccount()
 
 	testCases := []struct {
 		desc     string
@@ -182,21 +181,23 @@ func TestFixedMoveERC20(t *testing.T) {
 		err      bool
 	}{
 		{
-			desc:     "Success",
-			newVault: newVault.Address,
-			assets:   []initAsset{initAsset{erc20Addr, 1000}},
+			desc:   "Success",
+			assets: []initAsset{initAsset{erc20Addr, 1000}},
 		},
 		{
-			desc:     "One asset failed",
-			newVault: newVault.Address,
-			assets:   []initAsset{initAsset{erc20Addr, 1000}, initAsset{newVault.Address, 0}}, // Dummy address as erc20
-			err:      true,
+			desc:   "One asset failed",
+			assets: []initAsset{initAsset{erc20Addr, 1000}, initAsset{randAcc.Address, 0}}, // Dummy address as erc20
+			err:    true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			p, _, err := setupFixedCommittee()
+			assert.Nil(t, err)
+
+			// Deploy new vault to have updateAssets method
+			newVault, _, _, err := setupVault(auth, p.sim, auth.From, p.incAddr, p.vAddr)
 			assert.Nil(t, err)
 
 			// Deposit to make sure there's ERC20 to move
@@ -216,7 +217,7 @@ func TestFixedMoveERC20(t *testing.T) {
 			_, err = p.v.Pause(auth)
 			assert.Nil(t, err)
 			p.sim.Commit()
-			_, err = p.v.Migrate(auth, tc.newVault)
+			_, err = p.v.Migrate(auth, newVault)
 			assert.Nil(t, err)
 			p.sim.Commit()
 
@@ -231,7 +232,7 @@ func TestFixedMoveERC20(t *testing.T) {
 				for _, a := range tc.assets {
 					token, err := erc20.NewErc20(a.addr, p.sim)
 					assert.Nil(t, err)
-					assert.Equal(t, big.NewInt(a.value), getBalanceERC20(token, tc.newVault))
+					assert.Equal(t, big.NewInt(a.value), getBalanceERC20(token, newVault))
 				}
 			}
 		})
@@ -240,39 +241,39 @@ func TestFixedMoveERC20(t *testing.T) {
 
 func TestFixedMoveETH(t *testing.T) {
 	acc := newAccount()
-	newVault := newAccount()
 	testCases := []struct {
 		desc     string
 		mover    *account
 		paused   bool
-		newVault ec.Address
+		newVault bool
 		err      bool
 	}{
 		{
 			desc:     "Success",
 			mover:    genesisAcc,
 			paused:   true,
-			newVault: newVault.Address,
+			newVault: true,
 		},
 		{
 			desc:     "Not admin",
 			mover:    acc,
 			paused:   true,
-			newVault: newVault.Address,
+			newVault: true,
 			err:      true,
 		},
 		{
 			desc:     "Not paused",
 			mover:    genesisAcc,
 			paused:   false,
-			newVault: newVault.Address,
+			newVault: true,
 			err:      true,
 		},
 		{
-			desc:   "Not migrated", // newVault = 0x0
-			mover:  genesisAcc,
-			paused: true,
-			err:    true,
+			desc:     "Not migrated", // newVault = 0x0
+			mover:    genesisAcc,
+			paused:   true,
+			newVault: false,
+			err:      true,
 		},
 	}
 
@@ -280,6 +281,13 @@ func TestFixedMoveETH(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			p, _, err := setupFixedCommittee(tc.mover.Address)
 			assert.Nil(t, err)
+
+			newVault := ec.Address{}
+			if tc.newVault {
+				// Deploy new vault to have updateAssets method
+				newVault, _, _, err = setupVault(auth, p.sim, auth.From, p.incAddr, p.vAddr)
+				assert.Nil(t, err)
+			}
 
 			// Deposit to make sure there's ETH to move
 			oldBalance, newBalance, err := deposit(p, big.NewInt(int64(1000)))
@@ -290,8 +298,8 @@ func TestFixedMoveETH(t *testing.T) {
 			_, err = p.v.Pause(auth)
 			assert.Nil(t, err)
 			p.sim.Commit()
-			if !bytes.Equal(tc.newVault.Bytes(), make([]byte, 20)) {
-				_, err = p.v.Migrate(auth, tc.newVault)
+			if tc.newVault {
+				_, err = p.v.Migrate(auth, newVault)
 				assert.Nil(t, err)
 				p.sim.Commit()
 			}
@@ -313,7 +321,7 @@ func TestFixedMoveETH(t *testing.T) {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
-				assert.Equal(t, newBalance, p.getBalance(tc.newVault))
+				assert.Equal(t, newBalance, p.getBalance(newVault))
 			}
 		})
 	}
