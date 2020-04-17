@@ -108,6 +108,7 @@ func TestERC20Redeposit(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
 func TestERC20Approve(t *testing.T) {
 	// Get contract instances
 	privKey, c := connectAndInstantiate(t)
