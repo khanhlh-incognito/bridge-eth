@@ -82,6 +82,33 @@ func TestSwapBeacon(t *testing.T) {
 	fmt.Printf("swapped, txHash: %x\n", txHash[:])
 }
 
+func TestResendETH(t *testing.T) {
+	privKey, client, err := connect()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	// Enter receiver address here
+	addr := ""
+
+	// Enter nonce here
+	nonce := uint64(0)
+
+	// Enter amount to send here
+	value := big.NewInt(0.1 * params.Ether)
+
+	// Enter gasLimit and gasPrice here
+	gasLimit := uint64(30000)
+	gasPrice := big.NewInt(5000000000) // 5 GWei
+
+	txHash, err := transfer(client, privKey, addr, nonce, value, gasLimit, gasPrice)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("sent, txHash: %s\n", txHash)
+}
+
 func TestMassSend(t *testing.T) {
 	addrs := []string{
 		"0xDF1A9BE4dA9Ed6CDC28bea3c23E81B8a3e4480Ae",
@@ -102,8 +129,11 @@ func TestMassSend(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	value := big.NewInt(0.1 * params.Ether)
+	gasLimit := uint64(30000)
+	gasPrice := big.NewInt(20000000000)
 	for i, addr := range addrs {
-		txHash, err := transfer(client, privKey, addr, nonce+uint64(i))
+		txHash, err := transfer(client, privKey, addr, nonce+uint64(i), value, gasLimit, gasPrice)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -116,11 +146,11 @@ func transfer(
 	privKey *ecdsa.PrivateKey,
 	to string,
 	nonce uint64,
+	value *big.Int,
+	gasLimt uint64,
+	gasPrice *big.Int,
 ) (string, error) {
 	toAddress := common.HexToAddress(to)
-	value := big.NewInt(0.1 * params.Ether)
-	gasLimit := uint64(30000)
-	gasPrice := big.NewInt(20000000000)
 	tx := types.NewTransaction(nonce, toAddress, value, gasLimit, gasPrice, nil)
 
 	chainID, err := client.NetworkID(context.Background())
