@@ -77,6 +77,44 @@ func TestERC20Approve(t *testing.T) {
 	}
 }
 
+func TestERC20Reapprove(t *testing.T) {
+	// Set up client
+	privKey, client, err := connect()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enter nonce here
+	nonce := uint64(0)
+
+	// Enter amount here
+	amount := big.NewInt(int64(0))
+
+	// Enter gasPrice here
+	gasPrice := big.NewInt(5000000000) // 5 GWei
+
+	// Get contract instances
+	tokenAddr := "" // Enter token here
+	c, err := instantiate(client, IncognitoProxyAddress, VaultAddress, tokenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Approve
+	_, err = approveERC20Detail(
+		privKey,
+		c.vAddr,
+		c.token,
+		amount,
+		nonce,
+		0,
+		gasPrice,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestGetAllowance(t *testing.T) {
 	// Get contract instances
 	privKey, c := connectAndInstantiate(t)
@@ -123,7 +161,7 @@ func connectAndInstantiate(t *testing.T) (*ecdsa.PrivateKey, *contracts) {
 	}
 
 	// Get contract instance
-	c, err := instantiate(client)
+	c, err := instantiate(client, IncognitoProxyAddress, VaultAddress, TokenAddress)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +186,15 @@ func depositERC20(
 	return tx, nil
 }
 
-func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token Tokener, amount *big.Int) (*types.Transaction, error) {
+func approveERC20Detail(
+	privKey *ecdsa.PrivateKey,
+	spender common.Address,
+	token Tokener,
+	amount *big.Int,
+	nonce uint64,
+	gasLimit uint64,
+	gasPrice *big.Int,
+) (*types.Transaction, error) {
 	// Check balance
 	userAddr := crypto.PubkeyToAddress(privKey.PublicKey)
 	bal, _ := token.BalanceOf(nil, userAddr)
@@ -156,8 +202,16 @@ func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token Token
 
 	// Approve
 	auth := bind.NewKeyedTransactor(privKey)
-	// auth.GasPrice = big.NewInt(20000000000)
-	// auth.GasLimit = 1000000
+	if gasLimit > 0 {
+		auth.GasLimit = gasLimit
+	}
+	if gasPrice != nil {
+		auth.GasPrice = gasPrice
+	}
+	if nonce > 0 {
+		auth.Nonce = big.NewInt(int64(nonce))
+	}
+
 	tx, err := token.Approve(auth, spender, amount)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -167,25 +221,37 @@ func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token Token
 	return tx, nil
 }
 
-func instantiate(client *ethclient.Client) (*contracts, error) {
+func approveERC20(privKey *ecdsa.PrivateKey, spender common.Address, token Tokener, amount *big.Int) (*types.Transaction, error) {
+	return approveERC20Detail(
+		privKey,
+		spender,
+		token,
+		amount,
+		0,
+		0,
+		nil,
+	)
+}
+
+func instantiate(client *ethclient.Client, incAddr, vAddr, tokenAddr string) (*contracts, error) {
 	// Get contract instance
 	var err error
 	c := &contracts{}
-	c.incAddr = common.HexToAddress(IncognitoProxyAddress)
+	c.incAddr = common.HexToAddress(incAddr)
 	c.inc, err = incognito_proxy.NewIncognitoProxy(c.incAddr, client)
 	if err != nil {
 		return nil, err
 	}
 
 	// Vault
-	c.vAddr = common.HexToAddress(VaultAddress)
+	c.vAddr = common.HexToAddress(vAddr)
 	c.v, err = vault.NewVault(c.vAddr, client)
 	if err != nil {
 		return nil, err
 	}
 
 	// ERC20 token
-	c.tokenAddr = common.HexToAddress(TokenAddress)
+	c.tokenAddr = common.HexToAddress(tokenAddr)
 	c.token, err = erc20.NewErc20(c.tokenAddr, client)
 	if err != nil {
 		return nil, err

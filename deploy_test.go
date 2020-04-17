@@ -147,7 +147,7 @@ func transfer(
 	to string,
 	nonce uint64,
 	value *big.Int,
-	gasLimt uint64,
+	gasLimit uint64,
 	gasPrice *big.Int,
 ) (string, error) {
 	toAddress := common.HexToAddress(to)
