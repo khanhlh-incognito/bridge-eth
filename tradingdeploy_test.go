@@ -36,7 +36,7 @@ func NewTradingDeployTestSuite(tradingTestSuite *TradingTestSuite) *TradingDeplo
 func (tradingDeploySuite *TradingDeployTestSuite) SetupSuite() {
 	fmt.Println("Setting up the suite...")
 	// 0x kovan env
-	tradingDeploySuite.KyberContractAddr = common.HexToAddress("0xF77eC7Ed5f5B9a5aee4cfa6FFCaC6A4C315BaC76") // rinkeby
+	tradingDeploySuite.KyberContractAddr = common.HexToAddress("0x692f391bCc85cefCe8C237C01e1f636BbD70EA4D")
 	tradingDeploySuite.ZRXContractAddr = common.HexToAddress("0xf1ec01d6236d3cd881a0bf0130ea25fe4234003e")
 	tradingDeploySuite.WETHAddr = common.HexToAddress("0xd0a1e359811322d97991e03f863a0c30c2cf029c")
 }

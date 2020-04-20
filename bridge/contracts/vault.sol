@@ -77,7 +77,8 @@ contract Vault is AdminPausable {
     // address => token => amount
     mapping(address => mapping(address => uint)) public withdrawRequests;
     mapping(address => uint) public totalDepositedToSCAmount;
-    mapping(address => mapping(address => bool)) migration;
+    // TODO: uncomment for next version
+    // mapping(address => mapping(address => bool)) public migration;
 
     Incognito public incognito;
     Withdrawable public prevVault;
@@ -428,12 +429,10 @@ contract Vault is AdminPausable {
         bytes memory timestamp
     ) public isNotPaused {
         // verify owner signs data
-        address verifier = verifySignData(abi.encodePacked(incognitoAddress, token, timestamp), signData);
+        address verifier = verifySignData(abi.encodePacked(incognitoAddress, token, timestamp, amount), signData);
         // TODO: check the balance of previous version 
-        // if(address(prevVault) != address(0) && !migration[verifier][token]) {
-        //     withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeAdd(prevVault.getDepositedBalance(token, verifier));
-        //     migration[verifier][token] = true;
-        // }
+        // migrateBalance(verifier, token);
+        
         require(withdrawRequests[verifier][token] >= amount);
         withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeSub(amount);
         totalDepositedToSCAmount[token] = totalDepositedToSCAmount[token].safeSub(amount);
@@ -470,13 +469,11 @@ contract Vault is AdminPausable {
         bytes memory signData
     ) public payable isNotPaused {
         //verify ower signs data from input
-        address verifier = verifySignData(abi.encodePacked(exchangeAddress, callData, timestamp), signData);
+        address verifier = verifySignData(abi.encodePacked(exchangeAddress, callData, timestamp, amount), signData);
          
         // TODO: check the balance of previous version 
-        // if(address(prevVault) != address(0) && !migration[verifier][token]) {
-        //     withdrawRequests[verifier][token] = withdrawRequests[verifier][token].safeAdd(prevVault.getDepositedBalance(token, verifier));
-        //     migration[verifier][token] = true;
-        // }
+        // migrateBalance(verifier, token);
+        
         require(withdrawRequests[verifier][token] >= amount);
         require(token != recipientToken);
 
@@ -516,15 +513,12 @@ contract Vault is AdminPausable {
     ) public payable isNotPaused {
         require(tokens.length == amounts.length && recipientTokens.length > 0);
         //verify ower signs data from input
-        address verifier = verifySignData(abi.encodePacked(exchangeAddress, callData, timestamp), signData);
+        address verifier = verifySignData(abi.encodePacked(exchangeAddress, callData, timestamp, amounts), signData);
         // define number of eth spent for forwarder.
         uint ethAmount = msg.value;
         for(uint i = 0; i < tokens.length; i++){
-            // TODO: check the balance of previous version
-            // if(address(prevVault) != address(0) && !migration[verifier][tokens[i]]) {
-            //     withdrawRequests[verifier][tokens[i]] = withdrawRequests[verifier][tokens[i]].safeAdd(prevVault.getDepositedBalance(tokens[i], verifier));
-            //     migration[verifier][tokens[i]] = true;
-            // }
+            // TODO: check the balance of previous version 
+            // migrateBalance(verifier, token);
             
             // check balance is enough or not
             require(withdrawRequests[verifier][tokens[i]] >= amounts[i]);
@@ -610,12 +604,28 @@ contract Vault is AdminPausable {
      }
     
     /**
+     * @dev migrate balance from previous vault
+     * Note: uncomment for next version
+     */ 
+    // function migrateBalance(address owner, address token) public {
+    // 	// TODO: disable if case for vault v3
+    // 	if (address(prevVault) != address(0x0) && !migration[owner][token]) {
+    // 		withdrawRequests[owner][token] = withdrawRequests[owner][token].safeAdd(prevVault.getDepositedBalance(token, owner));
+    // 		migration[owner][token] = true;
+    // 	}
+    // }
+
+    /**
      * @dev Get the amount of specific coin for specific wallet
      */
     function getDepositedBalance(
         address token,
         address owner
     ) public view returns (uint) {
+       // TODO: uncomment for next version
+       // if (address(prevVault) != address(0x0) && !migration[owner][token]) {
+	   //  return withdrawRequests[owner][token].safeAdd(prevVault.getDepositedBalance(token, owner));
+	   // }
         return withdrawRequests[owner][token];
     }
 
